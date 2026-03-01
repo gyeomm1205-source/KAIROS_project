@@ -1,0 +1,20 @@
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+vue-fe/node_modules/
+vue-fe/dist/
+
+# Python
+__pycache__/
+*.pyc
+fastapi-be/.venv/
+
+# Java/Gradle
+springboot-be/.gradle/
+springboot-be/build/
+
+# IDE
+.idea/
+.vscode/
