@@ -59,3 +59,17 @@ npm run dev
 - FastAPI Ping: `GET /api/test/ping`
 - FastAPI -> Spring Ping: `GET /api/test/ping/spring`
 - Spring MockPost CRUD: `/api/test/mock-posts`
+
+## Kubernetes GitOps (Helm)
+
+- Helm chart path: `infra/helm/s14-app`
+- ArgoCD application manifest: `infra/argocd/app-build-test.yaml`
+- CI/CD pipeline: `.gitlab-ci.yml`
+- 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
+- Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
+
+Quick check:
+
+```bash
+helm template s14-app infra/helm/s14-app --namespace ssafy | head -n 40
+```

@@ -1,0 +1,24 @@
+baseDomain: 127.0.0.1.nip.io
+
+replicaCount:
+  vueFe: 1
+  springbootBe: 1
+  fastapiBe: 1
+
+images:
+  vueFe:
+    repository: docker.io/placeholder/vue-fe
+    tag: latest
+    pullPolicy: IfNotPresent
+  springbootBe:
+    repository: docker.io/placeholder/springboot-be
+    tag: latest
+    pullPolicy: IfNotPresent
+  fastapiBe:
+    repository: docker.io/placeholder/fastapi-be
+    tag: latest
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: traefik
