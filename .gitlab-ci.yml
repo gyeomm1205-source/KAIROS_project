@@ -12,6 +12,7 @@ variables:
   DOCKER_DRIVER: overlay2
   DOCKER_BUILDKIT: "1"
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  DOCKERHUB_REPOSITORY: "ken-ssafy"
 
 .docker-build-template:
   stage: build
@@ -22,6 +23,7 @@ variables:
     - test -n "$DOCKERHUB_USERNAME"
     - test -n "$DOCKERHUB_TOKEN"
     - test -n "$DOCKERHUB_NAMESPACE"
+    - test -n "$DOCKERHUB_REPOSITORY"
     - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
 .docker-java-build-template:
@@ -36,29 +38,44 @@ variables:
     - test -n "$DOCKERHUB_USERNAME"
     - test -n "$DOCKERHUB_TOKEN"
     - test -n "$DOCKERHUB_NAMESPACE"
+    - test -n "$DOCKERHUB_REPOSITORY"
     - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
 
 build_vue_fe:
   extends: .docker-build-template
   script:
-    - : "${BASE_DOMAIN:=127.0.0.1.nip.io}"
-    - docker build --pull -t "docker.io/${DOCKERHUB_NAMESPACE}/vue-fe:${IMAGE_TAG}" --build-arg VITE_SPRING_BASE_URL="http://spring.${BASE_DOMAIN}" --build-arg VITE_FASTAPI_BASE_URL="http://fastapi.${BASE_DOMAIN}" -f vue-fe/Dockerfile vue-fe
-    - docker push "docker.io/${DOCKERHUB_NAMESPACE}/vue-fe:${IMAGE_TAG}"
+    - |
+      set -e
+      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      docker build --pull \
+        -t "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}" \
+        --build-arg VITE_SPRING_BASE_URL="http://spring.${BASE_DOMAIN}" \
+        --build-arg VITE_FASTAPI_BASE_URL="http://fastapi.${BASE_DOMAIN}" \
+        -f vue-fe/Dockerfile vue-fe
+      docker push "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}"
 
 build_springboot_be:
   extends: .docker-java-build-template
   script:
-    - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
-    - export PATH="$JAVA_HOME/bin:$PATH"
-    - chmod +x springboot-be/gradlew
-    - ./springboot-be/gradlew -p springboot-be --no-daemon bootBuildImage --imageName="docker.io/${DOCKERHUB_NAMESPACE}/springboot-be:${IMAGE_TAG}"
-    - docker push "docker.io/${DOCKERHUB_NAMESPACE}/springboot-be:${IMAGE_TAG}"
+    - |
+      set -e
+      export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      export PATH="$JAVA_HOME/bin:$PATH"
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      chmod +x springboot-be/gradlew
+      ./springboot-be/gradlew -p springboot-be --no-daemon \
+        bootBuildImage --imageName="${IMAGE_REPO}:springboot-be-${IMAGE_TAG}"
+      docker push "${IMAGE_REPO}:springboot-be-${IMAGE_TAG}"
 
 build_fastapi_be:
   extends: .docker-build-template
   script:
-    - docker build --pull -t "docker.io/${DOCKERHUB_NAMESPACE}/fastapi-be:${IMAGE_TAG}" -f fastapi-be/Dockerfile fastapi-be
-    - docker push "docker.io/${DOCKERHUB_NAMESPACE}/fastapi-be:${IMAGE_TAG}"
+    - |
+      set -e
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      docker build --pull -t "${IMAGE_REPO}:fastapi-be-${IMAGE_TAG}" -f fastapi-be/Dockerfile fastapi-be
+      docker push "${IMAGE_REPO}:fastapi-be-${IMAGE_TAG}"
 
 update_gitops_manifest:
   stage: gitops
@@ -70,26 +87,33 @@ update_gitops_manifest:
   before_script:
     - apk add --no-cache git sed
   script:
-    - test -n "$DOCKERHUB_NAMESPACE"
-    - : "${BASE_DOMAIN:=127.0.0.1.nip.io}"
-    - VALUES_FILE="infra/helm/s14-app/values.yaml"
-    - sed -i "s|^baseDomain: .*|baseDomain: ${BASE_DOMAIN}|g" "$VALUES_FILE"
-    - sed -i "s|repository: docker.io/.*/vue-fe|repository: docker.io/${DOCKERHUB_NAMESPACE}/vue-fe|g" "$VALUES_FILE"
-    - sed -i "s|repository: docker.io/.*/springboot-be|repository: docker.io/${DOCKERHUB_NAMESPACE}/springboot-be|g" "$VALUES_FILE"
-    - sed -i "s|repository: docker.io/.*/fastapi-be|repository: docker.io/${DOCKERHUB_NAMESPACE}/fastapi-be|g" "$VALUES_FILE"
-    - sed -i "/vueFe:/,/springbootBe:/ s|tag: .*|tag: ${IMAGE_TAG}|g" "$VALUES_FILE"
-    - sed -i "/springbootBe:/,/fastapiBe:/ s|tag: .*|tag: ${IMAGE_TAG}|g" "$VALUES_FILE"
-    - sed -i "/fastapiBe:/,\$ s|tag: .*|tag: ${IMAGE_TAG}|g" "$VALUES_FILE"
     - |
+      set -e
+      test -n "$DOCKERHUB_NAMESPACE"
+      test -n "$DOCKERHUB_REPOSITORY"
+      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      VALUES_FILE="infra/helm/s14-app/values.yaml"
+
+      sed -i "s|^baseDomain: .*|baseDomain: ${BASE_DOMAIN}|g" "$VALUES_FILE"
+      sed -i "/vueFe:/,/springbootBe:/ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
+      sed -i "/springbootBe:/,/fastapiBe:/ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
+      sed -i "/fastapiBe:/,\$ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
+
+      sed -i "/vueFe:/,/springbootBe:/ s|tag: .*|tag: vue-fe-${IMAGE_TAG}|g" "$VALUES_FILE"
+      sed -i "/springbootBe:/,/fastapiBe:/ s|tag: .*|tag: springboot-be-${IMAGE_TAG}|g" "$VALUES_FILE"
+      sed -i "/fastapiBe:/,\$ s|tag: .*|tag: fastapi-be-${IMAGE_TAG}|g" "$VALUES_FILE"
+
       if git diff --quiet -- "$VALUES_FILE"; then
         echo "No GitOps changes detected."
         exit 0
       fi
-    - git config user.name "gitlab-ci"
-    - git config user.email "gitlab-ci@local"
-    - PUSH_USER="${GIT_PUSH_USERNAME:-gitlab-ci-token}"
-    - PUSH_TOKEN="${GIT_PUSH_TOKEN:-$CI_JOB_TOKEN}"
-    - git remote set-url origin "https://${PUSH_USER}:${PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
-    - git add "$VALUES_FILE"
-    - git commit -m "chore(helm): update image tags to ${IMAGE_TAG} [skip ci]"
-    - git push origin "HEAD:${CI_COMMIT_BRANCH}"
+
+      git config user.name "gitlab-ci"
+      git config user.email "gitlab-ci@local"
+      PUSH_USER="${GIT_PUSH_USERNAME:-gitlab-ci-token}"
+      PUSH_TOKEN="${GIT_PUSH_TOKEN:-$CI_JOB_TOKEN}"
+      git remote set-url origin "https://${PUSH_USER}:${PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git add "$VALUES_FILE"
+      git commit -m "chore(helm): update image tags to ${IMAGE_TAG} [skip ci]"
+      git push origin "HEAD:${CI_COMMIT_BRANCH}"

@@ -14,6 +14,10 @@ spec:
       labels:
         app.kubernetes.io/name: vue-fe
     spec:
+{{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+{{ toYaml . | nindent 8 }}
+{{- end }}
       containers:
         - name: vue-fe
           image: "{{ .Values.images.vueFe.repository }}:{{ .Values.images.vueFe.tag }}"

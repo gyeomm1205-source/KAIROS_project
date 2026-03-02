@@ -5,18 +5,22 @@ replicaCount:
   springbootBe: 1
   fastapiBe: 1
 
+imagePullSecrets: []
+# imagePullSecrets:
+#   - name: dockerhub-regcred
+
 images:
   vueFe:
-    repository: docker.io/placeholder/vue-fe
-    tag: latest
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: vue-fe-latest
     pullPolicy: IfNotPresent
   springbootBe:
-    repository: docker.io/placeholder/springboot-be
-    tag: latest
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: springboot-be-latest
     pullPolicy: IfNotPresent
   fastapiBe:
-    repository: docker.io/placeholder/fastapi-be
-    tag: latest
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: fastapi-be-latest
     pullPolicy: IfNotPresent
 
 ingress:
