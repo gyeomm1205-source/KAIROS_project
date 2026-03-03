@@ -67,6 +67,7 @@ npm run dev
 - CI/CD pipeline: `.gitlab-ci.yml` (self-hosted runner: other-vm)
 - 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
 - Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
+- Docker Hub private 저장소 기준: `ssafy`의 `dockerhub-regcred` + values `imagePullSecrets` 설정 필수
 
 Quick check:
 

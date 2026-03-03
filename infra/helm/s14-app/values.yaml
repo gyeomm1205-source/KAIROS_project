@@ -5,9 +5,10 @@ replicaCount:
   springbootBe: 1
   fastapiBe: 1
 
-imagePullSecrets: []
-# imagePullSecrets:
-#   - name: dockerhub-regcred
+imagePullSecrets:
+  - name: dockerhub-regcred
+# public 저장소 사용 시에는 아래처럼 비워도 됨
+# imagePullSecrets: []
 
 images:
   vueFe:
