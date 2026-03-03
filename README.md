@@ -64,7 +64,8 @@ npm run dev
 
 - Helm chart path: `infra/helm/s14-app`
 - ArgoCD application manifest: `infra/argocd/app-build-test.yaml`
-- CI/CD pipeline: `.gitlab-ci.yml`
+- CI/CD pipeline (primary): `Jenkinsfile`
+- GitLab CI reference(옵션): `.gitlab-ci.yml`
 - 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
 - Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
 
