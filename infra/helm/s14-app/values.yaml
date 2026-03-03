@@ -1,1 +1,28 @@
-baseDomain: 127.0.0.1.nip.io\n\nreplicaCount:\n  vueFe: 1\n  springbootBe: 1\n  fastapiBe: 1\n\nimagePullSecrets: []\n# imagePullSecrets:\n#   - name: dockerhub-regcred\n\nimages:\n  vueFe:\n    repository: docker.io/gjaku1031/ken-ssafy\n    tag: vue-fe-70f8396c\n    pullPolicy: IfNotPresent\n  springbootBe:\n    repository: docker.io/gjaku1031/ken-ssafy\n    tag: springboot-be-70f8396c\n    pullPolicy: IfNotPresent\n  fastapiBe:\n    repository: docker.io/gjaku1031/ken-ssafy\n    tag: fastapi-be-70f8396c\n    pullPolicy: IfNotPresent\n\ningress:\n  enabled: true\n  className: traefik\n
+baseDomain: 127.0.0.1.nip.io
+
+replicaCount:
+  vueFe: 1
+  springbootBe: 1
+  fastapiBe: 1
+
+imagePullSecrets: []
+# imagePullSecrets:
+#   - name: dockerhub-regcred
+
+images:
+  vueFe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: vue-fe-70f8396c
+    pullPolicy: IfNotPresent
+  springbootBe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: springboot-be-70f8396c
+    pullPolicy: IfNotPresent
+  fastapiBe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: fastapi-be-70f8396c
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: traefik

@@ -150,7 +150,7 @@ update_gitops_manifest:
                   continue
 
       with open(vf, 'w', encoding='utf-8') as f:
-          f.write('\\n'.join(lines) + '\\n')
+          f.write('\n'.join(lines) + '\n')
       PY2
 
       if git diff --quiet -- "$VALUES_FILE"; then
