@@ -89,24 +89,69 @@ update_gitops_manifest:
     - job: build_springboot_be
     - job: build_fastapi_be
   before_script:
-    - apk add --no-cache git sed
+    - apk add --no-cache git python3
   script:
     - |
       set -e
       test -n "$DOCKERHUB_NAMESPACE"
       test -n "$DOCKERHUB_REPOSITORY"
       export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
-      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
-      VALUES_FILE="infra/helm/s14-app/values.yaml"
+      export IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      export VALUES_FILE="infra/helm/s14-app/values.yaml"
+      export IMAGE_TAG
 
-      sed -i "s|^baseDomain: .*|baseDomain: ${BASE_DOMAIN}|g" "$VALUES_FILE"
-      sed -i "/vueFe:/,/springbootBe:/ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
-      sed -i "/springbootBe:/,/fastapiBe:/ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
-      sed -i "/fastapiBe:/,\$ s|repository: .*|repository: ${IMAGE_REPO}|g" "$VALUES_FILE"
+      python3 - <<'PY2'
+      import os
 
-      sed -i "/vueFe:/,/springbootBe:/ s|tag: .*|tag: vue-fe-${IMAGE_TAG}|g" "$VALUES_FILE"
-      sed -i "/springbootBe:/,/fastapiBe:/ s|tag: .*|tag: springboot-be-${IMAGE_TAG}|g" "$VALUES_FILE"
-      sed -i "/fastapiBe:/,\$ s|tag: .*|tag: fastapi-be-${IMAGE_TAG}|g" "$VALUES_FILE"
+      vf = os.environ['VALUES_FILE']
+      base = os.environ['BASE_DOMAIN']
+      repo = os.environ['IMAGE_REPO']
+      tag = os.environ['IMAGE_TAG']
+
+      service_tags = {
+          'vueFe': f'vue-fe-{tag}',
+          'springbootBe': f'springboot-be-{tag}',
+          'fastapiBe': f'fastapi-be-{tag}',
+      }
+
+      lines = open(vf, 'r', encoding='utf-8').read().splitlines()
+      in_images = False
+      service = None
+
+      for i, line in enumerate(lines):
+          stripped = line.strip()
+
+          if stripped.startswith('baseDomain:'):
+              lines[i] = f'baseDomain: {base}'
+              continue
+
+          if line.startswith('images:'):
+              in_images = True
+              service = None
+              continue
+
+          if in_images and line and not line.startswith('  '):
+              in_images = False
+              service = None
+
+          if in_images:
+              if stripped in ('vueFe:', 'springbootBe:', 'fastapiBe:'):
+                  service = stripped[:-1]
+                  continue
+
+              if service and stripped.startswith('repository:'):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  lines[i] = f'{indent}repository: {repo}'
+                  continue
+
+              if service and stripped.startswith('tag:'):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  lines[i] = f"{indent}tag: {service_tags[service]}"
+                  continue
+
+      with open(vf, 'w', encoding='utf-8') as f:
+          f.write('\\n'.join(lines) + '\\n')
+      PY2
 
       if git diff --quiet -- "$VALUES_FILE"; then
         echo "No GitOps changes detected."
