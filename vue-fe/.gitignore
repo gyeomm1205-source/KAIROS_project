@@ -1,0 +1,46 @@
+# npm (의존성 패키지 폴더)
+node_modules/
+.pnp
+.pnp.js
+
+# 빌드 결과물 (배포용 파일)
+dist/
+dist-ssr/
+build/
+
+# 환경 변수 (비밀번호, API 키 등 보안 정보)
+.env
+.env.local
+.env.*.local
+*.local
+
+# 로그 파일
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs
+*.log
+
+# 테스트 및 캐시
+coverage/
+.eslintcache
+.stylelintcache
+
+# 에디터 및 IDE 관련
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS 관련 (macOS / Windows)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
