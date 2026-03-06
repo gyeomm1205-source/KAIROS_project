@@ -63,9 +63,10 @@ npm run dev
 ## Kubernetes GitOps (Helm)
 
 - Helm chart path: `infra/helm/s14-app`
-- ArgoCD application manifest: `infra/argocd/app-build-test.yaml`
-- CI/CD pipeline: `.gitlab-ci.yml` (self-hosted runner: other-vm)
+- ArgoCD application manifest: `infra/argocd/app-develop.yaml`
+- CI/CD pipeline: `.gitlab-ci.yml` (self-hosted runner: other-vm, develop branch trigger)
 - 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
+- 배포 브랜치: `develop`
 - Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
 - Docker Hub private 저장소 기준: `ssafy`의 `dockerhub-regcred` + values `imagePullSecrets` 설정 필수
 
