@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: s14p21a506-build-test
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://lab.ssafy.com/s14-bigdata-recom-sub1/S14P21A506.git
+    targetRevision: build-test
+    path: infra/helm/s14-app
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: ssafy
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

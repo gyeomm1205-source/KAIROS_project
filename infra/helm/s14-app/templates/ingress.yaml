@@ -1,0 +1,39 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: app.{{ .Values.baseDomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: vue-fe
+                port:
+                  number: 80
+    - host: spring.{{ .Values.baseDomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: springboot-be
+                port:
+                  number: 8080
+    - host: fastapi.{{ .Values.baseDomain }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fastapi-be
+                port:
+                  number: 8000
+{{- end }}

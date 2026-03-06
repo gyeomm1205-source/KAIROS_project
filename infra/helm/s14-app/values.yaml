@@ -1,0 +1,29 @@
+baseDomain: 127.0.0.1.nip.io
+
+replicaCount:
+  vueFe: 1
+  springbootBe: 1
+  fastapiBe: 1
+
+imagePullSecrets:
+  - name: dockerhub-regcred
+# public 저장소 사용 시에는 아래처럼 비워도 됨
+# imagePullSecrets: []
+
+images:
+  vueFe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: vue-fe-d7bf6aa6
+    pullPolicy: IfNotPresent
+  springbootBe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: springboot-be-d7bf6aa6
+    pullPolicy: IfNotPresent
+  fastapiBe:
+    repository: docker.io/gjaku1031/ken-ssafy
+    tag: fastapi-be-d7bf6aa6
+    pullPolicy: IfNotPresent
+
+ingress:
+  enabled: true
+  className: traefik
