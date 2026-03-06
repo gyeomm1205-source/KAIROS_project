@@ -1,5 +1,6 @@
 package com.ssafy.s14p21a506.config;
 
+import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import org.springframework.beans.factory.ObjectProvider;
@@ -8,6 +9,13 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+@io.swagger.v3.oas.annotations.security.SecurityScheme(
+        name = "cognitoBearer",
+        type = SecuritySchemeType.HTTP,
+        scheme = "bearer",
+        bearerFormat = "JWT",
+        description = "AWS Cognito access token"
+)
 public class OpenApiConfig {
 
     private static final String TITLE = "S14P21A506 Spring API";
@@ -19,6 +27,10 @@ public class OpenApiConfig {
         String version = resolveVersion();
 
         return new OpenAPI()
+                .schemaRequirement("cognitoBearer", new io.swagger.v3.oas.models.security.SecurityScheme()
+                        .type(io.swagger.v3.oas.models.security.SecurityScheme.Type.HTTP)
+                        .scheme("bearer")
+                        .bearerFormat("JWT"))
                 .info(new Info()
                         .title(TITLE)
                         .version(version)

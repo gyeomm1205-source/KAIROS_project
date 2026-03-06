@@ -1,5 +1,6 @@
 package com.ssafy.s14p21a506.mockpost.service;
 
+import com.ssafy.s14p21a506.auth.AuthenticatedUser;
 import com.ssafy.s14p21a506.exception.BaseException;
 import com.ssafy.s14p21a506.exception.ErrorCode;
 import com.ssafy.s14p21a506.mockpost.dto.MockPostCreateRequest;
@@ -20,9 +21,10 @@ public class MockPostServiceImpl implements MockPostService {
 
     @Override
     @Transactional
-    public MockPostResponse create(MockPostCreateRequest request) {
+    public MockPostResponse create(AuthenticatedUser currentUser, MockPostCreateRequest request) {
         MockPost post = MockPost.createBuilder()
-                .authorId(request.authorId())
+                .authorSub(currentUser.subject())
+                .authorName(currentUser.username())
                 .title(request.title())
                 .content(request.content())
                 .build();
@@ -49,20 +51,28 @@ public class MockPostServiceImpl implements MockPostService {
 
     @Override
     @Transactional
-    public MockPostResponse update(long mockPostId, MockPostUpdateRequest request) {
+    public MockPostResponse update(AuthenticatedUser currentUser, long mockPostId, MockPostUpdateRequest request) {
         MockPost post = mockPostRepository.findById(mockPostId)
                 .orElseThrow(() -> new BaseException(ErrorCode.MOCK_POST_NOT_FOUND));
 
+        validateOwnership(currentUser, post);
         post.update(request.title(), request.content());
         return MockPostResponse.from(post);
     }
 
     @Override
     @Transactional
-    public void delete(long mockPostId) {
+    public void delete(AuthenticatedUser currentUser, long mockPostId) {
         MockPost post = mockPostRepository.findById(mockPostId)
                 .orElseThrow(() -> new BaseException(ErrorCode.MOCK_POST_NOT_FOUND));
 
+        validateOwnership(currentUser, post);
         mockPostRepository.delete(post);
+    }
+
+    private static void validateOwnership(AuthenticatedUser currentUser, MockPost post) {
+        if (!post.isOwnedBy(currentUser.subject())) {
+            throw new BaseException(ErrorCode.FORBIDDEN);
+        }
     }
 }

@@ -33,3 +33,12 @@ app:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,http://127.0.0.1:5173,https://kairos.cloud-ip.cc,http://kairos.cloud-ip.cc}
   fastapi:
     base-url: ${APP_FASTAPI_BASE_URL:http://localhost:8000}
+  security:
+    cognito:
+      enabled: ${APP_SECURITY_COGNITO_ENABLED:false}
+      region: ${APP_SECURITY_COGNITO_REGION:}
+      user-pool-id: ${APP_SECURITY_COGNITO_USER_POOL_ID:}
+      client-id: ${APP_SECURITY_COGNITO_CLIENT_ID:}
+      issuer-uri: ${APP_SECURITY_COGNITO_ISSUER_URI:}
+      token-use: ${APP_SECURITY_COGNITO_TOKEN_USE:access}
+      username-claim: ${APP_SECURITY_COGNITO_USERNAME_CLAIM:cognito:username}
