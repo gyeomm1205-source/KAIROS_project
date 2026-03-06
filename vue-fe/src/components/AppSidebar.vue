@@ -127,6 +127,7 @@ const NAV_ITEMS = [
     sub: [
       { to: '/calendar',       label: '캘린더 플로우',  desc: '브랜치 기반 학습 캘린더'     },
       { to: '/study-calendar', label: '학습 캘린더',    desc: '일별 학습 관리 & 구글 연동'  },
+      { to: '/prompt',         label: 'AI 어시스턴트',  desc: '프롬프트 및 블로그 내역'     }, // ★ 추가됨
     ],
   },
   { to: '/recommend', icon: 'fas fa-lightbulb',       label: '추천'         },

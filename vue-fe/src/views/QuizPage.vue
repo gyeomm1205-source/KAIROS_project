@@ -71,8 +71,66 @@
         </div>
       </div>
 
+      <!-- ── 캘린더 등록 확인 모달 ── -->
+      <Teleport to="body">
+        <Transition name="modal-fade">
+          <div v-if="showCalModal" class="cal-modal-overlay" @click.self="showCalModal = false">
+            <div class="cal-modal-box">
+              <template v-if="!calRegistered">
+                <button class="cal-modal-close" @click="showCalModal = false">
+                  <i class="fas fa-times" />
+                </button>
+                <div class="cal-modal-icon-pre">
+                  <i class="fas fa-calendar-plus" />
+                </div>
+                <h3 class="cal-modal-title">캘린더에 등록</h3>
+                <p class="cal-modal-sub">퀴즈 학습 활동을 학습 캘린더에 기록합니다</p>
+                <div class="cal-form">
+                  <div class="cal-form-row">
+                    <label>날짜</label>
+                    <input type="date" v-model="calDate" class="cal-input" />
+                  </div>
+                  <div class="cal-form-row">
+                    <label>시간</label>
+                    <input type="time" v-model="calTime" class="cal-input" />
+                  </div>
+                  <div class="cal-form-row">
+                    <label>트랙</label>
+                    <select v-model="calTrack" class="cal-input">
+                      <option value="main">CS 기초</option>
+                      <option value="algo">알고리즘</option>
+                      <option value="react">React</option>
+                      <option value="portfolio">포트폴리오</option>
+                    </select>
+                  </div>
+                  <div class="cal-form-row">
+                    <label>메모</label>
+                    <input type="text" v-model="calMemo" class="cal-input" :placeholder="`퀴즈 ${scorePercent}점`" />
+                  </div>
+                </div>
+                <button class="cal-modal-btn" @click="registerToCalendar">
+                  <i class="fas fa-calendar-check" /> 등록하기
+                </button>
+              </template>
+
+              <template v-else>
+                <!-- 이미지 1 스타일: 큰 검정 원 체크 + 굵은 텍스트 + 검정 버튼 -->
+                <div class="modal-check-circle">
+                  <i class="fas fa-check" />
+                </div>
+                <h3 class="modal-done-title">첫 학습 활동이 등록되었어요!</h3>
+                <p class="modal-done-sub">캘린더에서 학습 노드를 확인하세요</p>
+                <RouterLink to="/calendar" class="modal-done-btn" @click="showCalModal = false">
+                  확인
+                </RouterLink>
+              </template>
+            </div>
+          </div>
+        </Transition>
+      </Teleport>
+
       <!-- 카테고리 선택 -->
-      <div v-else-if="phase === 'select'" class="select-screen fade-in">
+      <div v-if="phase === 'select'" class="select-screen fade-in">
         <div class="select-inner">
           <h2 class="select-title">어떤 분야를 공부할까요?</h2>
           <p class="select-sub">카테고리를 선택하면 AI가 맞춤 퀴즈를 출제합니다</p>
@@ -118,7 +176,7 @@
       </div>
 
       <!-- 퀴즈 진행 -->
-      <div v-else class="quiz-screen fade-in">
+      <div v-else-if="phase === 'quiz'" class="quiz-screen fade-in">
         <div class="quiz-inner">
           <!-- 진행 표시 -->
           <div class="quiz-progress-bar">
@@ -182,64 +240,6 @@
           </div>
         </div>
       </div>
-
-      <!-- ── 캘린더 등록 확인 모달 ── -->
-      <Teleport to="body">
-        <Transition name="modal-fade">
-          <div v-if="showCalModal" class="cal-modal-overlay" @click.self="showCalModal = false">
-            <div class="cal-modal-box">
-              <template v-if="!calRegistered">
-                <button class="cal-modal-close" @click="showCalModal = false">
-                  <i class="fas fa-times" />
-                </button>
-                <div class="cal-modal-icon-pre">
-                  <i class="fas fa-calendar-plus" />
-                </div>
-                <h3 class="cal-modal-title">캘린더에 등록</h3>
-                <p class="cal-modal-sub">퀴즈 학습 활동을 학습 캘린더에 기록합니다</p>
-                <div class="cal-form">
-                  <div class="cal-form-row">
-                    <label>날짜</label>
-                    <input type="date" v-model="calDate" class="cal-input" />
-                  </div>
-                  <div class="cal-form-row">
-                    <label>시간</label>
-                    <input type="time" v-model="calTime" class="cal-input" />
-                  </div>
-                  <div class="cal-form-row">
-                    <label>트랙</label>
-                    <select v-model="calTrack" class="cal-input">
-                      <option value="main">CS 기초</option>
-                      <option value="algo">알고리즘</option>
-                      <option value="react">React</option>
-                      <option value="portfolio">포트폴리오</option>
-                    </select>
-                  </div>
-                  <div class="cal-form-row">
-                    <label>메모</label>
-                    <input type="text" v-model="calMemo" class="cal-input" :placeholder="`퀴즈 ${scorePercent}점`" />
-                  </div>
-                </div>
-                <button class="cal-modal-btn" @click="registerToCalendar">
-                  <i class="fas fa-calendar-check" /> 등록하기
-                </button>
-              </template>
-
-              <template v-else>
-                <!-- 이미지 1 스타일: 큰 검정 원 체크 + 굵은 텍스트 + 검정 버튼 -->
-                <div class="modal-check-circle">
-                  <i class="fas fa-check" />
-                </div>
-                <h3 class="modal-done-title">첫 학습 활동이 등록되었어요!</h3>
-                <p class="modal-done-sub">캘린더에서 학습 노드를 확인하세요</p>
-                <RouterLink to="/calendar" class="modal-done-btn" @click="showCalModal = false">
-                  확인
-                </RouterLink>
-              </template>
-            </div>
-          </div>
-        </Transition>
-      </Teleport>
 
     </main>
   </div>

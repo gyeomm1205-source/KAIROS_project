@@ -17,13 +17,17 @@ const routes = [
   { path: '/quiz-activity',      name: 'quiz-activity',      component: () => import('@/views/QuizActivityPage.vue')     },
 
   // ── 앱 내부 ─────────────────────────────
-  { path: '/calendar',       name: 'calendar',       component: () => import('@/views/MainPage.vue')          },
-  { path: '/study-calendar', name: 'study-calendar', component: () => import('@/views/StudyCalendarPage.vue') },
-  { path: '/recommend',      name: 'recommend',      component: () => import('@/views/RecommendPage.vue')     },
-  { path: '/history',        name: 'history',        component: () => import('@/views/HistoryPage.vue')     },
-  { path: '/quiz',           name: 'quiz',           component: () => import('@/views/QuizPage.vue')          },
-  { path: '/mypage',         name: 'mypage',         component: () => import('@/views/MyPage.vue')            },
-  { path: '/blog-assistant', name: 'blog-assistant', component: () => import('@/views/BlogAssistantPage.vue') },
+  { path: '/calendar',       name: 'calendar',       component: () => import('@/views/MainPage.vue')            },
+  { path: '/study-calendar', name: 'study-calendar', component: () => import('@/views/StudyCalendarPage.vue')   },
+  
+  // ★ 방금 새로 만든 프롬프트 페이지 라우트 추가!
+  { path: '/prompt',         name: 'prompt',         component: () => import('@/views/PromptPage.vue')          },
+
+  { path: '/recommend',      name: 'recommend',      component: () => import('@/views/RecommendPage.vue')       },
+  { path: '/history',        name: 'history',        component: () => import('@/views/HistoryPage.vue')         },
+  { path: '/quiz',           name: 'quiz',           component: () => import('@/views/QuizPage.vue')            },
+  { path: '/mypage',         name: 'mypage',         component: () => import('@/views/MyPage.vue')              },
+  { path: '/blog-assistant', name: 'blog-assistant', component: () => import('@/views/BlogAssistantPage.vue')   },
 
   // fallback
   { path: '/:pathMatch(.*)*', redirect: '/' },

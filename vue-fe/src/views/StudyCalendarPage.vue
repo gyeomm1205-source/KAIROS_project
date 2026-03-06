@@ -4,7 +4,6 @@
 
     <main class="main-content">
 
-      <!-- ── 헤더 ── -->
       <div class="page-header">
         <div class="header-left">
           <h1 class="page-title">학습 캘린더</h1>
@@ -14,10 +13,7 @@
           </div>
         </div>
         <div class="header-actions">
-          <RouterLink to="/calendar" class="btn-flow-cal">
-            <i class="fas fa-code-branch" />
-            캘린더 플로우
-          </RouterLink>
+          <div v-if="lastSync" class="sync-time">마지막 동기화: {{ lastSync }}</div>
           <button class="btn-import" @click="showImportModal = true">
             <i class="fas fa-download" /> 일정 불러오기
           </button>
@@ -25,29 +21,28 @@
             <i :class="syncing ? 'fas fa-spinner fa-spin' : 'fas fa-sync-alt'" />
             일정 반영하기
           </button>
-          <div v-if="lastSync" class="sync-time">마지막 동기화: {{ lastSync }}</div>
+
+          <RouterLink to="/calendar" class="btn-flow-cal">
+            <i class="fas fa-code-branch" />
+            캘린더 플로우
+          </RouterLink>
         </div>
       </div>
 
-      <!-- ── 본문 ── -->
       <div class="body-grid">
 
-        <!-- ── 왼쪽: 캘린더 ── -->
         <div class="cal-panel">
 
-          <!-- 캘린더 헤더 -->
           <div class="cal-top">
             <button class="nav-btn" @click="prevMonth"><i class="fas fa-chevron-left"/></button>
             <span class="cal-month-label">{{ monthLabel }}</span>
             <button class="nav-btn" @click="nextMonth"><i class="fas fa-chevron-right"/></button>
           </div>
 
-          <!-- 요일 헤더 -->
           <div class="dow-row">
             <span v-for="d in ['일','월','화','수','목','금','토']" :key="d" class="dow">{{ d }}</span>
           </div>
 
-          <!-- 날짜 그리드 -->
           <div class="date-grid">
             <div
               v-for="cell in calendarCells" :key="cell.key"
@@ -61,7 +56,6 @@
               @click="selectDay(cell.dateStr)"
             >
               <span class="date-num">{{ cell.day }}</span>
-              <!-- 이벤트 닷 -->
               <div class="dots-row">
                 <span
                   v-for="(ev, i) in cell.events.slice(0, 3)" :key="i"
@@ -73,11 +67,9 @@
           </div>
         </div>
 
-        <!-- ── 오른쪽: 일별 패널 ── -->
         <div class="day-panel">
           <div class="day-panel-title">{{ dayPanelTitle }}</div>
 
-          <!-- 오늘의 학습 진행 카드 -->
           <div class="today-card" v-if="selectedDayEvents.length">
             <div class="today-card-left">
               <div class="today-icon"><i class="fas fa-star" /></div>
@@ -96,7 +88,6 @@
             </div>
           </div>
 
-          <!-- 빈 날 -->
           <div v-if="!selectedDayEvents.length" class="day-empty">
             <i class="fas fa-calendar-day" />
             <p>이 날은 학습 일정이 없어요</p>
@@ -105,7 +96,6 @@
             </button>
           </div>
 
-          <!-- 학습 활동 목록 -->
           <div v-else>
             <div class="activities-label">학습 활동</div>
             <div class="activities-list">
@@ -137,7 +127,6 @@
             </button>
           </div>
 
-          <!-- 트랙 필터 (토글로 접기/펼치기) -->
           <div class="track-filter-wrap">
             <button class="track-filter-toggle" @click="showTrackFilter = !showTrackFilter">
               <i class="fas fa-layer-group" />
@@ -181,7 +170,6 @@
       </div>
     </main>
 
-    <!-- ── 일정 추가 모달 ── -->
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showAddModal" class="modal-overlay" @click.self="showAddModal = false">
@@ -225,7 +213,6 @@
       </Transition>
     </Teleport>
 
-    <!-- ── 불러오기 모달 ── -->
     <Teleport to="body">
       <Transition name="modal-fade">
         <div v-if="showImportModal" class="modal-overlay" @click.self="showImportModal = false">
@@ -447,7 +434,8 @@ function doImport() {
 .page-header {
   height: 64px; background: var(--bg-surface); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: space-between;
-  padding: 0 28px; flex-shrink: 0; gap: 16px;
+  padding: 0 24px; /* ★ 양쪽 화면 정렬 통일 */
+  flex-shrink: 0; gap: 16px;
 }
 .header-left { display: flex; align-items: center; gap: 16px; }
 .page-title { font-size: 18px; font-weight: 800; color: var(--text-primary); white-space: nowrap; }
@@ -476,7 +464,7 @@ function doImport() {
 }
 .btn-sync:hover { opacity: 0.88; }
 
-.sync-time { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+.sync-time { font-size: 11px; color: var(--text-faint); white-space: nowrap; margin-right: 4px; }
 
 /* ── 바디 2컬럼 ── */
 .body-grid {
@@ -765,14 +753,15 @@ function doImport() {
 .modal-fade-enter-active, .modal-fade-leave-active { transition: opacity 0.2s; }
 .modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
 
+/* ★ 캘린더 플로우 버튼 (학습 캘린더 버튼과 완벽하게 크기/디자인 동기화) */
 .btn-flow-cal {
   display: flex; align-items: center; gap: 7px;
-  padding: 8px 14px; border-radius: 10px;
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  color: var(--text-muted); font-size: 13px; font-weight: 600;
+  padding: 8px 16px; border-radius: 10px;
+  background: rgba(129,140,248,0.12); border: 1px solid rgba(129,140,248,0.3);
+  color: #818cf8; font-size: 13px; font-weight: 700;
   text-decoration: none; transition: all 0.15s; white-space: nowrap;
   font-family: 'Escoredream', sans-serif;
 }
-.btn-flow-cal:hover { background: var(--bg-hover); color: var(--text-primary); }
+.btn-flow-cal:hover { background: rgba(129,140,248,0.2); border-color: #818cf8; }
 
 </style>
