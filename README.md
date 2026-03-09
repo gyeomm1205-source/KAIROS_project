@@ -1,7 +1,7 @@
 # S14P21A506 Test Starter (Vue + Spring Boot + FastAPI)
 
 ## Modules
-- `vue-fe`: `/test` integration console (ping checks + mockpost CRUD)
+- `vue-fe`: `/` integration console (ping checks + mockpost CRUD, `/test` legacy alias)
 - `springboot-be`: test APIs, mockpost API, Swagger
 - `fastapi-be`: ping APIs, Spring bridge ping
 
@@ -51,7 +51,7 @@ npm run dev
 ## Docs
 - Spring Swagger: http://localhost:8080/swagger-ui/index.html
 - FastAPI Swagger: http://localhost:8000/docs
-- Vue Test Screen: http://localhost:5173/test
+- Vue Test Screen: http://localhost:5173/ (`/test` legacy alias)
 
 ## Main APIs
 - Spring Ping: `GET /api/test/ping`

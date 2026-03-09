@@ -60,7 +60,7 @@ export function decodeJwtPayload(token) {
 }
 
 export function getCognitoConfig() {
-  const redirectFallback = browserAvailable ? `${window.location.origin}/test` : '';
+  const redirectFallback = browserAvailable ? `${window.location.origin}/` : '';
 
   return {
     region: clean(import.meta.env.VITE_COGNITO_AWS_REGION),
