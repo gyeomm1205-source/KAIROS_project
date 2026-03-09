@@ -22,8 +22,11 @@ public class MockPost extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "author_id", nullable = false)
-    private Long authorId;
+    @Column(name = "author_sub", nullable = false, length = 128)
+    private String authorSub;
+
+    @Column(name = "author_name", nullable = false, length = 255)
+    private String authorName;
 
     @Column(nullable = false, length = 120)
     private String title;
@@ -31,19 +34,24 @@ public class MockPost extends BaseEntity {
     @Column(nullable = false, length = 10_000)
     private String content;
 
-    private MockPost(Long authorId, String title, String content) {
-        this.authorId = authorId;
+    private MockPost(String authorSub, String authorName, String title, String content) {
+        this.authorSub = authorSub;
+        this.authorName = authorName;
         this.title = title;
         this.content = content;
     }
 
     @Builder(builderMethodName = "createBuilder")
-    public static MockPost create(Long authorId, String title, String content) {
-        return new MockPost(authorId, title, content);
+    public static MockPost create(String authorSub, String authorName, String title, String content) {
+        return new MockPost(authorSub, authorName, title, content);
     }
 
     public void update(String title, String content) {
         this.title = title;
         this.content = content;
+    }
+
+    public boolean isOwnedBy(String subject) {
+        return authorSub.equals(subject);
     }
 }

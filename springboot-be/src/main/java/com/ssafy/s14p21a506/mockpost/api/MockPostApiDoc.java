@@ -10,9 +10,11 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 @Tag(name = "MockPost API", description = "Board CRUD test API")
 public interface MockPostApiDoc {
@@ -30,22 +32,47 @@ public interface MockPostApiDoc {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
-                    responseCode = "500",
-                    description = "Server error",
+                    responseCode = "401",
+                    description = "Unauthorized",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
-            )
-    })
-    ResponseEntity<MockPostResponse> create(MockPostCreateRequest request);
-
-    @Operation(summary = "List mock posts")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "OK"),
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
             @ApiResponse(
                     responseCode = "500",
                     description = "Server error",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
+    @SecurityRequirement(name = "cognitoBearer")
+    ResponseEntity<MockPostResponse> create(
+            @Parameter(hidden = true) Jwt jwt,
+            MockPostCreateRequest request
+    );
+
+    @Operation(summary = "List mock posts")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "OK"),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Server error",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    @SecurityRequirement(name = "cognitoBearer")
     ResponseEntity<List<MockPostResponse>> list();
 
     @Operation(summary = "Get mock post")
@@ -61,11 +88,22 @@ public interface MockPostApiDoc {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Server error",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
+    @SecurityRequirement(name = "cognitoBearer")
     ResponseEntity<MockPostResponse> get(@Parameter(example = "1") long mockPostId);
 
     @Operation(summary = "Update mock post")
@@ -86,12 +124,27 @@ public interface MockPostApiDoc {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Server error",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    ResponseEntity<MockPostResponse> update(long mockPostId, MockPostUpdateRequest request);
+    @SecurityRequirement(name = "cognitoBearer")
+    ResponseEntity<MockPostResponse> update(
+            @Parameter(hidden = true) Jwt jwt,
+            long mockPostId,
+            MockPostUpdateRequest request
+    );
 
     @Operation(summary = "Delete mock post")
     @ApiResponses({
@@ -102,10 +155,21 @@ public interface MockPostApiDoc {
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             ),
             @ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            ),
+            @ApiResponse(
                     responseCode = "500",
                     description = "Server error",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class))
             )
     })
-    ResponseEntity<Void> delete(long mockPostId);
+    @SecurityRequirement(name = "cognitoBearer")
+    ResponseEntity<Void> delete(@Parameter(hidden = true) Jwt jwt, long mockPostId);
 }

@@ -1,0 +1,168 @@
+stages:
+  - build
+  - gitops
+
+default:
+  tags:
+    - other
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "develop" || $CI_COMMIT_BRANCH == "master"'
+    - when: never
+
+variables:
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_DRIVER: overlay2
+  DOCKER_BUILDKIT: "1"
+  IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
+  DOCKERHUB_REPOSITORY: "ken-ssafy"
+
+.docker-build-template:
+  stage: build
+  image: docker:27.1.2
+  services:
+    - name: docker:27.1.2-dind
+  before_script:
+    - test -n "$DOCKERHUB_USERNAME"
+    - test -n "$DOCKERHUB_TOKEN"
+    - test -n "$DOCKERHUB_NAMESPACE"
+    - test -n "$DOCKERHUB_REPOSITORY"
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+.docker-java-build-template:
+  stage: build
+  image: docker:27.1.2
+  services:
+    - name: docker:27.1.2-dind
+  before_script:
+    - apk add --no-cache openjdk21-jdk
+    - export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+    - export PATH="$JAVA_HOME/bin:$PATH"
+    - test -n "$DOCKERHUB_USERNAME"
+    - test -n "$DOCKERHUB_TOKEN"
+    - test -n "$DOCKERHUB_NAMESPACE"
+    - test -n "$DOCKERHUB_REPOSITORY"
+    - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+
+build_vue_fe:
+  extends: .docker-build-template
+  script:
+    - |
+      set -e
+      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      docker build --pull \
+        -t "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}" \
+        --build-arg VITE_SPRING_BASE_URL="http://spring.${BASE_DOMAIN}" \
+        --build-arg VITE_FASTAPI_BASE_URL="http://fastapi.${BASE_DOMAIN}" \
+        -f vue-fe/Dockerfile vue-fe
+      docker push "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}"
+
+build_springboot_be:
+  extends: .docker-java-build-template
+  script:
+    - |
+      set -e
+      export JAVA_HOME=/usr/lib/jvm/java-21-openjdk
+      export PATH="$JAVA_HOME/bin:$PATH"
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      chmod +x springboot-be/gradlew
+      ./springboot-be/gradlew -p springboot-be --no-daemon \
+        bootBuildImage --imageName="${IMAGE_REPO}:springboot-be-${IMAGE_TAG}"
+      docker push "${IMAGE_REPO}:springboot-be-${IMAGE_TAG}"
+
+build_fastapi_be:
+  extends: .docker-build-template
+  script:
+    - |
+      set -e
+      IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      docker build --pull -t "${IMAGE_REPO}:fastapi-be-${IMAGE_TAG}" -f fastapi-be/Dockerfile fastapi-be
+      docker push "${IMAGE_REPO}:fastapi-be-${IMAGE_TAG}"
+
+update_gitops_manifest:
+  stage: gitops
+  image: alpine:3.20
+  needs:
+    - job: build_vue_fe
+    - job: build_springboot_be
+    - job: build_fastapi_be
+  before_script:
+    - apk add --no-cache git python3
+  script:
+    - |
+      set -e
+      test -n "$DOCKERHUB_NAMESPACE"
+      test -n "$DOCKERHUB_REPOSITORY"
+      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      export IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
+      export VALUES_FILE="infra/helm/s14-app/values.yaml"
+      export IMAGE_TAG
+
+      python3 - <<'PY2'
+      import os
+
+      vf = os.environ['VALUES_FILE']
+      base = os.environ['BASE_DOMAIN']
+      repo = os.environ['IMAGE_REPO']
+      tag = os.environ['IMAGE_TAG']
+
+      service_tags = {
+          'vueFe': f'vue-fe-{tag}',
+          'springbootBe': f'springboot-be-{tag}',
+          'fastapiBe': f'fastapi-be-{tag}',
+      }
+
+      lines = open(vf, 'r', encoding='utf-8').read().splitlines()
+      in_images = False
+      service = None
+
+      for i, line in enumerate(lines):
+          stripped = line.strip()
+
+          if stripped.startswith('baseDomain:'):
+              lines[i] = f'baseDomain: {base}'
+              continue
+
+          if line.startswith('images:'):
+              in_images = True
+              service = None
+              continue
+
+          if in_images and line and not line.startswith('  '):
+              in_images = False
+              service = None
+
+          if in_images:
+              if stripped in ('vueFe:', 'springbootBe:', 'fastapiBe:'):
+                  service = stripped[:-1]
+                  continue
+
+              if service and stripped.startswith('repository:'):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  lines[i] = f'{indent}repository: {repo}'
+                  continue
+
+              if service and stripped.startswith('tag:'):
+                  indent = line[:len(line) - len(line.lstrip())]
+                  lines[i] = f"{indent}tag: {service_tags[service]}"
+                  continue
+
+      with open(vf, 'w', encoding='utf-8') as f:
+          f.write('\n'.join(lines) + '\n')
+      PY2
+
+      if git diff --quiet -- "$VALUES_FILE"; then
+        echo "No GitOps changes detected."
+        exit 0
+      fi
+
+      git config user.name "gitlab-ci"
+      git config user.email "gitlab-ci@local"
+      PUSH_USER="${GIT_PUSH_USERNAME:-gitlab-ci-token}"
+      PUSH_TOKEN="${GIT_PUSH_TOKEN:-$CI_JOB_TOKEN}"
+      git remote set-url origin "https://${PUSH_USER}:${PUSH_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git add "$VALUES_FILE"
+      git commit -m "chore(helm): update image tags to ${IMAGE_TAG} [skip ci]"
+      git push origin "HEAD:${CI_COMMIT_BRANCH}"

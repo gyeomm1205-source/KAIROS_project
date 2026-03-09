@@ -1,7 +1,7 @@
 # S14P21A506 Test Starter (Vue + Spring Boot + FastAPI)
 
 ## Modules
-- `vue-fe`: `/test` integration console (ping checks + mockpost CRUD)
+- `vue-fe`: `/` integration console (ping checks + mockpost CRUD, `/test` legacy alias)
 - `springboot-be`: test APIs, mockpost API, Swagger
 - `fastapi-be`: ping APIs, Spring bridge ping
 
@@ -51,7 +51,7 @@ npm run dev
 ## Docs
 - Spring Swagger: http://localhost:8080/swagger-ui/index.html
 - FastAPI Swagger: http://localhost:8000/docs
-- Vue Test Screen: http://localhost:5173/test
+- Vue Test Screen: http://localhost:5173/ (`/test` legacy alias)
 
 ## Main APIs
 - Spring Ping: `GET /api/test/ping`
@@ -59,3 +59,19 @@ npm run dev
 - FastAPI Ping: `GET /api/test/ping`
 - FastAPI -> Spring Ping: `GET /api/test/ping/spring`
 - Spring MockPost CRUD: `/api/test/mock-posts`
+
+## Kubernetes GitOps (Helm)
+
+- Helm chart path: `infra/helm/s14-app`
+- ArgoCD application manifest: `infra/argocd/app-develop.yaml`
+- CI/CD pipeline: `.gitlab-ci.yml` (self-hosted runner: other-vm, develop branch trigger)
+- 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
+- 배포 브랜치: `develop`
+- Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
+- Docker Hub private 저장소 기준: `ssafy`의 `dockerhub-regcred` + values `imagePullSecrets` 설정 필수
+
+Quick check:
+
+```bash
+helm template s14-app infra/helm/s14-app --namespace ssafy | head -n 40
+```

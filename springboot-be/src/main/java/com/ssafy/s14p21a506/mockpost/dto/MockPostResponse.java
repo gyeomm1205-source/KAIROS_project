@@ -7,7 +7,8 @@ public record MockPostResponse(
         Long id,
         String title,
         String content,
-        Long authorId,
+        String authorSub,
+        String authorName,
         Instant createdAt,
         Instant updatedAt
 ) {
@@ -16,7 +17,8 @@ public record MockPostResponse(
                 post.getId(),
                 post.getTitle(),
                 post.getContent(),
-                post.getAuthorId(),
+                post.getAuthorSub(),
+                post.getAuthorName(),
                 post.getCreatedAt(),
                 post.getUpdatedAt()
         );
