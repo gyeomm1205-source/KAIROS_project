@@ -10,7 +10,7 @@ npm install
 npm run dev
 ```
 
-브라우저에서 http://localhost:5173 접속
+브라우저에서 http://localhost:3000 접속
 
 ## 주의사항
 - Node.js 18 이상 필요

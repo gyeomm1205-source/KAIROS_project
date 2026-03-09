@@ -71,7 +71,6 @@
                 <span class="ptl-head-dot" :style="{ background: track.color }" /> {{ track.name }}
               </span>
             </div>
-            <span class="ptl-count-badge">{{ allPromptSchedules.length }}개</span>
           </div>
 
           <div class="prompt-graph-inner custom-scroll snap-container">
@@ -372,12 +371,55 @@ function sendPrompt() {
 .snap-item-wrap { scroll-snap-align: start; scroll-margin-top: 12px; border-bottom: 1px solid var(--border-subtle); }
 
 .prompt-graph-panel { width: 380px; flex-shrink: 0; background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-.prompt-graph-title { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg-elevated); display: flex; justify-content: space-between; }
-.ptl-header-track-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; }
-.ptl-head-dot { width: 7px; height: 7px; border-radius: 50%; }
-.ptl-count-badge { font-size: 10px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); }
+/* ── 타임라인 상단 트랙 타이틀 영역 ── */
+.prompt-graph-title { 
+  padding: 16px 20px; /* 패딩을 키워 전체적으로 더 큼직하게 */
+  border-bottom: 1px solid var(--border); 
+  background: var(--bg-elevated); 
+  display: flex; 
+  align-items: center;
+}
 
-.prompt-graph-inner { flex: 1; min-height: 0; padding-bottom: 150px; }
+/* 뱃지들을 감싸는 컨테이너 (한 줄 유지) */
+.ptl-header-tracks {
+  display: flex;
+  align-items: center;
+  gap: 12px; /* 뱃지 사이 간격 추가 */
+  width: 100%;
+  overflow-x: auto; /* 항목이 많아 넘치면 가로 스크롤 허용 */
+  white-space: nowrap; /* 강제 줄바꿈 방지 */
+  
+  /* 디자인을 위해 스크롤바는 숨김 처리 */
+  -ms-overflow-style: none; /* IE, Edge */
+  scrollbar-width: none; /* Firefox */
+}
+.ptl-header-tracks::-webkit-scrollbar { 
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* 개별 트랙 뱃지 디자인 개선 */
+.ptl-header-track-badge { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  font-size: 13px; /* 11px -> 13px로 폰트 크기 증가 */
+  font-weight: 800; 
+  padding: 6px 14px; /* 알약 형태의 여백 추가 */
+  background: var(--bg-base); /* 배경색 분리 */
+  border: 1px solid var(--border-mid); /* 은은한 테두리 */
+  border-radius: 999px; /* 완전 둥글게 */
+  flex-shrink: 0; /* 화면이 좁아져도 뱃지가 찌그러지지 않게 보호 */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+
+/* 뱃지 앞의 색상 동그라미(Dot) */
+.ptl-head-dot { 
+  width: 9px; /* 7px -> 9px로 크기 증가 */
+  height: 9px; 
+  border-radius: 50%; 
+}
+
+.prompt-graph-inner { flex: 1; min-height: 0; padding-bottom: 10px; }
 
 /* 데이터 없을 때 화면 */
 .prompt-tl-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 400px; text-align: center; margin: 24px; background: var(--bg-elevated); border: 1.5px dashed var(--border-mid); border-radius: 16px; }
