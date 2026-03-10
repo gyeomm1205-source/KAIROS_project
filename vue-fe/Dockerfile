@@ -3,10 +3,8 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 ARG VITE_SPRING_BASE_URL=http://spring.127.0.0.1.nip.io
-ARG VITE_FASTAPI_BASE_URL=http://fastapi.127.0.0.1.nip.io
 
 ENV VITE_SPRING_BASE_URL=${VITE_SPRING_BASE_URL}
-ENV VITE_FASTAPI_BASE_URL=${VITE_FASTAPI_BASE_URL}
 
 COPY package.json package-lock.json ./
 RUN npm ci

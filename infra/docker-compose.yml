@@ -1,0 +1,38 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: ssafy-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: kairos_db
+      MYSQL_ROOT_PASSWORD: kairosdb!!
+      MYSQL_ROOT_HOST: "%"
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pkairosdb!!", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ssafy-redis
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  mysql_data:
+  redis_data:

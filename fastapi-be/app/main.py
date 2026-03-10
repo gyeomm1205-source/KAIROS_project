@@ -1,37 +1,31 @@
-import os
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette import status
 
 from app.api.test import router as test_router
 from app.schemas.common import ErrorResponse
 from app.services.errors import AppError
+from app.services.qdrant_client import close_qdrant_client, get_qdrant_client
 
 
-def resolve_cors_origins() -> list[str]:
-    raw = os.getenv(
-        "FASTAPI_CORS_ALLOWED_ORIGINS",
-        "http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174,https://kairos.cloud-ip.cc,http://kairos.cloud-ip.cc",
-    )
-    return [origin.strip() for origin in raw.split(",") if origin.strip()]
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    get_qdrant_client()
+    try:
+        yield
+    finally:
+        close_qdrant_client()
 
 
 app = FastAPI(
     title="S14P21A506 FastAPI",
     version="0.0.1",
-    description="FastAPI test APIs for Spring ping-pong integration.",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=resolve_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    description="Internal AI bridge for Spring Boot and Qdrant.",
+    lifespan=lifespan,
 )
 
 app.include_router(test_router)

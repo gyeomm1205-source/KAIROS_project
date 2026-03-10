@@ -1,5 +1,6 @@
 package com.ssafy.s14p21a506.testping.api;
 
+import com.ssafy.s14p21a506.testping.dto.InfrastructureStatusResponse;
 import com.ssafy.s14p21a506.testping.dto.TestPingResponse;
 import com.ssafy.s14p21a506.testping.service.TestPingService;
 import lombok.RequiredArgsConstructor;
@@ -25,5 +26,11 @@ public class TestPingApi implements TestPingApiDoc {
     @GetMapping("/fastapi")
     public ResponseEntity<TestPingResponse> pingFastApi() {
         return ResponseEntity.ok(testPingService.pingFastApi());
+    }
+
+    @Override
+    @GetMapping("/infrastructure")
+    public ResponseEntity<InfrastructureStatusResponse> checkInfrastructure() {
+        return ResponseEntity.ok(testPingService.checkInfrastructure());
     }
 }

@@ -14,6 +14,9 @@ fastapi-be/.venv/
 # Java/Gradle
 springboot-be/.gradle/
 springboot-be/build/
+springboot-be/.env
+infra/env/*
+!infra/env/.gitkeep
 
 # IDE
 .idea/

@@ -3,26 +3,37 @@ server:
   forward-headers-strategy: framework
 
 spring:
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:./springboot-be/.env[.properties]
+      - optional:file:./a506/springboot-be/.env[.properties]
+      - optional:file:./../a506/springboot-be/.env[.properties]
   application:
     name: springboot-be
   datasource:
-    url: ${DB_URL:jdbc:h2:mem:app;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false}
-    driver-class-name: ${DB_DRIVER:org.h2.Driver}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
   jpa:
     open-in-view: false
     hibernate:
-      ddl-auto: ${JPA_DDL_AUTO:update}
-  h2:
-    console:
-      enabled: true
+      ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO}
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST}
+      port: ${SPRING_DATA_REDIS_PORT}
+      database: ${SPRING_DATA_REDIS_DATABASE}
 
 springdoc:
   swagger-ui:
     path: /swagger-ui/index.html
 
 management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
   endpoints:
     web:
       exposure:
@@ -30,15 +41,6 @@ management:
 
 app:
   cors:
-    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,http://127.0.0.1:5173,https://kairos.cloud-ip.cc,http://kairos.cloud-ip.cc}
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS}
   fastapi:
-    base-url: ${APP_FASTAPI_BASE_URL:http://localhost:8000}
-  security:
-    cognito:
-      enabled: ${APP_SECURITY_COGNITO_ENABLED:false}
-      region: ${APP_SECURITY_COGNITO_REGION:}
-      user-pool-id: ${APP_SECURITY_COGNITO_USER_POOL_ID:}
-      client-id: ${APP_SECURITY_COGNITO_CLIENT_ID:}
-      issuer-uri: ${APP_SECURITY_COGNITO_ISSUER_URI:}
-      token-use: ${APP_SECURITY_COGNITO_TOKEN_USE:access}
-      username-claim: ${APP_SECURITY_COGNITO_USERNAME_CLAIM:cognito:username}
+    base-url: ${APP_FASTAPI_BASE_URL}

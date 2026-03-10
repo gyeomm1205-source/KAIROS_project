@@ -15,7 +15,6 @@ spec:
       hosts:
         - kairos.{{ .Values.baseDomain }}
         - spring.{{ .Values.baseDomain }}
-        - fastapi.{{ .Values.baseDomain }}
   {{- end }}
   rules:
     - host: kairos.{{ .Values.baseDomain }}
@@ -38,14 +37,4 @@ spec:
                 name: springboot-be
                 port:
                   number: 8080
-    - host: fastapi.{{ .Values.baseDomain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: fastapi-be
-                port:
-                  number: 8000
 {{- end }}

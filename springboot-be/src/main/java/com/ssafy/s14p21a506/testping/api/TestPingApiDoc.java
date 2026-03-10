@@ -1,5 +1,6 @@
 package com.ssafy.s14p21a506.testping.api;
 
+import com.ssafy.s14p21a506.testping.dto.InfrastructureStatusResponse;
 import com.ssafy.s14p21a506.exception.ErrorResponse;
 import com.ssafy.s14p21a506.testping.dto.TestPingResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -47,4 +48,22 @@ public interface TestPingApiDoc {
             )
     })
     ResponseEntity<TestPingResponse> pingFastApi();
+
+    @Operation(
+            summary = "Infrastructure connectivity check",
+            description = "Checks Spring Boot -> MySQL, Redis, FastAPI, and FastAPI -> Qdrant connectivity."
+    )
+    @ApiResponses({
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "OK",
+                    content = @Content(schema = @Schema(implementation = InfrastructureStatusResponse.class))
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Server error",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))
+            )
+    })
+    ResponseEntity<InfrastructureStatusResponse> checkInfrastructure();
 }
