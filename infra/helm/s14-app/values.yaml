@@ -27,3 +27,7 @@ images:
 ingress:
   enabled: true
   className: traefik
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+    secretName: ssafy-nipio-tls

@@ -54,8 +54,8 @@ build_vue_fe:
       IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
       docker build --pull \
         -t "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}" \
-        --build-arg VITE_SPRING_BASE_URL="http://spring.${BASE_DOMAIN}" \
-        --build-arg VITE_FASTAPI_BASE_URL="http://fastapi.${BASE_DOMAIN}" \
+        --build-arg VITE_SPRING_BASE_URL="https://spring.${BASE_DOMAIN}" \
+        --build-arg VITE_FASTAPI_BASE_URL="https://fastapi.${BASE_DOMAIN}" \
         -f vue-fe/Dockerfile vue-fe
       docker push "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}"
 
