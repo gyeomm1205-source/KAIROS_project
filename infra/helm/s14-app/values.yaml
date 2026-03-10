@@ -1,4 +1,4 @@
-baseDomain: 127.0.0.1.nip.io
+baseDomain: 221.138.211.197.nip.io
 
 replicaCount:
   vueFe: 1

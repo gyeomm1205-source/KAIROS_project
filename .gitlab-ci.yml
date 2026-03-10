@@ -50,7 +50,7 @@ build_vue_fe:
   script:
     - |
       set -e
-      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      export BASE_DOMAIN="${BASE_DOMAIN:-221.138.211.197.nip.io}"
       IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
       docker build --pull \
         -t "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}" \
@@ -95,7 +95,7 @@ update_gitops_manifest:
       set -e
       test -n "$DOCKERHUB_NAMESPACE"
       test -n "$DOCKERHUB_REPOSITORY"
-      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      export BASE_DOMAIN="${BASE_DOMAIN:-221.138.211.197.nip.io}"
       export IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
       export VALUES_FILE="infra/helm/s14-app/values.yaml"
       export IMAGE_TAG
