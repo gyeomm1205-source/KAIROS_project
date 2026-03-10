@@ -89,7 +89,7 @@
               :style="legendPanelStyle"
             >
               <div class="legend-panel-title">
-                <i class="fas fa-layer-group" /> 트랙 필터
+                <span><i class="fas fa-layer-group" style="margin-right: 4px;" /> 트랙 필터</span>
                 <button class="legend-panel-close" @click="legendOpen = false">
                   <i class="fas fa-times" />
                 </button>
@@ -213,14 +213,12 @@ onUnmounted(() => {
 
 <style scoped>
 .calendar-header {
-  position: relative; /* ★ 이거 추가! */
-  z-index: 50;        /* ★ z-index를 확실하게 높여줌 */
   height: 64px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-surface);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24px;
-  flex-shrink: 0; 
+  flex-shrink: 0; z-index: 30;
   transition: background 0.3s;
   gap: 12px;
 }
@@ -332,10 +330,13 @@ onUnmounted(() => {
 .btn-legend-toggle:hover, .btn-legend-toggle--open { background: var(--bg-hover); color: var(--text-primary); border-color: #818cf8; }
 .btn-legend-toggle i:first-child { color: #818cf8; }
 
+/* ★ 트랙 필터 모달 창 스타일: width: max-content 적용하여 동적으로 넓어지게 만듦 */
 .legend-panel-teleport {
   position: absolute; z-index: 9999;
   background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 14px; padding: 16px; width: 320px;
+  border-radius: 14px; padding: 16px; 
+  width: max-content; /* 내부 길이에 맞춰 늘어남 */
+  min-width: 320px;   /* 기본 최소 크기 방어 */
   box-shadow: 0 10px 40px rgba(0,0,0,0.15);
   display: flex; flex-direction: column; gap: 12px;
 }

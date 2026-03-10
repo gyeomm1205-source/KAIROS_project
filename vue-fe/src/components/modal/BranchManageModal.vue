@@ -18,7 +18,13 @@
                 <div v-for="track in store.activeTracks" :key="track.id" class="track-item">
                   <div class="track-info">
                     <span class="color-dot" :style="{ background: track.color }" />
-                    <span class="track-name">{{ track.name }}</span>
+                    <input 
+                      type="text" 
+                      class="track-name-input" 
+                      :value="track.name" 
+                      @change="store.updateTrackObj(track.id, { name: $event.target.value })" 
+                      placeholder="트랙 이름 입력"
+                    />
                   </div>
                   <button class="btn-end-track" @click="store.toggleTrackEnded(track.id)" title="트랙 종료">
                     <i class="fas fa-power-off" />
@@ -47,7 +53,13 @@
                 <div v-for="track in store.endedTracks" :key="track.id" class="track-item ended">
                   <div class="track-info">
                     <span class="color-dot" :style="{ background: track.color }" />
-                    <span class="track-name">{{ track.name }}</span>
+                    <input 
+                      type="text" 
+                      class="track-name-input" 
+                      :value="track.name" 
+                      @change="store.updateTrackObj(track.id, { name: $event.target.value })" 
+                      placeholder="트랙 이름 입력"
+                    />
                   </div>
                   <button class="btn-restore-track" @click="store.toggleTrackEnded(track.id)" title="다시 진행하기">
                     <i class="fas fa-undo" />
@@ -95,16 +107,26 @@ function openAddForm() {
 .section-desc { font-size: 11px; color: var(--text-faint); margin-top: 4px; }
 
 .track-list { display: flex; flex-direction: column; gap: 8px; }
-.track-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; }
-.track-item.ended { opacity: 0.6; }
-.track-info { display: flex; align-items: center; gap: 10px; }
-.color-dot { width: 10px; height: 10px; border-radius: 50%; }
-.track-name { font-size: 13px; font-weight: 600; font-family: 'Escoredream', sans-serif; }
+.track-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px 8px 16px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; }
+.track-item.ended { opacity: 0.65; }
+.track-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; margin-right: 12px; }
+.color-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
-.btn-end-track { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; width: 28px; height: 28px; border-radius: 6px; cursor: pointer; transition: 0.15s; }
+/* ★ 수정 가능하게 만든 Input 스타일 */
+.track-name-input {
+  flex: 1; background: transparent; border: none; color: var(--text-primary);
+  font-size: 13px; font-weight: 600; font-family: 'Escoredream', sans-serif;
+  padding: 6px 8px; border-radius: 6px; outline: none; transition: all 0.15s;
+  min-width: 0;
+}
+.track-name-input:hover, .track-name-input:focus {
+  background: var(--bg-base); box-shadow: inset 0 0 0 1px var(--border-mid);
+}
+
+.btn-end-track { background: rgba(239, 68, 68, 0.1); color: #ef4444; border: none; width: 32px; height: 32px; border-radius: 8px; cursor: pointer; transition: 0.15s; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .btn-end-track:hover { background: #ef4444; color: #fff; }
 
-.btn-restore-track { background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+.btn-restore-track { background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
 .btn-restore-track:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 .empty-msg { font-size: 12px; color: var(--text-faint); text-align: center; padding: 20px 0; }

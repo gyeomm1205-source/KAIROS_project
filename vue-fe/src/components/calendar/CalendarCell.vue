@@ -100,100 +100,46 @@ const isAllTracksHidden = computed(() => totalTrackCount.value > 0 && props.hidd
 
 <style scoped>
 .calendar-cell {
-  position: relative;
-  border-bottom: 1px solid var(--border);
-  border-right:  1px solid var(--border);
-  display: flex; flex-direction: column;
-  padding: 8px 8px 8px;
-  background: var(--bg-surface);
-  transition: background 0.15s;
-  cursor: pointer;
-  overflow: visible;
-  /* ★ 핵심: z-index를 제거하여 배경이 캔버스를 덮지 못하게 함 */
+  position: relative; border-bottom: 1px solid var(--border); border-right:  1px solid var(--border);
+  display: flex; flex-direction: column; padding: 8px 8px 8px; background: var(--bg-surface);
+  transition: background 0.15s; cursor: pointer; overflow: visible;
 }
-
 .calendar-cell:hover { background: var(--bg-elevated); }
 .calendar-cell:hover .btn-add-schedule { opacity: 1; }
 
 .cell--today { background: rgba(168, 85, 247, 0.04) !important; }
 .wrapper--today { display: flex; align-items: center; gap: 6px; }
-.date--today {
-  color: #fff !important; 
-  background: linear-gradient(135deg, #a855f7, #7e22ce); 
-  border-radius: 50%; width: 22px; height: 22px;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 800 !important; box-shadow: 0 2px 6px rgba(126, 34, 206, 0.25);
-}
-.today-tag {
-  font-size: 8px; font-weight: 800; color: #9333ea; 
-  background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25);
-  border-radius: 4px; padding: 2px 5px; letter-spacing: 0.05em;
-}
+.date--today { color: #fff !important; background: linear-gradient(135deg, #a855f7, #7e22ce); border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-weight: 800 !important; box-shadow: 0 2px 6px rgba(126, 34, 206, 0.25); }
+.today-tag { font-size: 8px; font-weight: 800; color: #9333ea; background: rgba(147, 51, 234, 0.1); border: 1px solid rgba(147, 51, 234, 0.25); border-radius: 4px; padding: 2px 5px; letter-spacing: 0.05em; }
 
-.cell--selected {
-  background: rgba(59,130,246,0.07) !important;
-  outline: 2px solid var(--accent); outline-offset: -2px;
-}
+.cell--selected { background: rgba(59,130,246,0.07) !important; outline: 2px solid var(--accent); outline-offset: -2px; }
 .cell--selected .date-label:not(.date--today) { color: var(--accent) !important; font-weight: 800 !important; }
 
-.cell--sat .date-label { color: var(--sat-color) !important; font-weight: 700; }
-.cell--sun .date-label { color: var(--sun-color) !important; font-weight: 700; }
+/* ★ 토/일요일 색상 적용 시, 공휴일 클래스(.date--holiday)가 없을 때만 적용되도록 변경 */
+.cell--sat .date-label:not(.date--holiday) { color: var(--sat-color) !important; font-weight: 700; }
+.cell--sun .date-label:not(.date--holiday) { color: var(--sun-color) !important; font-weight: 700; }
 
-.date--holiday { color: #ef4444 !important; font-weight: 700; }
-.holiday-name {
-  font-size: 10px; font-weight: 700; color: #ef4444;
-  font-family: 'Escoredream', sans-serif;
-  letter-spacing: -0.04em;
-  margin-top: 1px;
-}
+/* ★ 공휴일은 무조건 빨간색 적용 */
+.date--holiday { color: #ef4444 !important; font-weight: 800 !important; }
+.holiday-name { font-size: 10px; font-weight: 700; color: #ef4444; font-family: 'Escoredream', sans-serif; letter-spacing: -0.04em; margin-top: 1px; }
 
-.cell--other-month {
-  background: color-mix(in srgb, var(--bg-base) 60%, var(--bg-surface)) !important; cursor: default;
-}
+.cell--other-month { background: color-mix(in srgb, var(--bg-base) 60%, var(--bg-surface)) !important; cursor: default; }
 .cell--other-month:hover { background: color-mix(in srgb, var(--bg-base) 60%, var(--bg-surface)) !important; }
 .cell--other-month .date-label { color: var(--text-faint) !important; font-weight: 400; }
 .cell--other-month .date--holiday { color: rgba(239, 68, 68, 0.45) !important; }
 .cell--other-month .holiday-name { color: rgba(239, 68, 68, 0.45); }
 .cell--other-month .btn-add-schedule { display: none; }
 
-/* ★ z-index: 20을 유지해 날짜 글씨가 캔버스 선 위로 선명하게 올라오도록 보장 */
-.cell-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 5px; flex-shrink: 0; z-index: 20; position: relative;
-}
-.cell-header-left {
-  display: flex; align-items: baseline; gap: 6px;
-}
+.cell-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; flex-shrink: 0; z-index: 20; position: relative; }
+.cell-header-left { display: flex; align-items: baseline; gap: 6px; }
 
-.date-label {
-  font-size: 12px; font-weight: 600; color: var(--text-muted);
-  font-family: 'Escoredream', sans-serif; line-height: 1;
-  min-width: 22px; text-align: center;
-}
+.date-label { font-size: 12px; font-weight: 600; color: var(--text-muted); font-family: 'Escoredream', sans-serif; line-height: 1; min-width: 22px; text-align: center; }
 
-.btn-add-schedule {
-  width: 18px; height: 18px; border-radius: 4px;
-  background: var(--bg-hover); color: var(--text-muted);
-  border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 8px; opacity: 0; transition: all 0.15s;
-}
+.btn-add-schedule { width: 18px; height: 18px; border-radius: 4px; background: var(--bg-hover); color: var(--text-muted); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 8px; opacity: 0; transition: all 0.15s; }
 .btn-add-schedule:hover { background: var(--accent); color: #fff; }
 
-.label-cluster {
-  display: flex; flex-direction: column; gap: 4px;
-  margin-top: 2px; margin-bottom: 4px; 
-  z-index: 25; position: relative; flex-shrink: 0;
-}
-
-.schedule-label-chip {
-  font-size: 10px; font-weight: 600; padding: 4px 8px; 
-  border-radius: 6px; border: 1px solid transparent; cursor: pointer;
-  white-space: nowrap; font-family: 'Escoredream', sans-serif;
-  width: 100%; box-sizing: border-box; overflow: hidden; 
-  text-overflow: ellipsis; text-align: left; 
-  transition: transform 0.15s ease, opacity 0.15s ease; transform-origin: center; 
-}
+.label-cluster { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; margin-bottom: 4px; z-index: 25; position: relative; flex-shrink: 0; }
+.schedule-label-chip { font-size: 10px; font-weight: 600; padding: 4px 8px; border-radius: 6px; border: 1px solid transparent; cursor: pointer; white-space: nowrap; font-family: 'Escoredream', sans-serif; width: 100%; box-sizing: border-box; overflow: hidden; text-overflow: ellipsis; text-align: left; transition: transform 0.15s ease, opacity 0.15s ease; transform-origin: center; }
 .schedule-label-chip:hover { opacity: 0.9; transform: scale(1.02); }
 
 .chips-fade-enter-active { transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1); }

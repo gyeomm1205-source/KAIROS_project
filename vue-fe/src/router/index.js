@@ -31,6 +31,8 @@ const routes = [
 
   // fallback
   { path: '/:pathMatch(.*)*', redirect: '/' },
+  // 핑앤퐁~
+  { path : '/test',          name: 'test',            component: () => import('@/views/TestView.vue')   },
 ]
 
 const router = createRouter({

@@ -302,8 +302,13 @@ async function deletePost() {
   padding: 28px 18px 42px;
   display: grid;
   gap: 16px;
+  
+  /* ★ 스크롤을 살려주는 마법의 두 줄 추가 */
+  height: 100vh;
+  overflow-y: auto;
 }
 
+/* 아래는 기존 코드와 동일합니다 */
 .hero {
   background: linear-gradient(120deg, rgba(8, 81, 156, 0.85), rgba(16, 185, 129, 0.8));
   border-radius: 18px;
@@ -436,4 +441,10 @@ button.danger {
     grid-template-columns: 1fr;
   }
 }
+
+/* 브라우저 스크롤바 디자인 (선택사항, 깔끔하게 보이게 추가함) */
+.page::-webkit-scrollbar { width: 8px; }
+.page::-webkit-scrollbar-track { background: transparent; }
+.page::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
+.page::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
 </style>

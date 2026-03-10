@@ -78,14 +78,6 @@ function drawHLPath(ctx, p, color, alphaMult) {
     ctx.strokeStyle = color; ctx.lineWidth = SYS_W; ctx.lineCap = 'round'; ctx.stroke(p);
   });
 }
-function rDot(ctx, x, y, color, bg, alphaMult = 1) {
-  w(ctx, () => {
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.globalAlpha = alphaMult;
-    ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(x, y, DOT_R+DOT_BDR, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, DOT_R, 0, Math.PI*2); ctx.fill();
-  });
-}
 
 function buildLayout({ mode: vMode, W, allTracks, schedules, focusedDay, cy, cm, firstDow, zoneEl, scrollEl }) {
   const sorted = [...allTracks].sort((a,b) => {
@@ -96,7 +88,10 @@ function buildLayout({ mode: vMode, W, allTracks, schedules, focusedDay, cy, cm,
   
   const sysSet = new Set(sorted.filter(t => isHL(t)).map(t => t.id))
   const isSys  = id => sysSet.has(id)
-  const CW     = W / 7
+  
+  // ★ 1:1:1:1:1:1:1 비율을 위한 정확한 7등분 계산
+  const CW = W / 7;
+  
   const firstCell = scrollEl ? scrollEl.querySelector?.('.calendar-cell') : document.querySelector('.calendar-cell')
   const rowH = firstCell ? firstCell.getBoundingClientRect().height : (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--month-row-height')) || 150)
 
@@ -107,8 +102,17 @@ function buildLayout({ mode: vMode, W, allTracks, schedules, focusedDay, cy, cm,
     const ws = new Date(fd); ws.setDate(fd.getDate() - fd.getDay())
     const we = new Date(ws); we.setDate(ws.getDate() + 6)
     rangeStart = ds(ws); rangeEnd = ds(we); totalRows = 1
+    
     wLaneY = {}
-    sorted.forEach((t,i) => { wLaneY[t.id] = WEEK_TOP_MARGIN + i * WEEK_LANE_SPACING - (isSys(t.id) ? 3 : 0) })
+    let currentWIdx = null;
+    let currentWOffset = WEEK_TOP_MARGIN;
+    sorted.forEach((t) => {
+      if (currentWIdx !== t.index) {
+        if (currentWIdx !== null) currentWOffset += WEEK_LANE_SPACING;
+        currentWIdx = t.index;
+      }
+      wLaneY[t.id] = currentWOffset;
+    })
   } else {
     const cellNodes = scrollEl ? scrollEl.querySelectorAll('.calendar-cell') : [];
     if (cellNodes.length > 0) {
@@ -123,12 +127,16 @@ function buildLayout({ mode: vMode, W, allTracks, schedules, focusedDay, cy, cm,
   }
 
   const getTrackOffset = (trackId) => {
-    let offset = 0
+    let offset = 0;
+    let currentIdx = null;
     for (const t of sorted) {
-      if (t.id === trackId) return offset
-      offset += isHL(t) ? HL_SP : REGULAR_SP
+      if (currentIdx !== t.index) {
+        if (currentIdx !== null) offset += isHL(t) ? HL_SP : REGULAR_SP;
+        currentIdx = t.index;
+      }
+      if (t.id === trackId) return offset;
     }
-    return offset
+    return offset;
   }
 
   const mLaneY = (trackId, row) => {
@@ -136,7 +144,8 @@ function buildLayout({ mode: vMode, W, allTracks, schedules, focusedDay, cy, cm,
     if (!t) return (row+1)*rowH - MONTH_BOT
     return (row+1)*rowH - MONTH_BOT - getTrackOffset(trackId) - (isSys(trackId) ? 3 : 0)
   }
-  const getLaneY = (trackId, row=0) => vMode === 'week' ? (wLaneY[trackId] ?? WEEK_TOP_MARGIN) : mLaneY(trackId, row)
+  const getLaneY = (trackId, row=0) => vMode === 'week' ? wLaneY[trackId] : mLaneY(trackId, row)
+  
   const cell = d => {
     if (!d) return null
     if (vMode === 'week') {
@@ -228,23 +237,27 @@ export function useCanvasLines(calendarWrapper, lineCanvas, currentView, current
       const key = `${trackId}-${r}`
       if (exactRowY[key] !== undefined) return exactRowY[key]
       if (vMode === 'week') {
-        const rd = rowDates[r]
-        const node = schedules.value.find(s => s.track === trackId && s.day >= rd.s && s.day <= rd.e)
-        if (node) {
-          const el = document.getElementById(`node-${node.id}`)
-          if (el && zoneEl) {
-            const rect = el.getBoundingClientRect(), base = zoneEl.getBoundingClientRect()
-            exactRowY[key] = Math.round(rect.top - base.top + zoneEl.scrollTop + (rect.height / 2))
-            return exactRowY[key]
-          }
-        }
+        exactRowY[key] = Math.round(layout.wLaneY[trackId]);
+        return exactRowY[key];
       }
       exactRowY[key] = Math.round(getLaneY(trackId, r))
       return exactRowY[key]
     }
 
     const getRowX = (node, r) => {
-      const rd = rowDates[r]; if (node.day < rd.s) return -2; if (node.day > rd.e) return Math.round(W + 2)
+      const rd = rowDates[r]; 
+      
+      // ★ 주간 뷰: 각 칸의 정중앙 계산 (7등분 동일 비율)
+      if (vMode === 'week') {
+        if (node.day < rd.s) return -10;
+        if (node.day > rd.e) return W + 10;
+        const d = ymd(node.day);
+        const colIdx = Math.round((d.getTime() - ymd(rd.s).getTime()) / (1000 * 3600 * 24));
+        return Math.round((colIdx + 0.5) * CW);
+      }
+
+      if (node.day < rd.s) return -2; 
+      if (node.day > rd.e) return Math.round(W + 2)
       const x = getX(node.id); if (x != null) return x
       const c = cell(node.day); if (c) return Math.round((c.col + 0.5) * CW)
       return 0
@@ -317,7 +330,7 @@ export function useCanvasLines(calendarWrapper, lineCanvas, currentView, current
       return isHL ? 1 : 0.15;
     };
 
-    const L1=[], L2_gaps=[], L2_draws=[], L_hl=[], L3=[]; const hitPaths = [];
+    const L1=[], L2_gaps=[], L2_draws=[], L_hl=[]; const hitPaths = [];
 
     for (let r=0; r<totalRows; r++) {
       const rd = rowDates[r]
@@ -358,16 +371,7 @@ export function useCanvasLines(calendarWrapper, lineCanvas, currentView, current
       })
     }
 
-    schedules.value.forEach(s => {
-      if (isHidden(s.track)) return
-      const c = cell(s.day); if (!c) return
-      const t = getTrack(s.track); if (!t) return
-      const x = getX(s.id);  if (x==null) return
-      const y = getExactLaneY(s.track, c.row)
-      L3.push(() => rDot(ctx, x, y, t.color, bg, getAlphaMult('node', s)))
-    })
-
-    L1.forEach(fn => fn()); L2_gaps.forEach(fn => fn()); L2_draws.forEach(fn => fn()); L_hl.forEach(fn => fn()); L3.forEach(fn => fn())
+    L1.forEach(fn => fn()); L2_gaps.forEach(fn => fn()); L2_draws.forEach(fn => fn()); L_hl.forEach(fn => fn());
     currentHitPaths = hitPaths;
   }
 
@@ -377,8 +381,7 @@ export function useCanvasLines(calendarWrapper, lineCanvas, currentView, current
     return { x: (e.clientX - rect.left) * (cvs.width / rect.width), y: (e.clientY - rect.top) * (cvs.height / rect.height), cvs };
   }
 
-  // ★ 클릭/호버 방해 요소들(노드, 버튼, 칩 등) 완벽 예외 처리
-  const isInteractiveEl = (el) => el && el.closest('.calendar-node, .schedule-dot, .week-node, .schedule-label-chip, .ptl-header-track-badge, .btn-add-schedule, .cell-header, .calendar-cell');
+  const isInteractiveEl = (el) => el && el.closest('.calendar-node, .schedule-dot, .week-node, .week-node-dot, .schedule-label-chip, .ptl-header-track-badge, .btn-add-schedule, .cell-header, .calendar-cell, .week-lane-label');
 
   const handleMouseMove = (e) => {
     const cvs = lineCanvas.value; if (!cvs) return;
@@ -399,7 +402,6 @@ export function useCanvasLines(calendarWrapper, lineCanvas, currentView, current
   };
 
   const handleMouseClick = (e) => {
-    // 캘린더 셀 자체를 클릭/더블클릭하는 것도 방해하지 않도록 예외처리 세분화
     if (isInteractiveEl(e.target) && !e.target.classList.contains('calendar-cell')) return;
 
     const pos = getMousePos(e); if (!pos) return;
