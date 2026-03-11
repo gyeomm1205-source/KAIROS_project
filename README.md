@@ -85,14 +85,15 @@ npm run dev
 ## K8s env workflow
 - Helm chart path: `infra/helm/s14-app`
 - ArgoCD application manifest: `infra/argocd/app-develop.yaml`
+- GitLab Agent config: `.gitlab/agents/k3s-agent/config.yaml`
 - Spring Deployment만 `springboot-be-env` Secret을 읽는다.
 - Helm은 Spring env 값을 갖지 않고 고정된 이름의 Secret만 참조한다.
-- 실제 값은 GitLab file variable의 Spring prod env 파일에서 CI job이 바로 Secret으로 만든다.
+- 실제 값은 GitLab file variable의 Spring prod env 파일에서 CI job이 GitLab Agent context를 통해 바로 Secret으로 만든다.
 - ingress는 `kairos.<domain>`, `spring.<domain>`만 외부에 열고 FastAPI는 `ClusterIP` 내부 서비스로만 둔다.
 - FastAPI의 Qdrant Cloud endpoint와 API key는 코드에 하드코딩되어 있으므로 별도 Secret을 만들지 않는다.
-- GitLab에서는 file variable을 권장한다.
+- GitLab에서는 아래 variable만 등록하면 된다.
   - `SPRING_ENV_PROD_FILE`: 업로드 원본 파일 `infra/env/.env.spring.prod`
-  - `KUBE_CONFIG_FILE`: kubeconfig 파일 변수
+- `KUBE_CONTEXT`는 `.gitlab-ci.yml`에 `s14-bigdata-recom-sub1/S14P21A506:k3s-agent`로 고정되어 있다.
 
 수동 적용 예시:
 
@@ -109,7 +110,7 @@ kubectl rollout restart deployment/springboot-be -n ssafy
 GitLab CI job 안에서 file variable을 쓰는 예시:
 
 ```bash
-export KUBECONFIG="$KUBE_CONFIG_FILE"
+kubectl config use-context "s14-bigdata-recom-sub1/S14P21A506:k3s-agent"
 
 kubectl create namespace ssafy --dry-run=client -o yaml | kubectl apply -f -
 

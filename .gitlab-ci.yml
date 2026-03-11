@@ -17,6 +17,7 @@ variables:
   DOCKER_BUILDKIT: "1"
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   DOCKERHUB_REPOSITORY: "ken-ssafy"
+  KUBE_CONTEXT: "s14-bigdata-recom-sub1/S14P21A506:k3s-agent"
 
 .docker-build-template:
   stage: build
@@ -174,9 +175,8 @@ sync_runtime_secrets:
   script:
     - |
       set -e
-      test -n "$KUBE_CONFIG_FILE"
       test -n "$SPRING_ENV_PROD_FILE"
-      export KUBECONFIG="$KUBE_CONFIG_FILE"
+      kubectl config use-context "$KUBE_CONTEXT"
 
       kubectl create namespace ssafy --dry-run=client -o yaml | kubectl apply -f -
 
