@@ -169,7 +169,7 @@ update_gitops_manifest:
 
 sync_runtime_secrets:
   stage: gitops
-  image: bitnami/kubectl:1.31.0
+  image: alpine/k8s:1.31.0
   needs:
     - job: update_gitops_manifest
   script:
