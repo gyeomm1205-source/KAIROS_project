@@ -18,3 +18,11 @@ springboot-be/build/
 # IDE
 .idea/
 .vscode/
+
+
+# AI
+.env
+
+#documents
+ai.md
+알고리즘 기술 설계서.md
