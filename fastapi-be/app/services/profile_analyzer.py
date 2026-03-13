@@ -42,7 +42,8 @@ def analyze_all_activities(merged_context: str) -> list[dict]:
 2. summary: 커밋 메시지나 블로그 제목을 그대로 반복하지 마라.
    - [Github 경우]: 수정된 파일(changed_files)과 겹쳐봐서 "어떤 기술적 구현/구조 변경"을 했는지 파악.
    - [Velog 경우]: 본문 요약(content_snippet)을 보고 "어떤 기술적 난제를 해결했거나 무엇을 깊게 학습했는지" 파악.
-3. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 명확하게 기재하라.
+3. category: 활동의 본질을 파악하여 '개발', '학습', '취준', '기타' 중 하나로 정확하게 분류해라.
+4. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 기재.
 
 {format_instructions}
 
@@ -66,7 +67,7 @@ def generate_final_profile(activities_json: list[dict]) -> dict:
         headline: str = Field(description="이 개발자를 한 줄로 표현하는 매력적인 캐치프레이즈")
         skill_frequency: dict[str, int] = Field(description="원본 데이터를 집계하여, 기술별로 총 몇 번 커밋/태그가 등장했는지 카운트. 높은 순 정렬. 예: {'React': 23, 'TypeScript': 18}")
         # recommended_positions: dict[str, str] = Field(description="단순 '프론트/백엔드'가 아닌, 기술 스택과 도메인을 분석하여 도출한 구체적인 산업군/직무. (예: {'핀테크 프론트엔드 엔지니어': '적합도 높음', '웹 러닝 플랫폼 풀스택': '가능성 있음'})")
-        core_competencies: list[str] = Field(description="가장 많이 사용했고 자신있는 핵심 기술 스택 3~5개")
+        # core_competencies: list[str] = Field(description="가장 많이 사용했고 자신있는 핵심 기술 스택 3~5개")
         experience_summary: str = Field(description="어떤 도메인(게임, 백엔드 등)에서 어떤 기술적 경험을 쌓아왔는지 3~4줄로 요약")
         learning_attitude: str = Field(description="Velog나 TIL 학습 기록을 바탕으로 이 개발자의 성장 가능성과 태도 요약")
         possible_positions: list[str] = Field(description="이 개발자가 기여할 수 있는 상세 직무 3~5개")
@@ -97,6 +98,48 @@ def generate_final_profile(activities_json: list[dict]) -> dict:
     chain = prompt | llm | parser
     print("\n🧠 최종 대시보드 맞춤형 프로필 생성 중 (gpt-4o-mini)...")
     return chain.invoke({"activities": json.dumps(activities_json, ensure_ascii=False)})
+
+async def regenerate_profile_with_feedback(previous_profile: dict, user_feedback: str) -> dict:
+    """사용자가 1페이지 요약본을 보고 '아니오, 수정할게요'를 클릭했을 때, 대량의 데이터 재처리 없이 직전 분석 결과(JSON) 객체만으로 즉시 교정하는 특고속 함수"""
+    
+    llm = init_chat_model("gpt-4o-mini", model_provider="openai", temperature=0.1)
+    
+    class FinalProfile(BaseModel):
+        # recent_skills: list[str] = Field(description="이전 분석 결과 또는 사용자의 피드백을 반영하여 수정된 핵심 기술 4~5개")
+        skill_frequency: dict[str, int] = Field(description="이전 결과의 빈도수를 그대로 유지할 것. (피드백에서 명시적으로 특정 기술을 지워달라고 한 경우에만 제거)")
+        recommended_positions: dict[str, str] = Field(description="유저 피드백의 의도를 직접적으로 수용하여 새롭게 도출한 뾰족한 추천 직무 2개")
+        summary: str = Field(description="사용자의 기술을 서술형으로 요약하되, 유저 피드백의 수정/추가 요청 의도를 가장 강력하게 반영할 것.")
+
+    parser = JsonOutputParser(pydantic_object=FinalProfile)
+    
+    prompt = PromptTemplate(
+        template="""너는 기업의 시니어 테크 리크루터야.
+아래는 네가 방금 전에 작성한 1페이지 프로필 분석 결과(JSON) 객체야.
+
+[이전 분석 결과]
+{previous_profile}
+
+[사용자의 직접 교정/피드백 요청 사항]
+🚨 "{user_feedback}" 🚨
+
+위의 사용자의 <요청 사항>을 [절대적 최우선]으로 반영하여 기존 JSON을 수정해서 다시 출력해 줘!!! 
+사용자가 원치 않거나 자신없어하는 직무나 기술이 있다면 recommended_positions나 summary에서 과감히 반영하여 고쳐 쓰고, 반대로 강조하고 싶은 기술이 있다면 summary에 강력하게 어필해서 문장을 다시 작성해. 
+
+<주의사항>
+- skill_frequency(통계)는 피드백에서 "이 언어 빼주세요" 처럼 명시적인 제외 요청이 없는 한 원본 숫자(이전 분석 결과)를 그대로 똑같이 유지해라!!!
+
+{format_instructions}
+""",
+        input_variables=["previous_profile", "user_feedback"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+    
+    chain = prompt | llm | parser
+    print("\n🧠 [유저 피드백 반영] 이전 프로필 재수정 중 (gpt-4o-mini)...")
+    return await asyncio.to_thread(
+        chain.invoke, 
+        {"previous_profile": json.dumps(previous_profile, ensure_ascii=False), "user_feedback": user_feedback}
+    )
 
 
 async def run_integrated_analysis():
