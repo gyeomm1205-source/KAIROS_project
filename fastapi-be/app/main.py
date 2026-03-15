@@ -4,8 +4,13 @@ import asyncio
 from app.services.profile_analyzer import run_integrated_analysis
 import uuid
 
+from app.api.internal.recommend import router as internal_recommend_router
+
 # FastAPI 앱 생성
-app = FastAPI(title="Developer Profile Sync API")
+app = FastAPI(title="KAIROS AI Service")
+
+# Internal routers (Spring Boot → FastAPI only)
+app.include_router(internal_recommend_router)
 
 # 실무에서의 진짜 DB 대신, 데모용 인메모리 저장소 (Dict)
 # 실제로는 MongoDB, PostgreSQL 등에 유저 상태와 프로필을 저장해야 합니다.
