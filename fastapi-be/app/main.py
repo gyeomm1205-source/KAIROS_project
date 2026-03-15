@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette import status
 
+from app.api.internal.quiz import router as internal_quiz_router
 from app.api.test import router as test_router
 from app.schemas.common import ErrorResponse
 from app.services.errors import AppError
@@ -29,6 +30,7 @@ app = FastAPI(
 )
 
 app.include_router(test_router)
+app.include_router(internal_quiz_router)
 
 
 @app.exception_handler(AppError)
