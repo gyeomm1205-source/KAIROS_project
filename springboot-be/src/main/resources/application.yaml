@@ -1,0 +1,32 @@
+spring:
+  application:
+    name: springboot-be
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${DB_URL}
+    username: ${DB_USER}
+    password: ${DB_PW}
+  jpa:
+    open-in-view: false
+    show-sql: true
+    hibernate:
+      ddl-auto: create
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      timeout: 6000
+server:
+  servlet:
+    context-path: /api/v1
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,env,loggers,prometheus
+  endpoint:
+    health:
+      show-details: always
+service:
+  access-token-duration: ${ACCESS_TOKEN_DURATION} # 8시간
+  refresh-token-duration: ${REFRESH_TOKEN_DURATION} # 128시간 -> 1주일
