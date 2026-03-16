@@ -36,5 +36,8 @@ out/
 ### VS Code ###
 .vscode/
 
-# Local env file (do not commit)
-.env
+### env file ###
+/src/main/resources/env.txt
+
+### docker build ###
+/dockerBuild/
