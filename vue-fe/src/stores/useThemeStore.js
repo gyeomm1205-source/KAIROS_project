@@ -1,8 +1,9 @@
+// src/stores/useThemeStore.js
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
 export const useThemeStore = defineStore('theme', () => {
-  const isDark = ref(true)  // 기본: 다크
+  const isDark = ref(false)  // 기본: 라이트 모드로 변경됨
 
   const themeClass = computed(() => isDark.value ? 'theme-dark' : 'theme-light')
 

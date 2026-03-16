@@ -1,155 +1,262 @@
 <template>
-  <div class="page-root">
-    <header class="page-header">
-      <div class="header-left"><i class="fas fa-chart-line" /> 분석 대시보드</div>
-      <div class="header-right"><i class="fas fa-bell" /> <div class="avatar" /></div>
-    </header>
+  <div class="page-root custom-scroll">
+    
+    <div class="global-stepper-wrap">
+      <div class="brutal-stepper">
+        <div class="step done">1. 계정 연동</div>
+        <div class="step done">2. 사전 설문</div>
+        <div class="step done">3. 데이터 분석</div>
+        <div class="step active">4. 결과 확인</div>
+      </div>
+    </div>
 
     <main class="dashboard-content">
-      <section class="profile-section">
-        <div class="profile-avatar"><i class="fas fa-user-astronaut" /></div>
-        <div class="profile-info">
-          <h2>김철수님</h2>
-          <p>분석 완료일: 2026년 3월 15일</p>
-        </div>
-      </section>
+      
+      <div class="header-top">
+        <button class="btn-back" @click="router.push('/setup')">
+          <i class="fas fa-arrow-left" /> BACK
+        </button>
+      </div>
 
-      <section class="summary-cards">
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon"><i class="fas fa-code" /></div>
-            <span class="card-label">총 기술</span>
-          </div>
-          <h3>12</h3>
-          <p>확인된 기술 스택</p>
-        </div>
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon"><i class="fas fa-star" /></div>
-            <span class="card-label">숙련도</span>
-          </div>
-          <h3>중급</h3>
-          <p>전반적 수준</p>
-        </div>
-        <div class="card">
-          <div class="card-top">
-            <div class="card-icon"><i class="fas fa-trophy" /></div>
-            <span class="card-label">강점</span>
-          </div>
-          <h3>프론트엔드</h3>
-          <p>주요 전문 분야</p>
-        </div>
-      </section>
+      <div class="title-section">
+        <h2>현재 학습 상태를 이렇게 이해했어요</h2>
+        <p>최근 GitHub, Velog, 사전설문 데이터를 종합 분석한 결과입니다.</p>
+      </div>
 
-      <section class="chart-section panel">
-        <div class="panel-header">
-          <h3>기술 스택 분포</h3>
-          <button class="btn-outline"><i class="fas fa-download" /> 내보내기</button>
+      <div class="grid-layout">
+        <div class="brutal-panel">
+          <div class="panel-top">
+            <i class="fas fa-code panel-icon" />
+            <h3>최근 활동 기술</h3>
+          </div>
+          <div class="pill-group">
+            <span v-for="t in recentTechs" :key="t" class="data-pill">
+              {{ t }}
+            </span>
+          </div>
         </div>
-        <div class="chart-placeholder">
-          <i class="fas fa-chart-pie" />
-          <p>기술 스택 차트<br><span>카테고리별 기술 분포 그래프</span></p>
-        </div>
-        <div class="chart-legend">
-          <span><div class="dot" style="background:#111" /> 프론트엔드</span>
-          <span><div class="dot" style="background:#666" /> 백엔드</span>
-          <span><div class="dot" style="background:#aaa" /> 데이터베이스</span>
-          <span><div class="dot" style="background:#ddd" /> 도구</span>
-        </div>
-      </section>
 
-      <section class="skills-section panel">
-        <h3>상세 기술 목록</h3>
-        <div class="skill-list">
-          <div v-for="skill in skills" :key="skill.name" class="skill-item">
-            <div class="skill-info">
-              <div class="skill-icon"><i :class="skill.icon" /></div>
-              <div>
-                <h4>{{ skill.name }}</h4>
-                <p>{{ skill.desc }}</p>
+        <div class="brutal-panel">
+          <div class="panel-top">
+            <i class="fas fa-chart-bar panel-icon" />
+            <h3>전반적인 기술 숙련도</h3>
+          </div>
+          <div class="skill-bars">
+            <div class="skill-row" v-for="s in skillLevels" :key="s.name">
+              <span class="skill-name">{{ s.name }}</span>
+              <div class="bar-bg">
+                <div class="bar-fill" :style="{ width: s.level + '%' }" />
               </div>
-            </div>
-            <div class="skill-bar-wrap">
-              <div class="skill-bar"><div class="fill" :style="{ width: skill.score + '%' }" /></div>
-              <span class="skill-score">{{ skill.score }}%</span>
+              <span class="skill-pct">{{ s.level }}%</span>
             </div>
           </div>
         </div>
-      </section>
 
-      <section class="confirm-section">
-        <div class="confirm-icon"><i class="fas fa-question" /></div>
-        <h3>이 결과가 맞나요?</h3>
-        <p>분석된 기술 스택과 숙련도가 정확한지 확인해 주세요.</p>
-        <div class="confirm-actions">
-          <button class="btn-yes" @click="$router.push('/curriculum-suggest')"><i class="fas fa-check" /> 네</button>
-          <button class="btn-no" @click="$router.push('/feedback')"><i class="fas fa-times" /> 아니오</button>
+        <div class="brutal-panel">
+          <div class="panel-top">
+            <i class="fas fa-redo panel-icon" />
+            <h3>반복적으로 다룬 기술</h3>
+          </div>
+          <div class="list-group">
+            <div v-for="t in repeatedTechs" :key="t.name" class="list-item">
+              <span class="item-name">{{ t.name }}</span>
+              <span class="item-count">{{ t.count }}회 등장</span>
+            </div>
+          </div>
         </div>
-      </section>
+
+        <div class="brutal-panel">
+          <div class="panel-top">
+            <i class="fas fa-compass panel-icon" />
+            <h3>추천 포지션</h3>
+          </div>
+          <div class="position-group">
+            <div v-for="pos in recommendedPositions" :key="pos.title" class="position-row">
+              <span class="pos-title">{{ pos.title }}</span>
+              <span class="pos-badge" :class="{ highlight: pos.isHighMatch }">
+                {{ pos.isHighMatch ? '적합도 높음' : '가능성 있음' }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="summary-panel">
+        <h3><i class="fas fa-lightbulb text-blue-600 mr-2" /> 요약</h3>
+        <p>
+          최근 3개월간 React와 TypeScript 중심의 프론트엔드 학습을 꾸준히 진행하고 있습니다. 
+          Velog에서는 주로 상태 관리와 성능 최적화 관련 글을 작성했고, GitHub에서는 Next.js 기반 프로젝트에 활발히 커밋하고 있습니다. 
+          백엔드 관련 활동은 상대적으로 적어, 프론트엔드 전문성 강화를 추천합니다.
+        </p>
+      </div>
+
+      <div class="action-section">
+        <h3>분석 결과가 실제와 잘 맞나요?</h3>
+        <div class="btn-group">
+          <button class="btn-primary" @click="router.push('/curriculum/suggest')">
+            <i class="fas fa-check" /> 결과가 맞아요
+          </button>
+          <button class="btn-outline" @click="showFeedback = true">
+            <i class="fas fa-pen" /> 수정할게요
+          </button>
+        </div>
+      </div>
     </main>
+
+    <div v-if="showFeedback" class="modal-overlay" @click.self="showFeedback = false">
+      <div class="brutal-modal">
+        <div class="modal-header">
+          <h3>어떤 부분을 수정하면 좋을까요?</h3>
+          <button class="btn-close" @click="showFeedback = false"><i class="fas fa-times" /></button>
+        </div>
+        <p class="modal-desc">기술 숙련도, 관심 분야, 추천 포지션 등 수정이 필요한 내용을 자유롭게 적어주세요.</p>
+        
+        <textarea 
+          v-model="feedbackText" 
+          class="brutal-textarea" 
+          placeholder="예: TypeScript 숙련도가 실제보다 낮게 나온 것 같아요."
+          rows="4"
+        ></textarea>
+
+        <div class="modal-actions">
+          <button class="btn-outline-small" @click="showFeedback = false">취소</button>
+          <button 
+            class="btn-primary-small" 
+            :disabled="!feedbackText.trim()"
+            @click="submitFeedback"
+          >
+            <i class="fas fa-paper-plane" /> 피드백 제출
+          </button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup>
-const skills = [
-  { name: 'React', desc: '프론트엔드 프레임워크', score: 85, icon: 'fab fa-react' },
-  { name: 'Node.js', desc: '백엔드 런타임', score: 70, icon: 'fab fa-node-js' },
-  { name: 'Python', desc: '프로그래밍 언어', score: 65, icon: 'fab fa-python' },
-  { name: 'Docker', desc: '컨테이너 플랫폼', score: 60, icon: 'fab fa-docker' },
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const showFeedback = ref(false)
+const feedbackText = ref('')
+
+const recentTechs = ['React', 'TypeScript', 'Next.js', 'TailwindCSS']
+const skillLevels = [
+  { name: 'JavaScript', level: 78 },
+  { name: 'React', level: 72 },
+  { name: 'TypeScript', level: 55 },
+  { name: 'Node.js', level: 40 },
+  { name: 'Python', level: 30 },
 ]
+const repeatedTechs = [
+  { name: 'React', count: 23 },
+  { name: 'TypeScript', count: 18 },
+  { name: 'CSS', count: 14 },
+  { name: 'REST API', count: 9 },
+]
+const recommendedPositions = [
+  { title: '프론트엔드 개발자', isHighMatch: true },
+  { title: '풀스택 개발자', isHighMatch: false }
+]
+
+const submitFeedback = () => {
+  if (feedbackText.value.trim()) {
+    showFeedback.value = false
+    router.push('/curriculum/suggest')
+  }
+}
 </script>
 
 <style scoped>
-.page-root { height: 100vh; overflow-y: auto; background: #fafafa; font-family: 'Escoredream', sans-serif; color: #111; padding-bottom: 60px; }
-.page-header { display: flex; justify-content: space-between; padding: 16px 24px; background: #fff; border-bottom: 1px solid #eaeaea; }
-.header-left { font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; }
-.header-right { display: flex; align-items: center; gap: 16px; color: #666; }
-.avatar { width: 28px; height: 28px; border-radius: 50%; background: #ddd; }
+.page-root { height: 100vh; overflow-y: auto; background: var(--bg-base); font-family: 'Space Grotesk', 'Escoredream', sans-serif; display: block; padding-bottom: 60px; position: relative; }
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
 
-.dashboard-content { max-width: 860px; margin: 0 auto; padding: 40px 20px; }
-.profile-section { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
-.profile-avatar { width: 56px; height: 56px; border-radius: 50%; background: #f0f0f0; display: flex; align-items: center; justify-content: center; font-size: 24px; color: #555; }
-.profile-info h2 { font-size: 22px; font-weight: 800; margin-bottom: 4px; }
-.profile-info p { font-size: 13px; color: #666; }
+.global-stepper-wrap { position: absolute; top: 32px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
+.brutal-stepper { display: flex; gap: 8px; width: 100%; }
+.brutal-stepper .step { flex: 1; text-align: center; padding: 12px 4px; border: 2px solid var(--border); background: var(--bg-surface); color: var(--text-muted); font-size: 13px; font-weight: 900; font-family: 'Escoredream', sans-serif; transition: all 0.2s; white-space: nowrap; }
+.brutal-stepper .step.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+.brutal-stepper .step.done { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
+@media (max-width: 640px) { .brutal-stepper .step { font-size: 11px; padding: 8px 2px; } }
 
-.summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
-.card { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; padding: 20px; }
-.card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.card-icon { width: 32px; height: 32px; background: #111; color: #fff; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
-.card-label { font-size: 12px; color: #888; font-weight: 600; }
-.card h3 { font-size: 24px; font-weight: 800; margin-bottom: 4px; }
-.card p { font-size: 12px; color: #666; }
+.dashboard-content { max-width: 900px; margin: 0 auto; padding: 110px 24px 40px; }
 
-.panel { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; padding: 24px; margin-bottom: 24px; }
-.panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-.panel h3 { font-size: 16px; font-weight: 700; }
-.btn-outline { padding: 8px 14px; border: 1px solid #ddd; border-radius: 6px; background: #fff; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; gap: 6px; align-items: center; }
+.header-top { margin-bottom: 24px; }
+.btn-back { background: transparent; border: none; font-weight: 900; font-size: 14px; color: var(--text-muted); cursor: pointer; transition: color 0.1s; letter-spacing: 0.05em; padding: 0; }
+.btn-back:hover { color: var(--text-primary); }
 
-.chart-placeholder { height: 240px; background: #f9f9f9; border: 1px dashed #ddd; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #999; text-align: center; margin-bottom: 16px; gap: 12px; }
-.chart-placeholder i { font-size: 32px; color: #ccc; }
-.chart-placeholder span { font-size: 11px; color: #aaa; }
-.chart-legend { display: flex; justify-content: center; gap: 24px; font-size: 12px; color: #555; }
-.chart-legend span { display: flex; align-items: center; gap: 6px; }
-.dot { width: 10px; height: 10px; border-radius: 3px; }
+.title-section { text-align: center; margin-bottom: 40px; }
+.title-section h2 { font-size: 26px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; }
+.title-section p { font-size: 14px; font-weight: 700; color: var(--text-muted); }
 
-.skill-list { display: flex; flex-direction: column; gap: 16px; margin-top: 20px; }
-.skill-item { display: flex; align-items: center; justify-content: space-between; }
-.skill-info { display: flex; align-items: center; gap: 12px; width: 200px; }
-.skill-icon { width: 40px; height: 40px; background: #f5f5f5; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #333; }
-.skill-info h4 { font-size: 14px; font-weight: 700; margin-bottom: 2px; }
-.skill-info p { font-size: 11px; color: #888; }
-.skill-bar-wrap { flex: 1; display: flex; align-items: center; gap: 16px; max-width: 300px; }
-.skill-bar { flex: 1; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
-.fill { height: 100%; background: #111; border-radius: 3px; }
-.skill-score { font-size: 13px; font-weight: 600; width: 36px; text-align: right; }
+.grid-layout { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
 
-.confirm-section { background: #fafafa; border: 1px solid #eaeaea; border-radius: 12px; padding: 40px 20px; text-align: center; margin-top: 40px; }
-.confirm-icon { width: 48px; height: 48px; background: #111; color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 16px; }
-.confirm-section h3 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
-.confirm-section p { font-size: 13px; color: #666; margin-bottom: 24px; }
-.confirm-actions { display: flex; justify-content: center; gap: 12px; }
-.confirm-actions button { padding: 12px 32px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: opacity 0.2s; font-family: 'Escoredream', sans-serif; }
-.btn-yes { background: #111; color: #fff; border: none; }
-.btn-no { background: #fff; color: #111; border: 1px solid #ddd; }
-.confirm-actions button:hover { opacity: 0.8; }
+.brutal-panel { background: var(--bg-surface); border: 2px solid var(--text-primary); padding: 24px; box-shadow: 6px 6px 0 #6b7280; display: flex; flex-direction: column; transition: all 0.1s; }
+.brutal-panel:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 #6b7280; }
+
+.panel-top { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border); padding-bottom: 12px; }
+.panel-icon { font-size: 18px; color: var(--text-primary); }
+.panel-top h3 { font-size: 15px; font-weight: 900; letter-spacing: 0.05em; color: var(--text-primary); }
+
+.pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
+.data-pill { padding: 6px 14px; border: 2px solid var(--text-primary); background: var(--bg-base); font-size: 13px; font-weight: 800; color: var(--text-primary); }
+
+.skill-bars { display: flex; flex-direction: column; gap: 12px; }
+.skill-row { display: flex; align-items: center; gap: 12px; color: var(--text-primary); }
+.skill-name { width: 85px; font-size: 12px; font-weight: 800; }
+.bar-bg { flex: 1; height: 12px; border: 2px solid var(--text-primary); background: var(--bg-base); }
+.bar-fill { height: 100%; background: var(--text-primary); }
+.skill-pct { width: 35px; text-align: right; font-size: 12px; font-weight: 900; }
+
+.list-group { display: flex; flex-direction: column; gap: 12px; }
+.list-item { display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px; border-bottom: 1px dashed var(--border); }
+.list-item:last-child { border-bottom: none; padding-bottom: 0; }
+.item-name { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.item-count { font-size: 12px; font-weight: 800; color: var(--text-muted); }
+
+.position-group { display: flex; flex-direction: column; gap: 14px; }
+.position-row { display: flex; justify-content: space-between; align-items: center; }
+.pos-title { font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.pos-badge { padding: 4px 10px; border: 2px solid var(--text-primary); font-size: 11px; font-weight: 900; background: var(--bg-base); color: var(--text-muted); }
+.pos-badge.highlight { background: var(--text-primary); color: var(--bg-base); }
+
+.summary-panel { background: var(--bg-surface); border: 2px solid var(--text-primary); padding: 24px; box-shadow: 6px 6px 0 #6b7280; margin-bottom: 40px; }
+.summary-panel h3 { font-size: 16px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; display: flex; align-items: center; }
+.summary-panel p { font-size: 14px; font-weight: 700; line-height: 1.6; color: var(--text-muted); }
+
+.action-section { border-top: 2px dashed var(--text-primary); padding-top: 40px; text-align: center; }
+.action-section h3 { font-size: 20px; font-weight: 900; color: var(--text-primary); margin-bottom: 24px; }
+.btn-group { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; }
+.btn-primary, .btn-outline { padding: 16px 24px; font-size: 14px; font-weight: 900; cursor: pointer; transition: all 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; border: 2px solid var(--text-primary); font-family: 'Space Grotesk', 'Escoredream', sans-serif; width: 200px; }
+.btn-primary { background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; }
+.btn-primary:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; }
+.btn-outline { background: var(--bg-base); color: var(--text-primary); }
+.btn-outline:hover { background: var(--text-primary); color: var(--bg-base); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; }
+
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.brutal-modal { width: 100%; max-width: 500px; background: var(--bg-base); border: 2px solid var(--text-primary); box-shadow: 12px 12px 0 #6b7280; padding: 32px; animation: popUp 0.2s ease-out; }
+@keyframes popUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.modal-header h3 { font-size: 18px; font-weight: 900; color: var(--text-primary); }
+.btn-close { background: transparent; border: none; font-size: 20px; color: var(--text-primary); cursor: pointer; transition: transform 0.1s; }
+.btn-close:hover { transform: scale(1.2); }
+.modal-desc { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5; }
+
+.brutal-textarea { width: 100%; padding: 16px; border: 2px solid var(--border); background: var(--bg-surface); color: var(--text-primary); font-size: 14px; font-weight: 700; outline: none; transition: all 0.1s; font-family: 'Escoredream', sans-serif; resize: none; margin-bottom: 24px; }
+.brutal-textarea:focus { border-color: var(--text-primary); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+.btn-outline-small, .btn-primary-small { padding: 12px 20px; font-size: 13px; font-weight: 900; cursor: pointer; border: 2px solid var(--text-primary); transition: all 0.1s; font-family: 'Space Grotesk', 'Escoredream', sans-serif; display: flex; align-items: center; gap: 6px; }
+.btn-outline-small { background: var(--bg-base); color: var(--text-primary); }
+.btn-outline-small:hover { background: var(--border); }
+.btn-primary-small { background: var(--text-primary); color: var(--bg-base); }
+.btn-primary-small:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #6b7280; }
+.btn-primary-small:disabled { background: var(--bg-surface); border-color: var(--border); color: var(--text-faint); cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .grid-layout { grid-template-columns: 1fr; }
+}
 </style>

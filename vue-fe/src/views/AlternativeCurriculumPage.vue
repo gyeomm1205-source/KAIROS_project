@@ -2,24 +2,24 @@
   <div class="page-root custom-scroll">
     <header class="page-header">
       <div class="header-left">
-        <button class="btn-icon" @click="$router.push('/analyze')">
+        <button class="btn-icon" @click="$router.push('/curriculum/suggest')">
           <i class="fas fa-arrow-left" /> BACK
         </button>
       </div>
-      <div class="step-indicator">CURRICULUM RECOMMENDATION</div>
+      <div class="step-indicator">ALTERNATIVE CURRICULUM</div>
     </header>
 
     <main class="dashboard-content">
       <div class="title-section">
         <div class="icon-wrap"><i class="fas fa-lightbulb" /></div>
-        <h2>맞춤형 커리큘럼이 준비됐어요</h2>
-        <p>분석 결과를 기반으로 최적의 학습 계획을 구성했습니다.<br>확인 후 캘린더에 반영해보세요.</p>
+        <h2>같은 데이터를 바탕으로 다른 커리큘럼도 준비했어요</h2>
+        <p>이번에는 프로젝트 적용성과 협업 효율을 높이는 방향으로 다시 구성했습니다.<br>기존 추천안과 비교해 더 맞는 흐름을 선택해보세요.</p>
       </div>
 
-      <section class="brutal-panel">
+      <section class="brutal-panel mb-10">
         <div class="panel-top">
           <i class="fas fa-calendar-alt panel-icon" />
-          <h3>생성될 커리큘럼 일정</h3>
+          <h3>생성될 커리큘럼 일정 (대체안)</h3>
         </div>
         
         <div class="timeline-container">
@@ -34,12 +34,12 @@
           </div>
         </div>
 
-        <div class="summary-badge">
+        <div class="summary-badge mt-6">
           <i class="fas fa-flag-checkered" /> 총 6개 학습 · 약 12시간 소요 예상
         </div>
       </section>
 
-      <section class="brutal-panel mt-10">
+      <section class="brutal-panel mb-10">
         <div class="panel-top">
           <i class="fas fa-magic panel-icon" />
           <h3>AI 추천 이유 요약</h3>
@@ -69,20 +69,20 @@
             <i class="fas fa-arrow-right final-summary-icon" />
             <div class="final-summary-text">
               <strong style="color: var(--text-primary); font-weight: 900;">종합:</strong> 
-              실제 코드·글에서 드러난 약점 보강 → 실전 적용 → 스택 확장 순서로 배치했습니다. 일정은 캘린더 여유 시간과 희망 학습량을 기준으로 산정했습니다.
+              첫 추천안이 약점 보강형 학습 경로였다면, 이번 안은 현재 진행 중인 프론트엔드 작업을 더 빠르게 개선할 수 있도록 서버 상태 관리, 공통 컴포넌트 설계, 테스트 도입 순으로 재배치했습니다.
             </div>
           </div>
         </div>
       </section>
 
-      <section class="action-panel mt-10">
+      <section class="action-panel">
         <div class="action-text">
           <h3>이 커리큘럼을 캘린더에 반영할까요?</h3>
           <p>일정이 캘린더에 자동으로 추가됩니다.</p>
         </div>
         <div class="btn-group">
-          <button class="btn-outline" @click="$router.push('/curriculum/alternative')">
-            다른 커리큘럼 추천받기
+          <button class="btn-outline" @click="$router.push('/curriculum/suggest')">
+            <i class="fas fa-undo" /> 처음 추천 보기
           </button>
           <button class="btn-primary" @click="openCoachmark">
             <i class="fas fa-calendar-plus" /> 캘린더에 추가하기
@@ -124,31 +124,31 @@ const showCoachmark = ref(false)
 const isAnimating = ref(false)
 
 const scheduleItems = [
-  { date: "3월 11일 (수)", title: "React 기초 및 렌더링 최적화", duration: "2시간 예상" },
-  { date: "3월 12일 (목)", title: "상태 관리 심화 (Zustand/Pinia)", duration: "1시간 30분 예상" },
-  { date: "3월 13일 (금)", title: "TypeScript 고급 타입 활용", duration: "2시간 예상" },
-  { date: "3월 14일 (토)", title: "번들 최적화 및 Lighthouse 분석", duration: "3시간 예상" },
-  { date: "3월 16일 (월)", title: "Next.js App Router 심화", duration: "2시간 예상" },
-  { date: "3월 17일 (화)", title: "API 설계 패턴 및 데이터 패칭 전략", duration: "1시간 30분 예상" },
+  { date: "3월 11일 (수)", title: "TanStack Query로 서버 상태 설계하기", duration: "1시간 30분 예상" },
+  { date: "3월 12일 (목)", title: "폼 검증 흐름 개선과 에러 UX 정리", duration: "2시간 예상" },
+  { date: "3월 13일 (금)", title: "공통 컴포넌트 API와 접근성 기준 정리", duration: "2시간 예상" },
+  { date: "3월 14일 (토)", title: "TypeScript로 props 타입과 상태 모델링 고도화", duration: "2시간 예상" },
+  { date: "3월 16일 (월)", title: "React Testing Library로 핵심 화면 테스트 작성", duration: "2시간 30분 예상" },
+  { date: "3월 17일 (화)", title: "기존 프로젝트 리팩터링 스프린트", duration: "2시간 예상" },
 ]
 
 const reasonSections = [
   {
     icon: "fab fa-github",
     title: "GitHub",
-    meta: "· 최근 90일 · 커밋 247건",
+    meta: "· 최근 90일 · UI/상태관리 커밋 비중 높음",
     bullets: [
-      { text: "React 커밋 68% 차지하나, useEffect 의존성 오류·리렌더링 패턴 반복", hint: "→ 1일차 렌더링 최적화" },
-      { text: "Next.js 레포 존재하나 App Router 미사용, 번들 경고 커밋 2건", hint: "→ 4~5일차 번들·App Router 심화" },
+      { text: "API 연결 이후 로딩·에러 처리 분기 커밋이 반복되고, fetch 로직이 페이지마다 분산", hint: "→ 1일차 서버 상태 설계" },
+      { text: "공통 UI 수정이 잦지만 props 구조와 타입 선언 패턴이 제각각", hint: "→ 3~4일차 컴포넌트 API·타입 모델링" },
     ],
   },
   {
     icon: "fas fa-file-alt",
     title: "Velog",
-    meta: "· 최근 6개월 · 포스트 12편",
+    meta: "· 최근 6개월 · 실전 적용형 글 위주",
     bullets: [
-      { text: "상태 관리 비교글 4편 작성했으나 결론 없이 종료 반복", hint: "→ 2일차 상태 관리 심화" },
-      { text: "TS 제네릭 관련 질문글 3편, 타입 추론 이해 부족 확인", hint: "→ 3일차 TypeScript 고급 타입" },
+      { text: "상태관리·성능 관련 글은 꾸준하지만 테스트와 접근성 회고는 거의 없음", hint: "→ 3·5일차 접근성·테스트 보강" },
+      { text: "학습 내용을 실제 서비스 개선 사례로 연결하려는 시도가 많음", hint: "→ 마지막 날 리팩터링 스프린트" },
     ],
   },
   {
@@ -156,8 +156,8 @@ const reasonSections = [
     title: "Google Calendar + 사전설문",
     meta: "· 최근 30일",
     bullets: [
-      { text: "평일 19~22시 빈 슬롯 확인, 기존 학습 이벤트 평균 1.5h", hint: "→ 일 1.5~3h, 일요일 제외 배치" },
-      { text: "사전설문 응답: 하루 2시간 이내 희망 · 실습 위주 선호", hint: "→ 학습량 상한 기준 반영" },
+      { text: "평일 19~22시 집중 시간이 확보되고, 하루 2시간 안팎 학습 선호", hint: "→ 1.5~2.5시간 단위 실습형 일정 배치" },
+      { text: "설문에서 즉시 프로젝트에 적용 가능한 학습을 더 선호한다고 응답", hint: "→ 개념보다 유지보수·협업 역량 중심 재구성" },
     ],
   },
 ]
@@ -172,10 +172,9 @@ const confirmAndGoCalendar = () => {
   
   // 파트 1 애니메이션(압축)이 끝나는 0.6초 시점에 캘린더 페이지로 라우팅
   setTimeout(() => {
-    // 캘린더 페이지에서만 2단계 애니메이션을 띄우도록 플래그 설정
     sessionStorage.setItem('playCalendarEntryAnim', 'true')
     router.push('/calendar')
-  }, 600) 
+  }, 600)
 }
 </script>
 
@@ -193,10 +192,8 @@ const confirmAndGoCalendar = () => {
 .dashboard-content { max-width: 800px; margin: 0 auto; padding: 48px 24px; }
 .title-section { text-align: center; margin-bottom: 40px; }
 .icon-wrap { width: 48px; height: 48px; border: 2px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; background: var(--bg-base); color: var(--text-primary); margin: 0 auto 16px; box-shadow: 4px 4px 0 #6b7280; }
-.title-section h2 { font-size: 28px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; }
+.title-section h2 { font-size: 26px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; line-height: 1.4; }
 .title-section p { font-size: 14px; font-weight: 700; color: var(--text-muted); line-height: 1.6; }
-
-.mt-10 { margin-top: 40px; }
 
 .brutal-panel { background: var(--bg-surface); border: 2px solid var(--text-primary); padding: 32px; box-shadow: 8px 8px 0 #6b7280; transition: all 0.2s; }
 .brutal-panel:hover { transform: translate(-2px, -2px); box-shadow: 10px 10px 0 #6b7280; }
@@ -255,9 +252,9 @@ const confirmAndGoCalendar = () => {
 .brutal-modal p { font-size: 13px; font-weight: 700; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-.btn-outline-small, .btn-primary-small { padding: 12px 20px; font-size: 13px; font-weight: 900; cursor: pointer; border: 2px solid var(--text-primary); transition: all 0.1s; font-family: 'Space Grotesk', 'Escoredream', sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-outline-small { background: transparent; color: var(--text-primary); }
-.btn-outline-small:hover { background: var(--text-primary); color: var(--bg-surface); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+.btn-outline-small, .btn-primary-small { padding: 12px 20px; font-size: 13px; font-weight: 900; cursor: pointer; border: 2px solid var(--text-primary); transition: all 0.1s; font-family: 'Space Grotesk', 'Escoredream', sans-serif; }
+.btn-outline-small { background: var(--bg-base); color: var(--text-primary); }
+.btn-outline-small:hover { background: var(--border); }
 .btn-primary-small { background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; }
 .btn-primary-small:hover { background: transparent; color: var(--text-primary); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; }
 
@@ -276,14 +273,8 @@ const confirmAndGoCalendar = () => {
 }
 
 @media (max-width: 640px) {
-  .dashboard-content { padding: 24px 16px; }
-  .title-section h2 { font-size: 22px; }
-  .timeline-card { flex-direction: column; align-items: flex-start; gap: 8px; }
-  .reason-header { flex-direction: column; align-items: flex-start; gap: 4px; }
   .btn-group { flex-direction: column; width: 100%; }
   .btn-outline, .btn-primary { width: 100%; justify-content: center; }
-  .action-panel { flex-direction: column; align-items: flex-start; padding: 24px 16px; }
-  .modal-actions { flex-direction: column; width: 100%; }
-  .btn-outline-small, .btn-primary-small { width: 100%; justify-content: center; }
+  .action-panel { flex-direction: column; align-items: flex-start; }
 }
 </style>

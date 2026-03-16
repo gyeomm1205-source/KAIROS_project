@@ -1,27 +1,21 @@
 <template>
   <div class="login-root">
     <div class="login-card">
-      <!-- 로고 -->
       <div class="login-logo">
         <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" fill="url(#kgLogin)" opacity="0.15"/>
-          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="url(#kgLogin)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-          <circle cx="14" cy="14" r="2" fill="url(#kgLogin)"/>
-          <defs>
-            <linearGradient id="kgLogin" x1="6" y1="3" x2="22" y2="25" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#818cf8"/><stop offset="1" stop-color="#38bdf8"/>
-            </linearGradient>
-          </defs>
+          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" fill="currentColor" opacity="0.15"/>
+          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+          <circle cx="14" cy="14" r="2" fill="currentColor"/>
+          <path d="M8 5h12l-4 4H12L8 5z" fill="currentColor" opacity="0.5"/>
         </svg>
         <span class="logo-text">KAIROS</span>
       </div>
 
-      <h2 class="login-title">다시 오셨군요!</h2>
+      <h2 class="login-title">WELCOME BACK.</h2>
       <p class="login-sub">계정에 로그인하여 학습을 이어가세요</p>
 
-      <!-- 이메일 -->
       <div class="form-group">
-        <label class="form-label">이메일</label>
+        <label class="form-label">EMAIL</label>
         <input
           v-model="email"
           type="email"
@@ -30,9 +24,8 @@
         />
       </div>
 
-      <!-- 비밀번호 -->
       <div class="form-group">
-        <label class="form-label">비밀번호</label>
+        <label class="form-label">PASSWORD</label>
         <div class="input-wrap">
           <input
             v-model="password"
@@ -46,20 +39,18 @@
         </div>
       </div>
 
-      <!-- 로그인 버튼 -->
-      <button class="btn-primary" @click="handleLogin">로그인</button>
+      <button class="btn-primary" @click="handleLogin">LOGIN</button>
 
-      <div class="divider"><span>또는</span></div>
+      <div class="divider"><span>OR</span></div>
 
-      <!-- Google 로그인 -->
       <button class="btn-google" @click="handleLogin">
         <div class="google-icon">G</div>
-        Google로 로그인
+        CONTINUE WITH GOOGLE
       </button>
 
       <p class="signup-link">
         계정이 없으신가요?
-        <span @click="$router.push('/signup')">회원가입</span>
+        <span @click="$router.push('/signup')">CREATE ACCOUNT</span>
       </p>
     </div>
   </div>
@@ -86,17 +77,17 @@ function handleLogin() {
   align-items: center;
   justify-content: center;
   background: var(--bg-base);
-  font-family: 'Escoredream', system-ui, sans-serif;
+  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif;
   padding: 24px;
 }
 
 .login-card {
   width: 100%;
   max-width: 420px;
-  background: var(--bg-surface);
+  background: transparent;
   border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 40px 36px;
+  border-radius: 0; /* 직각 */
+  padding: 48px 40px;
   display: flex;
   flex-direction: column;
   gap: 0;
@@ -111,39 +102,39 @@ function handleLogin() {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 28px;
+  margin-bottom: 32px;
+  color: var(--text-primary);
 }
 .logo-text {
   font-weight: 800;
-  font-size: 18px;
+  font-size: 20px;
   letter-spacing: 0.16em;
-  background: linear-gradient(135deg, #818cf8, #38bdf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: var(--text-primary);
 }
 
 .login-title {
-  font-size: 22px;
-  font-weight: 800;
+  font-size: 24px;
+  font-weight: 900;
   color: var(--text-primary);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
 }
 .login-sub {
   font-size: 13px;
   color: var(--text-muted);
-  margin-bottom: 28px;
+  margin-bottom: 32px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 .form-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   color: var(--text-primary);
 }
 .input-wrap {
@@ -151,10 +142,10 @@ function handleLogin() {
 }
 .form-input {
   width: 100%;
-  padding: 12px 16px;
+  padding: 14px 16px;
   border: 1px solid var(--border);
-  border-radius: 10px;
-  background: var(--bg-elevated);
+  border-radius: 0; /* 직각 */
+  background: transparent;
   color: var(--text-primary);
   font-size: 14px;
   font-family: 'Escoredream', sans-serif;
@@ -163,7 +154,7 @@ function handleLogin() {
 }
 .form-input:focus {
   outline: none;
-  border-color: #818cf8;
+  border-color: var(--text-primary);
 }
 .pw-toggle {
   position: absolute;
@@ -176,30 +167,37 @@ function handleLogin() {
   color: var(--text-muted);
   font-size: 14px;
 }
+.pw-toggle:hover { color: var(--text-primary); }
 
 .btn-primary {
   width: 100%;
-  padding: 14px;
-  border: none;
-  border-radius: 12px;
-  background: #111;
-  color: #fff;
+  padding: 16px;
+  border: 1px solid var(--text-primary);
+  border-radius: 0; /* 직각 */
+  background: var(--text-primary);
+  color: var(--bg-base);
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 800;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  font-family: 'Escoredream', sans-serif;
-  transition: opacity 0.15s;
+  font-family: 'Space Grotesk', 'Escoredream', sans-serif;
+  transition: background 0.15s, color 0.15s;
   margin-top: 8px;
 }
-.btn-primary:hover { opacity: 0.85; }
+.btn-primary:hover { 
+  background: transparent; 
+  color: var(--text-primary); 
+}
 
 .divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 20px 0;
-  color: var(--text-faint);
-  font-size: 12px;
+  margin: 24px 0;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
 }
 .divider::before,
 .divider::after {
@@ -211,45 +209,54 @@ function handleLogin() {
 
 .btn-google {
   width: 100%;
-  padding: 13px;
+  padding: 14px;
   border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-elevated);
+  border-radius: 0; /* 직각 */
+  background: transparent;
   color: var(--text-primary);
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  font-family: 'Escoredream', sans-serif;
+  font-family: 'Space Grotesk', 'Escoredream', sans-serif;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  transition: background 0.15s;
+  gap: 12px;
+  transition: background 0.15s, color 0.15s;
 }
-.btn-google:hover { background: var(--bg-hover); }
+.btn-google:hover { 
+  background: var(--text-primary); 
+  color: var(--bg-base);
+}
+.btn-google:hover .google-icon {
+  border-color: var(--bg-base);
+}
 .google-icon {
   width: 22px;
   height: 22px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  border-radius: 0; /* 직각 */
+  border: 1px solid var(--text-primary);
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 800;
-  color: #fff;
 }
 
 .signup-link {
   text-align: center;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--text-muted);
-  margin-top: 20px;
+  margin-top: 24px;
+  letter-spacing: 0.05em;
 }
 .signup-link span {
-  color: #818cf8;
-  font-weight: 600;
+  color: var(--text-primary);
+  font-weight: 700;
   cursor: pointer;
+  margin-left: 6px;
 }
 .signup-link span:hover { text-decoration: underline; }
 </style>

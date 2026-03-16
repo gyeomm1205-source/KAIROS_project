@@ -53,8 +53,8 @@
 
         <Transition name="floatbar">
           <div v-if="selectedSchedules.length" class="floating-action-bar">
-            <span class="sel-count">{{ selectedSchedules.length }}개 선택됨</span>
-            <button class="btn-sel-delete" @click="deleteSelected"><i class="fas fa-trash" /> 삭제</button>
+            <span class="sel-count">{{ selectedSchedules.length }} SELECTED</span>
+            <button class="btn-sel-delete" @click="deleteSelected"><i class="fas fa-trash" /> DELETE</button>
             <button class="btn-sel-clear" @click="selectedSchedules = []"><i class="fas fa-times" /></button>
           </div>
         </Transition>
@@ -87,10 +87,7 @@
               v-for="(track, tIdx) in sortedAllTracks"
               :key="`lane-bg-${track.id}`"
               class="week-lane-bg"
-              :style="{
-                top: getWeekLaneY(track.id) + 'px',
-                background: track.color + (track.isHighlight ? '22' : '14')
-              }"
+              :style="{ top: getWeekLaneY(track.id) + 'px', borderBottom: `1.5px dashed ${track.color}` }"
             />
 
             <div class="week-lane-labels">
@@ -99,11 +96,7 @@
                 :key="track.id"
                 class="week-lane-label"
                 :class="{ 'week-lane-label--highlight': track.isHighlight }"
-                :style="{
-                  top: getWeekLaneY(track.id) + 'px',
-                  color: track.color,
-                  borderColor: track.color + '44'
-                }"
+                :style="{ top: getWeekLaneY(track.id) + 'px', color: track.color, borderColor: track.color }"
                 @mouseenter="onTrackHover(track.id)"
                 @mouseleave="onTrackHover(null)"
               >
@@ -165,7 +158,7 @@
       <div 
         v-if="edgeTooltip.visible" 
         class="edge-tooltip-popup" 
-        :style="{ left: edgeTooltip.x + 'px', top: (edgeTooltip.baseY - currentScrollY) + 'px', transform: `translate(${edgeTooltip.translateX}, -100%)` }"
+        :style="{ left: edgeTooltip.x + 'px', top: (edgeTooltip.baseY - currentScrollY) + 'px', transform: `translate(${edgeTooltip.translateX}, ${edgeTooltip.translateY})` }"
       >
         <div class="et-track" :style="{ color: edgeTooltip.edge.color }">{{ store.getTrackById(edgeTooltip.edge.track)?.name }}</div>
         <div class="et-nodes">
@@ -180,11 +173,11 @@
       <div 
         v-if="edgeRemote.visible" 
         class="edge-remote-modal" 
-        :style="{ left: edgeRemote.x + 'px', top: (edgeRemote.baseY - currentScrollY) + 'px' }"
+        :style="{ left: edgeRemote.x + 'px', top: (edgeRemote.baseY - currentScrollY) + 'px', transform: `translate(${edgeRemote.translateX}, ${edgeRemote.translateY})` }"
       >
         <div class="er-header">
           <span class="er-track-name" :style="{ color: edgeRemote.edge.color }">
-            {{ store.getTrackById(edgeRemote.edge.track)?.name }} 연결선
+            {{ store.getTrackById(edgeRemote.edge.track)?.name }} CONNECTION
           </span>
           <button class="er-close" @click.stop="closeRemote"><i class="fas fa-times"/></button>
         </div>
@@ -196,7 +189,7 @@
               <div class="er-node-title">{{ edgeRemote.edge.from.tooltip?.title || edgeRemote.edge.from.text }}</div>
             </div>
           </div>
-          <div class="er-arrow"><i class="fas fa-link"/></div>
+          <div class="er-arrow"><i class="fas fa-arrow-down"/></div>
           <div class="er-node" @click.stop="jumpToNode(edgeRemote.edge.to)">
             <div class="er-node-color" :style="{ background: store.getTrackById(edgeRemote.edge.to.track)?.color }"></div>
             <div class="er-node-info">
@@ -211,6 +204,16 @@
     <NodeFormModal v-model="isScheduleModalOpen" :mode="modalMode" :initial-form="modalInitialForm" :edit-node-id="editTargetId" @save="handleSaveSchedule" />
     <BranchManageModal v-model="isTrackModalOpen" />
     <DayDetailModal v-model="isDayDetailOpen" :day-str="dayDetailTarget" :schedules="store.getSchedulesForDay(dayDetailTarget)" @add-schedule="(d) => { isDayDetailOpen = false; openCreateModal(d) }" @edit-schedule="(s) => { isDayDetailOpen = false; openEditModal(s) }" @delete-schedule="(id) => { handleDeleteSchedule(id) }" />
+
+    <Teleport to="body">
+      <div v-if="playEntryAnim" class="fly-overlay-entry">
+        <div class="flying-curriculum-part2">
+          <i class="fas fa-calendar-check" />
+          <span>일정 생성 중...</span>
+        </div>
+      </div>
+    </Teleport>
+
   </div>
 </template>
 
@@ -244,8 +247,6 @@ const activeTooltipId = ref(null)
 const selectedSchedules = ref([])
 
 const currentScrollY = ref(0)
-const anchorDate = ref(new Date(today.getFullYear(), today.getMonth(), 1))
-
 const calendarWrapper = ref(null)
 const monthScrollBody = ref(null)
 const weekGraphZone = ref(null)
@@ -263,8 +264,11 @@ const hiddenTracks = ref(new Set())
 function onHiddenTracksChange(set) { hiddenTracks.value = new Set(set) }
 
 const interactionState = ref({ hovered: null, clicked: null })
-const edgeTooltip = ref({ visible: false, x: 0, baseY: 0, translateX: '-50%', edge: null })
-const edgeRemote = ref({ visible: false, x: 0, baseY: 0, edge: null })
+const edgeTooltip = ref({ visible: false, x: 0, baseY: 0, translateX: '-50%', translateY: '-100%', edge: null })
+const edgeRemote = ref({ visible: false, x: 0, baseY: 0, translateX: '-50%', translateY: '-100%', edge: null })
+
+// 🚀 플라잉 애니메이션 상태
+const playEntryAnim = ref(false)
 
 function onTrackHover(trackId) { interactionState.value.hovered = trackId ? { type: 'track', data: trackId } : null }
 function onNodeHover(schedule) { interactionState.value.hovered = schedule ? { type: 'node', data: schedule } : null }
@@ -275,7 +279,15 @@ function onEdgeHover(edge, e) {
     if (e) {
       const x = e.clientX; const w = window.innerWidth;
       let translateX = `-${(x / w) * 100}%`;
-      edgeTooltip.value = { visible: true, x, baseY: e.clientY - 20 + currentScrollY.value, translateX, edge }
+      let translateY = '-100%';
+      let yOffset = -15;
+
+      if (e.clientY < 300) {
+        translateY = '0%';
+        yOffset = 15;
+      }
+
+      edgeTooltip.value = { visible: true, x, baseY: e.clientY + yOffset + currentScrollY.value, translateX, translateY, edge }
     }
   } else {
     if (interactionState.value.hovered?.type === 'edge') interactionState.value.hovered = null
@@ -288,13 +300,18 @@ function onEdgeClick(edge, e) {
     interactionState.value.clicked = { type: 'edge', data: edge }
     activeTooltipId.value = null
     edgeTooltip.value.visible = false 
-
     if (e) {
-      const w = window.innerWidth; const h = window.innerHeight;
-      let x = e.clientX + 15; let y = e.clientY + 15;
-      if (x + 240 > w) x = w - 240; 
-      if (y + 180 > h) y = h - 180; 
-      edgeRemote.value = { visible: true, x, baseY: y + currentScrollY.value, edge }
+      const x = e.clientX; const w = window.innerWidth;
+      let translateX = `-${(x / w) * 100}%`;
+      let translateY = '-100%';
+      let yOffset = -15;
+
+      if (e.clientY < 380) {
+        translateY = '0%';
+        yOffset = 15;
+      }
+
+      edgeRemote.value = { visible: true, x, baseY: e.clientY + yOffset + currentScrollY.value, translateX, translateY, edge }
     }
   }
 }
@@ -303,7 +320,12 @@ function closeRemote() { edgeRemote.value.visible = false; if (interactionState.
 
 function jumpToNode(node) {
   const d = parseDate(node.day);
-  anchorDate.value = d; currentYear.value = d.getFullYear(); currentMonth.value = d.getMonth() + 1; focusedDay.value = node.day;
+  anchorDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
+  startOffsetWeeks.value = 12; 
+  endOffsetWeeks.value = 16;
+  currentYear.value = d.getFullYear(); currentMonth.value = d.getMonth() + 1;
+  focusedDay.value = node.day;
+  
   edgeRemote.value.visible = false; activeTooltipId.value = node.id; interactionState.value.clicked = { type: 'node', data: node };
 
   if (currentView.value === 'month') {
@@ -320,12 +342,7 @@ function jumpToNode(node) {
   }
 }
 
-// ★ 트랙 이름 띄어쓰기 기준 첫 단어만 노출
-function getShortTrackName(name) {
-  if (!name) return '';
-  return name.trim().split(' ')[0];
-}
-
+function getShortTrackName(name) { return name ? name.trim().split(' ')[0] : ''; }
 function formatNodeDate(dateStr) { const [y, m, d] = dateStr.split('-').map(Number); return `${m}월 ${d}일`; }
 
 const dimmedNodeIds = computed(() => {
@@ -360,17 +377,145 @@ const { requestDraw } = useCanvasLines(
   weekGraphZone, monthScrollBody, hiddenTracks, interactionState, { onEdgeHover, onEdgeClick }
 )
 
+const anchorDate = ref(new Date(today.getFullYear(), today.getMonth(), 1))
+const startOffsetWeeks = ref(12) 
+const endOffsetWeeks = ref(16)   
+
 const monthCells = computed(() => {
   const cells = []
-  const start = new Date(anchorDate.value.getFullYear(), anchorDate.value.getMonth() - 6, 1)
+  const start = new Date(anchorDate.value.getFullYear(), anchorDate.value.getMonth(), 1)
+  start.setDate(start.getDate() - start.getDay()) 
+  start.setDate(start.getDate() - startOffsetWeeks.value * 7)
+
+  const totalWeeks = startOffsetWeeks.value + endOffsetWeeks.value + 6
   const d = new Date(start)
-  d.setDate(d.getDate() - d.getDay())
-  for (let i = 0; i < 52 * 7; i++) {
+
+  for (let i = 0; i < totalWeeks * 7; i++) {
     cells.push({ dateStr: toDateStr(d), month: d.getMonth() + 1, year: d.getFullYear() })
     d.setDate(d.getDate() + 1)
   }
   return cells
 })
+
+let scrollTicking = false;
+let isAdjustingScroll = false; 
+
+function handleMonthScroll(e) {
+  if (e && e.target) currentScrollY.value = e.target.scrollTop;
+  if (isAdjustingScroll) return; 
+
+  if (!scrollTicking) {
+    window.requestAnimationFrame(() => {
+      const el = monthScrollBody.value
+      if (!el) { scrollTicking = false; return; }
+
+      const centerLine = el.scrollTop + (el.clientHeight / 2) + 50 
+      const firstCell = el.querySelector('.calendar-cell')
+      if (firstCell) {
+        const rowHeight = firstCell.offsetHeight || 150
+        const rowIndex = Math.floor(centerLine / rowHeight)
+        const target = monthCells.value[rowIndex * 7 + 3] 
+        if (target && (target.month !== currentMonth.value || target.year !== currentYear.value)) {
+          currentMonth.value = target.month; currentYear.value = target.year;
+        }
+      }
+
+      const threshold = 1200; 
+
+      if (el.scrollTop < threshold) {
+        isAdjustingScroll = true;
+        const oldScrollHeight = el.scrollHeight;
+        const oldScrollTop = el.scrollTop;
+        
+        startOffsetWeeks.value += 12; 
+        
+        if (endOffsetWeeks.value > 40) endOffsetWeeks.value -= 12;
+
+        nextTick(() => {
+          const heightDiff = el.scrollHeight - oldScrollHeight;
+          el.scrollTop = oldScrollTop + heightDiff;
+          isAdjustingScroll = false;
+        });
+      } 
+      else if (el.scrollHeight - el.scrollTop - el.clientHeight < threshold) {
+        isAdjustingScroll = true;
+        endOffsetWeeks.value += 12; 
+
+        if (startOffsetWeeks.value > 40) {
+          const oldScrollHeight = el.scrollHeight;
+          const oldScrollTop = el.scrollTop;
+          startOffsetWeeks.value -= 12;
+          
+          nextTick(() => {
+            const heightDiff = oldScrollHeight - el.scrollHeight;
+            el.scrollTop = Math.max(0, oldScrollTop - heightDiff);
+            isAdjustingScroll = false;
+          });
+        } else {
+          isAdjustingScroll = false;
+        }
+      }
+      scrollTicking = false;
+    });
+    scrollTicking = true;
+  }
+}
+
+function initMonthScroll() { 
+  startOffsetWeeks.value = 12;
+  endOffsetWeeks.value = 16;
+  anchorDate.value = new Date(currentYear.value, currentMonth.value - 1, 1);
+  nextTick(() => {
+    const firstDayStr = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}-01`;
+    scrollToDate(firstDayStr, 'auto', 'top');
+  });
+}
+
+function scrollToDate(dateStr, behavior = 'smooth', align = 'top') {
+  const el = document.getElementById(`day-${dateStr}`);
+  if (el && monthScrollBody.value) {
+    let targetTop = el.offsetTop - 50; 
+    if (align === 'center') {
+      const containerH = monthScrollBody.value.clientHeight;
+      targetTop = Math.max(0, el.offsetTop - (containerH / 2) + (el.clientHeight / 2));
+    }
+    monthScrollBody.value.scrollTo({ top: targetTop, behavior });
+  }
+}
+
+function navigate(dir) {
+  if (currentView.value === 'month') {
+    let d;
+    if (dir === 'prev') d = new Date(currentYear.value, currentMonth.value - 2, 1);
+    else if (dir === 'next') d = new Date(currentYear.value, currentMonth.value, 1);
+    else d = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const diffMonths = Math.abs((d.getFullYear() - anchorDate.value.getFullYear()) * 12 + (d.getMonth() - anchorDate.value.getMonth()));
+
+    if (diffMonths > 3) {
+      anchorDate.value = d;
+      startOffsetWeeks.value = 12;
+      endOffsetWeeks.value = 16;
+      currentYear.value = d.getFullYear();
+      currentMonth.value = d.getMonth() + 1;
+      nextTick(() => { scrollToDate(toDateStr(d), 'auto', 'top'); });
+    } else {
+      const targetEl = document.getElementById(`day-${toDateStr(d)}`);
+      if (targetEl) scrollToDate(toDateStr(d), 'smooth', 'top');
+      else { 
+        anchorDate.value = d;
+        currentYear.value = d.getFullYear(); currentMonth.value = d.getMonth() + 1;
+        nextTick(() => scrollToDate(toDateStr(d), 'auto', 'top'));
+      }
+    }
+  } else if (currentView.value === 'week') {
+    const d = parseDate(focusedDay.value)
+    if (dir === 'prev') d.setDate(d.getDate() - 7)
+    else if (dir === 'next') d.setDate(d.getDate() + 7)
+    else { focusedDay.value = todayStr; return }
+    weekSlideDir.value = dir; focusedDay.value = toDateStr(d); currentMonth.value = d.getMonth() + 1; currentYear.value = d.getFullYear()
+  }
+}
 
 const tracksInCurrentView = computed(() => {
   const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}`
@@ -393,40 +538,22 @@ const sortedAllTracks = computed(() => {
 const headerDateText = computed(() => `${currentYear.value}년 ${currentMonth.value}월`)
 
 const weekDays = computed(() => {
-  const d = parseDate(focusedDay.value)
-  const day = d.getDay()
-  const start = new Date(d)
-  start.setDate(d.getDate() - day)
-  const days = []
-  for (let i = 0; i < 7; i++) {
-    const cur = new Date(start)
-    cur.setDate(start.getDate() + i)
-    days.push(toDateStr(cur))
-  }
+  const d = parseDate(focusedDay.value); const day = d.getDay(); const start = new Date(d); start.setDate(d.getDate() - day);
+  const days = []; for (let i = 0; i < 7; i++) { const cur = new Date(start); cur.setDate(start.getDate() + i); days.push(toDateStr(cur)); }
   return days
 })
 const dateOf = (dateStr) => parseInt(dateStr.split('-')[2], 10)
 
 const weekGraphHeight = computed(() => {
-  let maxOffset = WEEK_TOP_MARGIN;
-  let currentIdx = null;
-  for (const t of sortedAllTracks.value) {
-    if (currentIdx !== t.index) {
-      if (currentIdx !== null) maxOffset += WEEK_LANE_SPACING;
-      currentIdx = t.index;
-    }
-  }
+  let maxOffset = WEEK_TOP_MARGIN; let currentIdx = null;
+  for (const t of sortedAllTracks.value) { if (currentIdx !== t.index) { if (currentIdx !== null) maxOffset += WEEK_LANE_SPACING; currentIdx = t.index; } }
   return maxOffset + WEEK_TOP_MARGIN; 
 })
 
 const getWeekLaneY = (trackId) => {
-  let offset = WEEK_TOP_MARGIN;
-  let currentIdx = null;
+  let offset = WEEK_TOP_MARGIN; let currentIdx = null;
   for (const t of sortedAllTracks.value) {
-    if (currentIdx !== t.index) {
-      if (currentIdx !== null) offset += WEEK_LANE_SPACING;
-      currentIdx = t.index;
-    }
+    if (currentIdx !== t.index) { if (currentIdx !== null) offset += WEEK_LANE_SPACING; currentIdx = t.index; }
     if (t.id === trackId) return offset;
   }
   return offset;
@@ -434,67 +561,6 @@ const getWeekLaneY = (trackId) => {
 
 const weekSlideAnimClass = computed(() => { if (!weekSlideDir.value) return ''; return weekSlideDir.value === 'next' ? 'slide-in-left' : 'slide-in-right' })
 watch(weekSlideDir, (v) => { if (v) setTimeout(() => { weekSlideDir.value = null }, 340) })
-
-let scrollTicking = false;
-function handleMonthScroll(e) {
-  if (e && e.target) currentScrollY.value = e.target.scrollTop;
-  if (!scrollTicking) {
-    window.requestAnimationFrame(() => {
-      const el = monthScrollBody.value
-      if (el) {
-        const centerLine = el.scrollTop + el.clientHeight / 2
-        const firstCell = el.querySelector('.calendar-cell')
-        if (firstCell) {
-          const rowHeight = firstCell.offsetHeight || 150
-          const rowIndex = Math.floor(centerLine / rowHeight)
-          const target = monthCells.value[rowIndex * 7 + 3]
-          if (target && (target.month !== currentMonth.value || target.year !== currentYear.value)) {
-            currentMonth.value = target.month; currentYear.value = target.year;
-          }
-        }
-      }
-      scrollTicking = false;
-    });
-    scrollTicking = true;
-  }
-}
-
-function scrollToDate(dateStr, behavior = 'smooth', align = 'top') {
-  const el = document.getElementById(`day-${dateStr}`);
-  if (el && monthScrollBody.value) {
-    let targetTop = el.offsetTop - 10;
-    if (align === 'center') {
-      const containerH = monthScrollBody.value.clientHeight;
-      targetTop = Math.max(0, el.offsetTop - (containerH / 2) + (el.clientHeight / 2));
-    }
-    monthScrollBody.value.scrollTo({ top: targetTop, behavior });
-  }
-}
-
-function navigate(dir) {
-  if (currentView.value === 'month') {
-    let d;
-    if (dir === 'prev') d = new Date(currentYear.value, currentMonth.value - 2, 1);
-    else if (dir === 'next') d = new Date(currentYear.value, currentMonth.value, 1);
-    else { jumpToDate(today); return; }
-    const el = document.getElementById(`day-${toDateStr(d)}`);
-    if (el) scrollToDate(toDateStr(d), 'smooth', 'top');
-    else jumpToDate(d);
-  } else if (currentView.value === 'week') {
-    const d = parseDate(focusedDay.value)
-    if (dir === 'prev') d.setDate(d.getDate() - 7)
-    else if (dir === 'next') d.setDate(d.getDate() + 7)
-    else { focusedDay.value = todayStr; return }
-    weekSlideDir.value = dir; focusedDay.value = toDateStr(d); currentMonth.value = d.getMonth() + 1; currentYear.value = d.getFullYear()
-  }
-}
-
-function jumpToDate(date) {
-  anchorDate.value = date; currentYear.value = date.getFullYear(); currentMonth.value = date.getMonth() + 1; focusedDay.value = toDateStr(date);
-  if (currentView.value === 'month') {
-    nextTick(() => scrollToDate(toDateStr(new Date(currentYear.value, currentMonth.value - 1, 1)), 'auto', 'top'))
-  }
-}
 
 function setView(v) { 
   currentView.value = v; currentScrollY.value = 0; 
@@ -504,11 +570,6 @@ function setView(v) {
 
 function toDateStr(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` }
 function parseDate(str) { const [y,m,d] = str.split('-').map(Number); return new Date(y, m-1, d) }
-
-function handleBackdropClick(e) {
-  if (e && e.target.closest('.edge-remote-modal')) return;
-  activeTooltipId.value = null; interactionState.value.clicked = null; edgeRemote.value.visible = false;
-}
 
 function openCreateModal(dateStr) { selectedDay.value = dateStr; focusedDay.value = dateStr; modalMode.value = 'create'; editTargetId.value = null; modalInitialForm.value = { day: dateStr, track: '', title: '', text: '', time: '09:00', tags: '', parentIds: [], childIds: [] }; isScheduleModalOpen.value = true; activeTooltipId.value = null }
 function openEditModal(schedule) { 
@@ -531,13 +592,22 @@ async function handleSaveSchedule(payload) {
 async function handleDeleteSchedule(id) { if (!confirm('이 일정을 삭제하시겠습니까?')) return; await store.deleteSchedule(id); activeTooltipId.value = null }
 function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; selectedSchedules.value.forEach(id => store.deleteSchedule(id)); selectedSchedules.value = [] }
 
-function initMonthScroll() { 
-  const firstDayStr = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}-01`;
-  scrollToDate(firstDayStr, 'auto', 'top');
-}
-
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
-onMounted(() => { store.fetchHolidaysForYear(currentYear.value); nextTick(() => initMonthScroll()) })
+onMounted(() => { 
+  store.fetchHolidaysForYear(currentYear.value); 
+  nextTick(() => initMonthScroll());
+
+  // 🚀 온보딩 페이지에서 넘어왔는지 확인 후 파트 2 애니메이션 재생
+  if (sessionStorage.getItem('playCalendarEntryAnim') === 'true') {
+    sessionStorage.removeItem('playCalendarEntryAnim')
+    playEntryAnim.value = true
+    
+    // 파트 2 비행 애니메이션(0.7초)이 완전히 끝나는 0.8초 시점에 뷰에서 제거
+    setTimeout(() => {
+      playEntryAnim.value = false
+    }, 800)
+  }
+})
 
 let _touchStartX = 0; let wheelTimeout = null;
 function onWeekTouchStart(e) { _touchStartX = e.touches[0].clientX }
@@ -550,117 +620,143 @@ function onWeekWheel(e) {
 </script>
 
 <style scoped>
-.app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; background: var(--bg-base); font-family: 'Escoredream', system-ui, sans-serif; }
+.custom-scroll { overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; overflow-anchor: auto; }
+.custom-scroll::-webkit-scrollbar { display: none; }
+
+.app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; background: var(--bg-base); font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
 :deep(.calendar-header) { position: relative !important; z-index: 100 !important; }
 
 /* ── 공통 ── */
 .calendar-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; background: var(--bg-base); }
-.calendar-wrapper { position: relative; width: 100%; height: 100%; background: var(--bg-surface); display: flex; flex-direction: column; overflow: hidden; }
-.calendar-header-row { display: grid; border-bottom: 1px solid var(--border); background: var(--bg-elevated); z-index: 90; position: sticky; top: 0; }
-.grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
-.day-header { padding: 10px 0; text-align: center; font-size: 12px; font-weight: 700; color: var(--text-faint); }
-.day-header--sat { color: var(--sat-color) !important; }
-.day-header--sun { color: var(--sun-color) !important; }
-.line-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+.calendar-wrapper { position: relative; width: 100%; min-height: 100%; display: flex; flex-direction: column; }
 
 /* ── 월간 뷰 전용 ── */
-.month-scroll-body { flex: 1; overflow-y: auto; overflow-x: hidden; position: relative; z-index: 10; scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track); scroll-behavior: smooth; }
+.month-scroll-body { flex: 1; position: relative; z-index: 10; scroll-behavior: auto; }
+.calendar-header-row { display: grid; border-bottom: 2px solid var(--text-primary); background: var(--bg-surface); z-index: 90; position: sticky; top: 0; }
+.grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
+.day-header { padding: 14px 0; text-align: center; font-size: 13px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; border-right: 1px solid var(--border); }
+.day-header:last-child { border-right: none; }
+.day-header--sat { color: #2563eb !important; }
+.day-header--sun { color: #dc2626 !important; }
+.line-canvas { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
 
-/* ── ★ 주간 뷰(Week View) 최적화 ── */
-.week-wrapper { 
-  flex: 1; display: flex; flex-direction: column; 
-  position: relative; background: var(--bg-surface); 
-  overflow-y: auto; overflow-x: hidden; 
-  scrollbar-width: thin; 
-  scrollbar-color: var(--scrollbar-thumb) transparent;
+/* ── Floating Action Bar ── */
+.floating-action-bar {
+  position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+  background: var(--text-primary); color: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0;
+  padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+  box-shadow: 6px 6px 0 var(--border); z-index: 200; font-weight: 900; letter-spacing: 0.05em;
 }
-
-.sticky-header {
-  position: sticky;
-  top: 0;
-  z-index: 90;
+.floating-action-bar button {
+  background: transparent; color: var(--bg-base); border: 2px solid var(--bg-base);
+  padding: 6px 12px; font-weight: 900; cursor: pointer; border-radius: 0; transition: all 0.1s; letter-spacing: 0.05em;
 }
+.floating-action-bar button:hover { background: var(--bg-base); color: var(--text-primary); }
 
-/* ★ 7일 모두 완벽히 동일한 비율(1:1) 적용 (내용물이 길어도 늘어나지 않도록 minmax 강제) */
-.week-grid-cols {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-}
+/* ── 주간 뷰(Week View) ── */
+.week-wrapper { flex: 1; display: flex; flex-direction: column; position: relative; background: transparent; }
+.sticky-header { position: sticky; top: 0; z-index: 90; }
+.week-grid-cols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 
-.week-col-header { padding: 12px 0 8px; text-align: center; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.week-col-header { padding: 18px 0 14px; text-align: center; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 2px solid var(--text-primary); }
 .week-col-header:last-child { border-right: none; }
-.week-col-label { font-size: 10px; font-weight: 700; color: var(--text-faint); text-transform: uppercase; }
-.week-col-date { font-size: 18px; font-weight: 800; color: var(--text-muted); font-family: 'Escoredream', sans-serif; display: flex; align-items: center; gap: 5px; }
-.week-col-date.is-today { color: var(--text-primary); }
-.week-today-tag { font-size: 8px; background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); padding: 2px 5px; border-radius: 4px; color: var(--accent); }
+.week-col-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+.week-col-date { font-size: 22px; font-weight: 900; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
+.week-holiday-name { font-size: 10px; font-weight: 800; color: #dc2626; margin-top: 4px; letter-spacing: -0.05em; }
+
+.day-header--sat .week-col-label, .day-header--sat .week-col-date { color: #2563eb !important; }
+.day-header--sun .week-col-label, .day-header--sun .week-col-date { color: #dc2626 !important; }
+.day-header--holiday .week-col-label, .day-header--holiday .week-col-date { color: #dc2626 !important; }
+
+.week-col-header:has(.is-today) .week-col-label,
+.week-col-header:has(.is-today) .week-col-date,
+.week-col-header:has(.is-today) .week-holiday-name { color: var(--bg-base) !important; }
+.week-col-header:has(.is-today) { background: var(--text-primary); color: var(--bg-base); }
+.week-today-tag { font-size: 9px; background: var(--text-primary); border: 1px solid var(--text-primary); padding: 4px 6px; color: var(--bg-base); font-weight: 900; letter-spacing: 0.05em; border-radius: 0; }
 
 /* 그래프 구역 */
-.week-graph-zone { position: relative; border-bottom: 1px solid var(--border-mid); flex-shrink: 0; background: var(--bg-base); z-index: 10; }
+.week-graph-zone { position: relative; border-bottom: 2px solid var(--border); flex-shrink: 0; background: transparent; z-index: 10; }
 .week-bg-grid { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
-.week-bg-col { border-right: 1px solid var(--border); background: linear-gradient(to bottom, rgba(150, 150, 150, 0.07) 1px, transparent 1px); background-size: 100% 28px; }
+.week-bg-col { border-right: 1px solid var(--border); }
 .week-bg-col:last-child { border-right: none; }
-.week-lane-bg { position: absolute; left: 0; right: 0; height: 1px; transform: translateY(-50%); z-index: 0; pointer-events: none; }
+.week-lane-bg { position: absolute; left: 0; right: 0; height: 1px; transform: translateY(-50%); z-index: 0; pointer-events: none; background: transparent !important; }
 
-/* ★ 라벨 구역: 선의 Y축 정중앙에 완벽하게 일치, 점과 닿지 않도록 길이 제한 */
+/* 라벨 구역 */
 .week-lane-labels { position: absolute; inset: 0; pointer-events: none; z-index: 45; }
 .week-lane-label { 
-  position: absolute; left: 4px; 
-  transform: translateY(-50%); /* Y축 정중앙 배치 */
-  margin-top: 0; 
-  display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; 
-  border-radius: 4px; border: 1px solid transparent; background: var(--bg-surface); 
-  font-size: 10px; font-weight: 700; color: var(--text-secondary); 
-  cursor: pointer; transition: all 0.15s; pointer-events: auto;
-  /* 점(첫째 날 중앙 = 7.14%)과 겹치지 않도록 최대 너비 제한 (1/14 지점에서 여백 12px 뺌) */
+  position: absolute; left: 4px; transform: translateY(-50%); margin-top: 0; 
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; 
+  border-radius: 0; border: 1.5px solid transparent; background: var(--bg-surface); 
+  font-size: 11px; font-weight: 800; color: var(--text-primary); 
+  cursor: pointer; transition: all 0.1s; pointer-events: auto; text-transform: uppercase;
   max-width: calc((100% / 14) - 12px); 
 }
-.week-lane-label:hover { border-color: var(--accent) !important; background: var(--bg-elevated); z-index: 100; max-width: max-content; }
-.lane-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.lane-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Escoredream', sans-serif; }
-.lane-hl-badge { font-size: 8px; color: var(--text-faint); margin-left: 2px; flex-shrink: 0; }
+.week-lane-label:hover { background: var(--text-primary); color: var(--bg-base) !important; z-index: 100; max-width: max-content; }
+.week-lane-label:hover .lane-name { color: var(--bg-base); }
+.lane-dot { width: 8px; height: 8px; border-radius: 0; border: 1px solid var(--bg-base); flex-shrink: 0; }
+.lane-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Space Grotesk', sans-serif; }
+.lane-hl-badge { font-size: 9px; margin-left: 4px; flex-shrink: 0; }
 
 /* 하단 카드 존 */
-.week-card-zone { flex: 1; background: var(--bg-base); min-height: 100%; }
+.week-card-zone { flex: 1; background: transparent; min-height: 100%; }
 
-.week-cell { border-right: 1px solid var(--border); padding: 12px 6px 44px; display: flex; flex-direction: column; gap: 8px; position: relative; transition: background 0.15s; cursor: pointer; min-height: 100%; }
+.week-cell { border-right: 1px solid var(--border); padding: 16px 8px 48px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: background 0.1s; cursor: pointer; min-height: 100%; }
 .week-cell:last-child { border-right: none; }
-.week-cell:hover { background: var(--bg-elevated); }
-.week-cell--today { background: var(--today-bg) !important; border-top: 2px solid rgba(168, 162, 158, 0.5); }
-.week-cell--selected { background: rgba(59,130,246,0.06) !important; outline: 2px solid var(--accent); outline-offset: -2px; }
+.week-cell:hover { background: var(--bg-hover); }
+.week-cell--today { background: transparent !important; }
+.week-cell--selected { outline: 2px solid var(--text-primary); outline-offset: -2px; background: transparent !important; }
 .week-cards { display: flex; flex-direction: column; gap: 8px; }
 
-.btn-add-week { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 8px; background: var(--bg-hover); color: var(--text-muted); border: 1px solid var(--border); cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.15s; }
+.btn-add-week { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 32px; height: 32px; border-radius: 0; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
 .week-cell:hover .btn-add-week { opacity: 1; }
-.btn-add-week:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-add-week:hover { background: var(--text-primary); color: var(--bg-base); transform: scale(1.1); box-shadow: 2px 2px 0 var(--text-primary); }
 
-@keyframes targetFlash { 0% { background-color: rgba(59, 130, 246, 0.25); box-shadow: inset 0 0 0 3px var(--accent); } 100% { background-color: var(--bg-surface); box-shadow: inset 0 0 0 0px transparent; } }
-:deep(.flash-target) { animation: targetFlash 1.2s ease-out; border-radius: 8px; }
+@keyframes targetFlash { 0% { background-color: var(--text-primary); color: var(--bg-base); box-shadow: inset 0 0 0 4px var(--bg-base); } 100% { background-color: transparent; box-shadow: inset 0 0 0 0px transparent; } }
+:deep(.flash-target) { animation: targetFlash 0.8s ease-out; border-radius: 0; }
 
-/* 툴팁 및 팝업 (기존 유지) */
-.edge-tooltip-popup { position: absolute; z-index: 80; pointer-events: none; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; box-shadow: 0 4px 16px rgba(0,0,0,0.15); margin-top: -10px; display: flex; flex-direction: column; gap: 6px; min-width: max-content; white-space: nowrap; }
-.et-track { font-size: 11px; font-weight: 800; font-family: 'Escoredream', sans-serif; }
-.et-nodes { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; font-family: 'Escoredream', sans-serif; color: var(--text-primary); }
-.et-nodes i { color: var(--text-faint); font-size: 11px; }
+/* ★ 툴팁 & 모달 통일 (여백 및 위치 문제 해결) */
+.edge-tooltip-popup { position: absolute; z-index: 80; pointer-events: none; background: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0; padding: 12px 16px; box-shadow: 4px 4px 0 var(--text-primary); display: flex; flex-direction: column; gap: 8px; min-width: max-content; white-space: nowrap; }
+.et-track { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; }
+.et-nodes { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; color: var(--text-primary); }
+.et-nodes i { color: var(--text-primary); font-size: 12px; }
 
-.edge-remote-modal { position: absolute; z-index: 80; width: 240px; background: var(--bg-surface); border: 1.5px solid var(--border-mid); border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,0.25); display: flex; flex-direction: column; overflow: hidden; }
-.er-header { padding: 12px 14px; background: var(--bg-elevated); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.er-track-name { font-size: 12px; font-weight: 800; font-family: 'Escoredream', sans-serif; }
-.er-close { background: none; border: none; color: var(--text-faint); font-size: 14px; cursor: pointer; transition: 0.15s; padding: 0 4px; line-height: 1; }
-.er-close:hover { color: var(--text-primary); }
-.er-body { padding: 14px; display: flex; flex-direction: column; gap: 6px; }
-.er-node { display: flex; gap: 10px; align-items: center; padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-elevated); cursor: pointer; transition: all 0.15s ease; }
-.er-node:hover { border-color: var(--accent); background: rgba(59,130,246,0.06); transform: translateX(4px); box-shadow: 0 2px 8px rgba(59,130,246,0.1); }
-.er-node-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 4px rgba(0,0,0,0.2); }
-.er-node-info { display: flex; flex-direction: column; flex: 1; min-width: 0; }
-.er-node-day { font-size: 10px; color: var(--text-faint); margin-bottom: 4px; font-family: monospace; font-weight: 600; letter-spacing: 0.05em; }
-.er-node-title { font-size: 13px; font-weight: 700; color: var(--text-primary); font-family: 'Escoredream', sans-serif; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.er-arrow { text-align: center; color: var(--border-mid); font-size: 14px; margin: -2px 0; }
+.edge-remote-modal { position: absolute; z-index: 80; width: 260px; background: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0; box-shadow: 6px 6px 0 var(--text-primary); display: flex; flex-direction: column; overflow: hidden; }
+.er-header { padding: 14px 16px; background: transparent; border-bottom: 2px solid var(--text-primary); display: flex; justify-content: space-between; align-items: center; }
+.er-track-name { font-size: 13px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+.er-close { background: none; border: none; color: var(--text-primary); font-size: 16px; cursor: pointer; transition: 0.1s; padding: 0 4px; line-height: 1; }
+.er-close:hover { transform: scale(1.1); }
+.er-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.er-node { display: flex; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 0; border: 2px solid var(--border); background: transparent; cursor: pointer; transition: all 0.1s ease; }
+.er-node:hover { border-color: var(--text-primary); background: var(--text-primary); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--border); }
+.er-node:hover .er-node-title, .er-node:hover .er-node-day { color: var(--bg-base); }
+.er-node-color { width: 10px; height: 10px; border-radius: 0; flex-shrink: 0; border: 2px solid var(--border); }
+.er-node-info { display: flex; flex-direction: column; flex: 1; min-width: 0; gap: 2px; }
+.er-node-day { font-size: 11px; color: var(--text-muted); font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase; }
+.er-node-title { font-size: 14px; font-weight: 800; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.er-arrow { text-align: center; color: var(--text-primary); font-size: 16px; margin: 4px 0; }
 
 @keyframes slideInFromLeft { from { transform: translateX(-6%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slideInFromRight { from { transform: translateX(6%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
-.slide-in-left  { animation: slideInFromLeft  0.32s cubic-bezier(0.25,0.46,0.45,0.94) both; }
-.slide-in-right { animation: slideInFromRight 0.32s cubic-bezier(0.25,0.46,0.45,0.94) both; }
+.slide-in-left  { animation: slideInFromLeft  0.2s ease-out both; }
+.slide-in-right { animation: slideInFromRight 0.2s ease-out both; }
+
+/* 🚀 플라잉 애니메이션 Part 2 (사이드바로 쏙 날아감) */
+.fly-overlay-entry { position: fixed; inset: 0; z-index: 9999; pointer-events: none; }
+.flying-curriculum-part2 {
+  position: absolute; display: flex; align-items: center; gap: 12px; padding: 24px 36px;
+  background: var(--text-primary); color: var(--bg-base); font-size: 20px; font-weight: 900;
+  border: 4px solid var(--text-primary); white-space: nowrap; font-family: 'Space Grotesk', 'Escoredream', sans-serif;
+  /* Part 1에서 끝난 상태(압축된 알약)와 동일한 모습으로 시작 */
+  top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.45); border-radius: 100px;
+  animation: flyIntoNav 0.7s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+@keyframes flyIntoNav {
+  0% { top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.45); opacity: 1; box-shadow: 0 0 40px rgba(0,0,0,0.3); }
+  20% { top: 48%; left: 50%; transform: translate(-50%, -50%) scale(0.45); opacity: 1; box-shadow: 0 0 40px rgba(0,0,0,0.3); } /* 살짝 떴다가 */
+  100% { top: 120px; left: 32px; transform: translate(-50%, -50%) scale(0.05); opacity: 0; } /* 사이드바 캘린더 아이콘 위치로 흡수 */
+}
 </style>

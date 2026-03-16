@@ -7,8 +7,8 @@
 <script setup>
 import { useThemeStore } from '@/stores/useThemeStore'
 import { storeToRefs } from 'pinia'
-
 import { watch } from 'vue'
+
 const themeStore = useThemeStore()
 const { themeClass } = storeToRefs(themeStore)
 
@@ -37,120 +37,116 @@ watch(themeClass, (cls) => {
   --month-row-height: 150px;
 }
 
-/* ── 다크 테마 (기본) — .app-root + body 모두 적용 (Teleport 지원) ── */
+/* ── 다크 테마 (기본) ── */
 .theme-dark, body.theme-dark {
-  --bg-base:      #18181e;
-  --bg-surface:   #1e1e24;
-  --bg-elevated:  #23232c;
-  --bg-hover:     #2a2a35;
-  --border:       #2d2d38;
-  --border-mid:   #374151;
-  --text-primary: #f1f5f9;
-  --text-secondary:#c0c8d8;
-  --text-muted:   #8896a8;
-  --text-faint:   #4b5563;
-  --accent:       #3b82f6;
-  --accent-glow:  rgba(59,130,246,0.35);
-  --sat-color:    #60a5fa;
-  --sun-color:    #f87171;
-  --today-bg:     rgba(59,130,246,0.08);
-  --today-border: rgba(59,130,246,0.4);
+  --bg-base:      #000000;
+  --bg-surface:   #0a0a0a;
+  --bg-elevated:  #111111;
+  --bg-hover:     #1a1a1a;
+  --border:       #333333;
+  --border-mid:   #555555;
+  --text-primary: #ffffff;
+  --text-secondary:#cccccc;
+  --text-muted:   #888888;
+  --text-faint:   #444444;
+  --accent:       #ffffff;
+  --accent-glow:  rgba(255,255,255,0.15);
+  --sat-color:    #aaaaaa;
+  --sun-color:    #aaaaaa;
+  --today-bg:     rgba(255,255,255,0.08);
+  --today-border: rgba(255,255,255,0.4);
   --node-border:  var(--bg-surface);
-  --scrollbar-thumb: #374151;
-  --scrollbar-track: #17171d;
+  --scrollbar-thumb: #333333;
+  --scrollbar-track: #000000;
+  
   /* ── 모달 전용 ── */
-  --modal-bg:            #2c2c3e;
-  --modal-border:        #4e4e6a;
-  --modal-text:          #f1f5f9;
-  --modal-sub:           #94a3b8;
-  --modal-text:          #f1f5f9;
-  --modal-sub:           #94a3b8;
-  --modal-divider:       #3a3a52;
-  --modal-input-bg:      #1e1e2c;
-  --modal-input-focus-bg:#23233a;
+  --modal-bg:            #0a0a0a;
+  --modal-border:        #333333;
+  --modal-text:          #ffffff;
+  --modal-sub:           #888888;
+  --modal-divider:       #222222;
+  --modal-input-bg:      #000000;
+  --modal-input-focus-bg:#111111;
   --modal-shadow:
-    0 0 0 1px rgba(255,255,255,0.07) inset,
-    0 32px 72px rgba(0,0,0,0.75),
-    0 12px 32px rgba(0,0,0,0.5);
+    0 0 0 1px rgba(255,255,255,0.1) inset,
+    0 32px 72px rgba(0,0,0,0.9);
   color-scheme: dark;
 }
 
 /* ── 라이트 테마 ── */
 .theme-light, body.theme-light {
-  --bg-base:      #eef2f7;
-  --bg-surface:   #ffffff;
-  --bg-elevated:  #f1f5fb;
-  --bg-hover:     #e4eaf4;
-  --border:       #d0d8e8;
-  --border-mid:   #b0bccf;
-  --text-primary: #0f1923;
-  --text-secondary:#2c3d52;
-  --text-muted:   #506070;
-  --text-faint:   #8a99aa;
-  --accent:       #2563eb;
-  --accent-glow:  rgba(37,99,235,0.2);
-  --sat-color:    #2563eb;
-  --sun-color:    #dc2626;
-  --today-bg:     rgba(37,99,235,0.06);
-  --today-border: rgba(37,99,235,0.35);
+  --bg-base:      #ffffff;
+  --bg-surface:   #f5f5f5;
+  --bg-elevated:  #eeeeee;
+  --bg-hover:     #e0e0e0;
+  --border:       #000000;
+  --border-mid:   #666666;
+  --text-primary: #000000;
+  --text-secondary:#333333;
+  --text-muted:   #666666;
+  --text-faint:   #999999;
+  --accent:       #000000;
+  --accent-glow:  rgba(0,0,0,0.1);
+  --sat-color:    #555555;
+  --sun-color:    #555555;
+  --today-bg:     rgba(0,0,0,0.04);
+  --today-border: rgba(0,0,0,0.35);
   --node-border:  #ffffff;
-  --scrollbar-thumb: #c4cdd8;
-  --scrollbar-track: #edf2f7;
+  --scrollbar-thumb: #cccccc;
+  --scrollbar-track: #f0f0f0;
+  
   /* ── 모달 전용 ── */
   --modal-bg:            #ffffff;
-  --modal-border:        #e2e8f0;
-  --modal-text:          #111827;
-  --modal-sub:           #6b7280;
-  --modal-divider:       #d8e4f0;
-  --modal-input-bg:      #f0f5fb;
+  --modal-border:        #000000;
+  --modal-text:          #000000;
+  --modal-sub:           #666666;
+  --modal-divider:       #cccccc;
+  --modal-input-bg:      #f9f9f9;
   --modal-input-focus-bg:#ffffff;
   --modal-shadow:
-    0 0 0 1px rgba(255,255,255,1) inset,
-    0 32px 72px rgba(10,20,50,0.22),
-    0 12px 32px rgba(10,20,50,0.12);
+    0 0 0 1px rgba(0,0,0,1) inset,
+    0 16px 40px rgba(0,0,0,0.1);
   color-scheme: light;
 }
 
 /* Teleport to="body" 대응 — body에도 같은 변수 전달 */
 body.is-dark {
-  --modal-bg:            #2c2c3e;
-  --modal-border:        #4e4e6a;
-  --modal-divider:       #3a3a52;
-  --modal-input-bg:      #1e1e2c;
-  --modal-input-focus-bg:#23233a;
+  --modal-bg:            #0a0a0a;
+  --modal-border:        #333333;
+  --modal-divider:       #222222;
+  --modal-input-bg:      #000000;
+  --modal-input-focus-bg:#111111;
   --modal-shadow:
-    0 0 0 1px rgba(255,255,255,0.07) inset,
-    0 32px 72px rgba(0,0,0,0.75),
-    0 12px 32px rgba(0,0,0,0.5);
-  --text-primary: #f1f5f9;
-  --text-muted:   #8896a8;
-  --text-faint:   #4b5563;
-  --accent:       #3b82f6;
-  --accent-glow:  rgba(59,130,246,0.35);
-  --bg-hover:     #2a2a35;
-  --border-mid:   #374151;
-  --scrollbar-thumb: #374151;
+    0 0 0 1px rgba(255,255,255,0.1) inset,
+    0 32px 72px rgba(0,0,0,0.9);
+  --text-primary: #ffffff;
+  --text-muted:   #888888;
+  --text-faint:   #444444;
+  --accent:       #ffffff;
+  --accent-glow:  rgba(255,255,255,0.15);
+  --bg-hover:     #1a1a1a;
+  --border-mid:   #555555;
+  --scrollbar-thumb: #333333;
 }
 body.is-light {
   --modal-bg:            #ffffff;
-  --modal-border:        #e2e8f0;
-  --modal-text:          #111827;
-  --modal-sub:           #6b7280;
-  --modal-divider:       #d8e4f0;
-  --modal-input-bg:      #f0f5fb;
+  --modal-border:        #000000;
+  --modal-text:          #000000;
+  --modal-sub:           #666666;
+  --modal-divider:       #cccccc;
+  --modal-input-bg:      #f9f9f9;
   --modal-input-focus-bg:#ffffff;
   --modal-shadow:
-    0 0 0 1px rgba(255,255,255,1) inset,
-    0 32px 72px rgba(10,20,50,0.22),
-    0 12px 32px rgba(10,20,50,0.12);
-  --text-primary: #0f1923;
-  --text-muted:   #506070;
-  --text-faint:   #8a99aa;
-  --accent:       #2563eb;
-  --accent-glow:  rgba(37,99,235,0.2);
-  --bg-hover:     #e4eaf4;
-  --border-mid:   #b0bccf;
-  --scrollbar-thumb: #c4cdd8;
+    0 0 0 1px rgba(0,0,0,1) inset,
+    0 16px 40px rgba(0,0,0,0.1);
+  --text-primary: #000000;
+  --text-muted:   #666666;
+  --text-faint:   #999999;
+  --accent:       #000000;
+  --accent-glow:  rgba(0,0,0,0.1);
+  --bg-hover:     #e0e0e0;
+  --border-mid:   #666666;
+  --scrollbar-thumb: #cccccc;
 }
 
 body {
@@ -164,13 +160,13 @@ body {
 
 .app-root { width: 100%; height: 100vh; overflow: hidden; }
 
-/* 전역 스크롤바 */
+/* 전역 스크롤바 - 직각으로 변경 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 0; }
 
-/* 전역 선택 색상 */
-::selection { background: var(--accent); color: #fff; }
+/* 전역 선택 색상 - 흑백 반전 */
+::selection { background: var(--text-primary); color: var(--bg-base); }
 
 /* ────────────────────────────────────
    Teleport 전역 패널: BranchLegend 드롭다운
@@ -178,19 +174,14 @@ body {
 .legend-panel-teleport {
   position: fixed;
   min-width: 320px;
-  
-  /* ★ 핵심 수정: 트랙 개수만큼 넓이가 자동으로 늘어나게 함 */
   width: max-content; 
-  /* 화면(브라우저) 넓이보다 커지는 것만 방지 */
   max-width: 90vw; 
 
-  background: #1e1e24;
-  background: var(--bg-surface, #1e1e24);
-  border: 1px solid #2d2d38;
-  border: 1px solid var(--border, #2d2d38);
-  border-radius: 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 0; /* 직각 */
   padding: 16px 18px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
   z-index: 9999;
   font-family: 'Escoredream', system-ui, sans-serif;
 }
@@ -201,20 +192,18 @@ body {
   gap: 8px;
   font-size: 12px;
   font-weight: 700;
-  color: #8896a8;
-  color: var(--text-muted, #8896a8);
+  color: var(--text-muted);
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid #2d2d38;
-  border-bottom: 1px solid var(--border, #2d2d38);
+  border-bottom: 1px solid var(--border);
 }
-.legend-panel-title i { color: #818cf8; }
+.legend-panel-title i { color: var(--text-primary); }
 
 .legend-panel-close {
   margin-left: auto;
   width: 24px; height: 24px;
-  border-radius: 6px;
-  background: var(--bg-hover);
+  border-radius: 0; /* 직각 */
+  background: transparent;
   border: 1px solid var(--border);
   color: var(--text-faint);
   cursor: pointer;
@@ -222,7 +211,11 @@ body {
   font-size: 10px;
   transition: all 0.15s;
 }
-.legend-panel-close:hover { color: var(--text-primary); background: var(--bg-elevated); }
+.legend-panel-close:hover { 
+  color: var(--bg-base); 
+  background: var(--text-primary); 
+  border-color: var(--text-primary);
+}
 
 /* Teleport 전환 애니메이션 */
 .legend-fade-enter-active { transition: all 0.18s cubic-bezier(0.34,1.2,0.64,1); }
