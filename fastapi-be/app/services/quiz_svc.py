@@ -635,16 +635,13 @@ def _assemble_response(
         if q.scoring_keywords and q_type != QuestionType.multiple_choice:
             points.append(f"필수 키워드: {', '.join(q.scoring_keywords)}")
 
-        # for mc: prepend the correct answer index as the first expected_point
-        if q_type == QuestionType.multiple_choice and q.correct_option_index is not None:
-            points.insert(0, f"정답: 보기 {q.correct_option_index + 1}")
-
         quiz_questions.append(QuizQuestion(
             id=idx + 1,
             type=q_type,
             question=q.question,
             expected_points=points,
             options=q.options,
+            correct=q.correct_option_index if q_type == QuestionType.multiple_choice else None,
         ))
 
     # flatten per_question_rubrics into full_score_criteria for easy reading

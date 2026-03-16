@@ -197,7 +197,12 @@ class RecommendationHint(BaseModel):
 
 
 class QuizRequest(BaseModel):
-    """POST /internal/quizzes"""
+    """POST /internal/quizzes
+
+    필수 필드 누락 시 400 COMMON-002 반환:
+      request_id, trace_id, user(user_id+job_role), target_skill, current_level
+    Enum 허용값: current_level/difficulty = "low"|"mid"|"high", quiz_type = "pre_assessment"|"review"|"interview"
+    """
     request_id: str
     trace_id: str
     policy_version: str = "policy_v1"
@@ -292,6 +297,9 @@ class QuizQuestion(BaseModel):
     )
     options: list[str] | None = Field(
         default=None, description="객관식인 경우에만 사용"
+    )
+    correct: int | None = Field(
+        default=None, description="객관식 정답 보기의 0-based 인덱스. 객관식이 아닌 경우 null."
     )
 
 
