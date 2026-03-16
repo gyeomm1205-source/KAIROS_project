@@ -3,15 +3,19 @@ import asyncio
 import json
 import csv
 import io
+import os
 import time
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ==========================================
 # [Spring Boot가 FastAPI로 넘겨주었다고 가정하는 데이터]
+# GitHub OAuth 구현 전 임시 테스트용 — .env 파일에서 로드
 # ==========================================
-# GITHUB_TOKEN = "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" # 본인의 토큰 입력!
-GITHUB_TOKEN = "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" # 본인의 토큰 입력!
-USERNAME = "zhy2on"                    # 본인의 깃허브 아이디 입력!
+GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
+USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
 
 HEADERS = {
     "Authorization": f"token {GITHUB_TOKEN}",
