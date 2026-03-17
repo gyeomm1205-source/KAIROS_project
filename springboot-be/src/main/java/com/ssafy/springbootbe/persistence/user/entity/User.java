@@ -40,6 +40,9 @@ public class User {
     @Builder.Default
     private UserStatus status = UserStatus.GUEST;
 
+    @Column(name = "velog_username", length = 100)
+    private String velogUsername;
+
     @Column(name = "calendar_sync_enabled", nullable = false)
     @Builder.Default
     private Boolean calendarSyncEnabled = false;
@@ -56,8 +59,7 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public void updateProfile(String nickname, UserPosition position, Boolean calendarSyncEnabled) {
-        if (nickname != null) this.nickname = nickname;
+    public void updateProfile(UserPosition position, Boolean calendarSyncEnabled) {
         if (position != null) this.position = position;
         if (calendarSyncEnabled != null) this.calendarSyncEnabled = calendarSyncEnabled;
     }
