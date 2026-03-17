@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from starlette import status
 import uuid
 
+from app.api.internal.ingestion import router as internal_ingestion_router
 from app.api.internal.quiz import router as internal_quiz_router
 from app.api.internal.recommend import router as internal_recommend_router
 from app.api.test import router as test_router
@@ -36,6 +37,7 @@ app = FastAPI(
 app.include_router(test_router)
 app.include_router(internal_quiz_router)
 app.include_router(internal_recommend_router)
+app.include_router(internal_ingestion_router)
 
 # 데모용 인메모리 저장소 (실제로는 DB로 교체 필요)
 fake_db = {}
