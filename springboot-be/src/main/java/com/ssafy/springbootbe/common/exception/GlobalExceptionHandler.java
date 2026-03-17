@@ -8,6 +8,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
+import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -62,6 +63,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleScheduleAccessDeniedException(ScheduleAccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
