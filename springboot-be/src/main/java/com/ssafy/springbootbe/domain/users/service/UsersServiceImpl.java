@@ -132,6 +132,15 @@ public class UsersServiceImpl implements UsersService {
     }
 
 
+    @Override
+    @Transactional
+    public void deleteUser(Long userId) {
+        User user = findUserByIdOrThrow(userId);
+        redisService.delete(buildProfileCacheKey(userId));
+        userRepository.delete(user);
+        log.info("회원 탈퇴 완료. userId={}", userId);
+    }
+
     protected User findUserByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException(userId));

@@ -44,6 +44,13 @@ public class UsersController {
         return ResponseEntity.ok(usersService.updateDarkMode(userId, request));
     }
 
+    @DeleteMapping("/me")
+    public ResponseEntity<Void> deleteUser(
+            @RequestHeader("Authorization") String authorizationHeader) {
+        Long userId = extractUserId(authorizationHeader);
+        usersService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
+    }
 
     private Long extractUserId(String authorizationHeader) {
         String token = authorizationHeader.replace("Bearer ", "");
