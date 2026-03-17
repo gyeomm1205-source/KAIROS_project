@@ -66,6 +66,16 @@ _RANK_PRIORITY: dict[RelativeRank, int] = {
     RelativeRank.high: 2,
 }
 
+# Difficulty composition target ratio for TOP_K results: high : mid : low = 1 : 2 : 1
+# For TOP_K=5, the extra slot goes to low (highest learning priority).
+# Spring Boot assigns relative_rank using 30 / 40 / 30 percentile thresholds:
+#   bottom 30 % → low, middle 40 % → mid, top 30 % → high
+_DIFFICULTY_RATIO: dict[RelativeRank, int] = {
+    RelativeRank.low:  1,
+    RelativeRank.mid:  2,
+    RelativeRank.high: 1,
+}
+
 
 # ---------------------------------------------------------------------------
 # Step 1 — Retrieve candidates
@@ -203,14 +213,106 @@ def _rank_by_learning_priority(
 
 
 # ---------------------------------------------------------------------------
-# Step 5 — Select top-K
+# Step 5 — Select top-K with difficulty balance
 # ---------------------------------------------------------------------------
 
 def _select_top_k(
     candidates: list[dict[str, Any]],
     k: int = TOP_K,
 ) -> list[dict[str, Any]]:
+    """Simple top-K slice. Used only in the empty-result fallback path."""
     return candidates[:k]
+
+
+def _select_with_difficulty_balance(
+    candidates: list[dict[str, Any]],
+    learning_states: list[LearningState],
+    k: int = TOP_K,
+) -> list[dict[str, Any]]:
+    """
+    Select k candidates while enforcing the 1:2:1 difficulty composition
+    (high : mid : low, defined in _DIFFICULTY_RATIO).
+
+    Algorithm:
+      1. Bucket each candidate by derived difficulty (preserving rank order within
+         each bucket — weakest skill first, as established by _rank_by_learning_priority).
+      2. Compute per-bucket quotas proportional to _DIFFICULTY_RATIO.
+         The extra slot(s) from rounding are awarded to low first, then mid
+         (lower rank = higher learning priority).
+      3. Fill each bucket up to its quota; any bucket short of quota donates
+         its remainder to the next-priority bucket.
+
+    Falls back to a simple top-K slice if all candidates share the same
+    difficulty (e.g., all-high scenario), preserving existing behaviour.
+    """
+    ratio_total = sum(_DIFFICULTY_RATIO.values())
+
+    # Compute base quotas (floor division)
+    quotas: dict[RelativeRank, int] = {
+        rank: k * weight // ratio_total
+        for rank, weight in _DIFFICULTY_RATIO.items()
+    }
+
+    # Distribute leftover slots: prioritise low → mid → high
+    assigned = sum(quotas.values())
+    fill_order = [RelativeRank.low, RelativeRank.mid, RelativeRank.high]
+    for rank in fill_order:
+        if assigned >= k:
+            break
+        quotas[rank] += 1
+        assigned += 1
+
+    # Bucket candidates (order within each bucket is already priority-sorted)
+    buckets: dict[RelativeRank, list[dict[str, Any]]] = {
+        RelativeRank.low:  [],
+        RelativeRank.mid:  [],
+        RelativeRank.high: [],
+    }
+    for c in candidates:
+        diff = _difficulty_for_candidate(c, learning_states)
+        buckets[diff].append(c)
+
+    selected: list[dict[str, Any]] = []
+    surplus: list[dict[str, Any]] = []
+
+    # First pass: fill each bucket up to its quota
+    for rank in fill_order:
+        pool = buckets[rank]
+        quota = quotas[rank]
+        selected.extend(pool[:quota])
+        surplus.extend(pool[quota:])   # leftovers available for gap-filling
+
+    # Second pass: fill remaining slots from surplus (weak-skill items first)
+    remaining = k - len(selected)
+    if remaining > 0:
+        surplus.sort(key=lambda c: _RANK_PRIORITY[_difficulty_for_candidate(c, learning_states)])
+        selected.extend(surplus[:remaining])
+
+    # Restore weak-skill-first order within the balanced selection so that
+    # low-rank items still surface before mid/high (spec §12-3).
+    rank_index: dict[str, tuple[int, int]] = {}
+    for ls in learning_states:
+        priority = _RANK_PRIORITY[ls.relative_rank]
+        rank_index[ls.skill.lower()] = (priority, -ls.percentile)
+
+    def _sort_key(c: dict[str, Any]) -> tuple[int, int, float]:
+        best_priority, best_pct_neg = 99, 0
+        for tag in c.get("skill_tags", []):
+            for skill_lower, (prio, pct_neg) in rank_index.items():
+                if tag.lower() in skill_lower or skill_lower in tag.lower():
+                    if prio < best_priority:
+                        best_priority, best_pct_neg = prio, pct_neg
+        return (best_priority, best_pct_neg, -c.get("score", 0.0))
+
+    selected.sort(key=_sort_key)
+
+    logger.debug(
+        "[select_difficulty_balance] k=%d quotas=%s selected=%d",
+        k,
+        {r.value: q for r, q in quotas.items()},
+        len(selected),
+    )
+    return selected[:k]
 
 
 # ---------------------------------------------------------------------------
@@ -511,8 +613,10 @@ async def run_recommendation(request: RecommendationRequest) -> RecommendationRe
     # 4. Sort: weakest skill / lowest percentile first
     candidates = _rank_by_learning_priority(candidates, request.learning_states)
 
-    # 5. Cap result count
-    candidates = _select_top_k(candidates, TOP_K)
+    # 5. Select with 1:2:1 (high:mid:low) difficulty balance
+    candidates = _select_with_difficulty_balance(
+        candidates, request.learning_states, TOP_K
+    )
 
     if not candidates:
         logger.warning(

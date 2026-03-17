@@ -5,11 +5,11 @@ issue: s14p21a506-121
 execution flow:
     run_quiz(request)
         │
-        ├─ 1. build_generation_context()    ← compile target_skill, level, hint into prompt vars
-        ├─ 2. retrieve_reference_context()  ← qdrant search (real client, fallback: recent_references)
-        ├─ 3. generate_questions()          ← gpt-4o rag-grounded, personalized, with_structured_output
-        ├─ 4. generate_rubric()             ← gpt-4o keyword-based rubric, with_structured_output
-        └─ 5. _assemble_response()          ← build QuizResponse (100% schema compliant)
+        ├─ 1. build_generation_context()         ← compile target_skill, level, hint into prompt vars
+        ├─ 2. retrieve_reference_context()       ← qdrant search (real client, fallback: recent_references)
+        ├─ 3. generate_questions_and_rubric()    ← single gpt-4o call: questions + rubric combined
+        │      fallback → generate_questions() + generate_rubric() (2-call sequential)
+        └─ 4. _assemble_response()               ← build QuizResponse (100% schema compliant)
 
 design decisions:
   - questions are grounded exclusively in qdrant chunks (anti-hallucination)
@@ -18,6 +18,7 @@ design decisions:
   - rubric includes per-question keyword requirements for essay/coding grading
   - all llm calls use with_structured_output — no raw string parsing
   - any llm failure triggers rule-based fallback without raising to the caller
+  - combined single-call path eliminates sequential latency between questions and rubric
 """
 
 from __future__ import annotations
@@ -283,6 +284,98 @@ _RUBRIC_USER_TEMPLATE = """\
 
 위 문항들에 대한 채점 기준을 설계하세요.
 required_keywords는 반드시 [출제 근거 자료 요약] 내용에서만 추출하세요.\
+"""
+
+
+# ---------------------------------------------------------------------------
+# combined output schema — questions + rubric in one llm call
+# ---------------------------------------------------------------------------
+
+class _CombinedOutput(BaseModel):
+    """Single structured output that merges _QuestionsOutput and _RubricOutput."""
+    questions: list[_SingleQuestion] = Field(
+        description=(
+            "question_types에 명시된 순서와 수량을 정확히 지킨 문항 리스트. "
+            "각 문항은 반드시 [참고 자료]에 근거해야 함."
+        )
+    )
+    full_score_criteria: list[str] = Field(
+        description="퀴즈 전체 만점 기준. 2~3개의 전반적인 기준.",
+        min_length=1,
+        max_length=3,
+    )
+    partial_score_criteria: list[str] = Field(
+        default_factory=list,
+        description="퀴즈 전체 부분 점수 기준. 1~2개.",
+        max_length=2,
+    )
+    per_question_rubrics: list[_PerQuestionRubric] = Field(
+        description="문항별 세부 채점 기준. 모든 문항에 대해 작성."
+    )
+
+
+# ---------------------------------------------------------------------------
+# prompts — combined generation (questions + rubric in one pass)
+# ---------------------------------------------------------------------------
+
+_COMBINED_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토이자 채점 기준 설계 전문가입니다.
+개발자의 학습 맥락과 참고 자료를 바탕으로 퀴즈 문항과 채점 기준을 한 번에 생성합니다.
+
+━━━ [파트 1] 문항 생성 원칙 ━━━
+1. 오직 [참고 자료] 내용만을 근거로 출제하세요. 자료에 없는 내용은 창작하지 마세요.
+2. [학습 맥락]이 제공된 경우, 문항 서두에 개인화 문구를 자연스럽게 포함하세요.
+   예: "당신이 최근 학습한 OAuth 흐름을 바탕으로, JWT signature가 필요한 이유를 설명하세요."
+
+━━━ 난이도 기준 ━━━
+• low  → 기초: 용어 정의, 개념 설명
+• mid  → 중급: 비교 분석, 적용 방법, 트레이드오프
+• high → 심화: 설계 결정, 엣지 케이스, 실무 최적화
+
+━━━ quiz_type별 성격 ━━━
+• pre_assessment : 현재 지식 수준 진단 (판단적 어조 금지)
+• review         : 학습 내용 재확인 ("다시 떠올려보세요" 어조)
+• interview      : 실무 면접 상황, 근거와 경험 서술 유도
+
+━━━ 문항 유형 규칙 ━━━
+• multiple_choice : 정답 1개 + 오답 3개, correct_option_index 필수
+• short_answer    : scoring_keywords에 참고 자료 핵심 용어 2~5개
+• coding          : 실행 가능한 최소 코드, 언어/프레임워크 명시
+
+━━━ [파트 2] 채점 기준 설계 원칙 ━━━
+• full_score_criteria    : 핵심 개념 정확히 이해 + 실무 맥락 연결 + 구체적 예시 포함 (2~3개)
+• partial_score_criteria : 방향은 맞으나 설명 불완전 (1~2개)
+• per_question_rubrics   : 생성한 모든 문항에 대해 작성
+  - short_answer  → required_keywords: 참고 자료에서 추출한 핵심 용어 2~5개
+  - multiple_choice → required_keywords: 빈 리스트
+  - coding        → required_keywords: 핵심 api/메서드명
+
+━━━ 공통 규칙 ━━━
+• 모든 출력은 한국어
+• required_keywords는 반드시 [참고 자료]에서만 추출\
+"""
+
+_COMBINED_USER_TEMPLATE = """\
+━━━ 학습자 프로필 ━━━
+• 학습 중인 기술  : {target_skill}
+• 현재 수준      : {current_level}
+• 퀴즈 목적      : {quiz_type}
+• 목표 포지션    : {target_positions}
+
+━━━ 학습 맥락 ━━━
+{recommendation_hint_text}
+
+━━━ 출제 조건 ━━━
+• 총 문항 수     : {question_count}개
+• 제한 시간      : {time_limit}분
+• 문항 유형 순서 (이 순서와 수량을 정확히 지키세요):
+{question_types}
+
+━━━ 참고 자료 ━━━
+{reference_context}
+
+문항 {question_count}개와 채점 기준을 함께 생성하세요.
+[참고 자료]에 없는 내용은 절대 출제하지 마세요.\
 """
 
 
@@ -563,6 +656,68 @@ async def _generate_rubric_with_llm(
     return result
 
 
+async def generate_questions_and_rubric(
+    context: dict[str, Any],
+    reference_chunks: list[dict[str, Any]],
+) -> tuple[list[_SingleQuestion], _RubricOutput]:
+    """
+    Single LLM call that generates questions + rubric together.
+
+    Eliminates the sequential latency between generate_questions() and generate_rubric().
+    Falls back to the 2-call path if the combined call fails.
+    """
+    try:
+        return await _generate_combined_with_llm(context, reference_chunks)
+    except Exception as exc:
+        logger.warning(
+            "[generate_questions_and_rubric] combined call failed (%s) — falling back to 2-call path",
+            exc,
+        )
+        questions = await generate_questions(context, reference_chunks)
+        rubric = await generate_rubric(context, questions, reference_chunks)
+        return questions, rubric
+
+
+async def _generate_combined_with_llm(
+    context: dict[str, Any],
+    reference_chunks: list[dict[str, Any]],
+) -> tuple[list[_SingleQuestion], _RubricOutput]:
+    """Single gpt-4o call returning questions and rubric in one structured output."""
+    llm = get_model(TaskType.QUIZ_GENERATION, temperature=0.4)
+    structured_llm = llm.with_structured_output(_CombinedOutput)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _COMBINED_SYSTEM_PROMPT),
+        ("human",  _COMBINED_USER_TEMPLATE),
+    ])
+    chain = prompt | structured_llm
+
+    result: _CombinedOutput = await chain.ainvoke({
+        "target_skill":             context["target_skill"],
+        "current_level":            context["current_level"],
+        "quiz_type":                context["quiz_type"],
+        "target_positions":         context["target_positions"],
+        "question_count":           context["question_count"],
+        "question_types":           _fmt_question_types(context["question_types"]),
+        "time_limit":               context["time_limit"],
+        "recommendation_hint_text": context["hint_text"],
+        "reference_context":        _fmt_reference_chunks(reference_chunks),
+    })
+
+    rubric = _RubricOutput(
+        full_score_criteria=result.full_score_criteria,
+        partial_score_criteria=result.partial_score_criteria,
+        per_question_rubrics=result.per_question_rubrics,
+    )
+
+    logger.debug(
+        "[_generate_combined_with_llm] questions=%d  rubric_criteria=%d",
+        len(result.questions),
+        len(result.full_score_criteria),
+    )
+    return result.questions, rubric
+
+
 def _generate_rubric_fallback(
     context: dict[str, Any],
     questions: list[_SingleQuestion],
@@ -693,13 +848,10 @@ async def run_quiz(request: QuizRequest) -> QuizResponse:
     # 2. retrieve rag grounding context from qdrant
     reference_chunks = retrieve_reference_context(request)
 
-    # 3. generate questions — rag-grounded + personalized (llm / fallback)
-    questions = await generate_questions(context, reference_chunks)
+    # 3. generate questions + rubric in a single llm call (fallback: 2-call sequential)
+    questions, rubric = await generate_questions_and_rubric(context, reference_chunks)
 
-    # 4. generate rubric — keyword-based per-question criteria (llm / fallback)
-    rubric = await generate_rubric(context, questions, reference_chunks)
-
-    # 5. assemble and return (100% schema compliant)
+    # 4. assemble and return (100% schema compliant)
     response = _assemble_response(request, questions, rubric)
 
     logger.info(
