@@ -1,5 +1,11 @@
 package com.ssafy.springbootbe.common.exception;
 
+import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
+import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
+import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
+import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -12,6 +18,39 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(GoogleAuthorizationCodeMissingException.class)
+    public ResponseEntity<Map<String, String>> handleGoogleAuthorizationCodeMissingException(
+            GoogleAuthorizationCodeMissingException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "INVALID_INPUT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(GoogleTokenExchangeFailedException.class)
+    public ResponseEntity<Map<String, String>> handleGoogleTokenExchangeFailedException(
+            GoogleTokenExchangeFailedException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(GoogleUserInfoFetchFailedException.class)
+    public ResponseEntity<Map<String, String>> handleGoogleUserInfoFetchFailedException(
+            GoogleUserInfoFetchFailedException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(DuplicateOAuthEmailException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateOAuthEmailException(DuplicateOAuthEmailException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "DUPLICATE_USER", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler({AuthTokenGenerationException.class, AuthRedisSaveFailedException.class})
+    public ResponseEntity<Map<String, String>> handleAuthInternalException(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
 
     @ExceptionHandler(ScheduleNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleScheduleNotFoundException(ScheduleNotFoundException e) {

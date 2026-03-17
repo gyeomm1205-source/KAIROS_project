@@ -22,6 +22,8 @@ public class JWTUtils {
     @Value("${service.refresh-token-duration}")
     private Long refreshTokenDurationTime;
 
+    private static final long ONBOARDING_TOKEN_DURATION_MINUTES = 30L;
+
     private SecretKey secretKey;
     public JWTUtils(@Value("${spring.jwt.secret}") String secret) {
         secretKey = new SecretKeySpec(
@@ -39,6 +41,19 @@ public class JWTUtils {
     }
     public String createRefreshToken(User user) {
         return createToken("refreshToken", user, refreshTokenDurationTime);
+    }
+    public String createOnboardingToken(String googleSub, String email) {
+        Date expiration = new Date(System.currentTimeMillis() + 1000 * 60 * ONBOARDING_TOKEN_DURATION_MINUTES);
+        return Jwts.builder()
+                .subject("onboarding")
+                .expiration(expiration)
+                .claims(Map.of(
+                        "googleSub", googleSub,
+                        "email", email,
+                        "purpose", "onboarding"
+                ))
+                .signWith(secretKey)
+                .compact();
     }
     private String createToken(String subject, User user, long duration) {
         Date expiration = new Date(System.currentTimeMillis() + 1000*60*60*duration); // 시간(hour) 단위

@@ -32,8 +32,8 @@ management:
     health:
       show-details: always
 service:
-  access-token-duration: ${ACCESS_TOKEN_DURATION} # 8시간
-  refresh-token-duration: ${REFRESH_TOKEN_DURATION} # 128시간 -> 1주일
+  access-token-duration: ${ACCESS_TOKEN_DURATION}
+  refresh-token-duration: ${REFRESH_TOKEN_DURATION}
 oauth:
   content-type: application/x-www-form-urlencoded
   grant_type: authorization_code
