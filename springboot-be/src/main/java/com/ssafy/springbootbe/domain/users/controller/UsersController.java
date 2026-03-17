@@ -1,6 +1,7 @@
 package com.ssafy.springbootbe.domain.users.controller;
 
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
@@ -9,6 +10,8 @@ import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/users")
@@ -32,6 +35,15 @@ public class UsersController {
         Long userId = extractUserId(authorizationHeader);
         return ResponseEntity.ok(usersService.updateProfile(userId, request));
     }
+
+    @PatchMapping("/me/settings/dark-mode")
+    public ResponseEntity<Map<String, Boolean>> updateDarkMode(
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody DarkModeUpdateRequest request) {
+        Long userId = extractUserId(authorizationHeader);
+        return ResponseEntity.ok(usersService.updateDarkMode(userId, request));
+    }
+
 
     private Long extractUserId(String authorizationHeader) {
         String token = authorizationHeader.replace("Bearer ", "");

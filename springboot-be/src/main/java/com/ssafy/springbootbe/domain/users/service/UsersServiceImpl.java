@@ -5,6 +5,7 @@ import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.common.dto.DevPositionInfo;
 import com.ssafy.springbootbe.domain.common.dto.TechStackInfo;
+import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -118,6 +120,17 @@ public class UsersServiceImpl implements UsersService {
                 .considerPersonalSchedule(user.getCalendarSyncEnabled())
                 .build();
     }
+
+    @Override
+    @Transactional
+    public Map<String, Boolean> updateDarkMode(Long userId, DarkModeUpdateRequest request) {
+        User user = findUserByIdOrThrow(userId);
+        user.updateDarkMode(request.getDarkModeEnabled());
+        redisService.delete(buildProfileCacheKey(userId));
+        log.info("다크모드 설정 변경. userId={}, darkModeEnabled={}", userId, request.getDarkModeEnabled());
+        return Map.of("darkModeEnabled", user.getDarkModeEnabled());
+    }
+
 
     protected User findUserByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
