@@ -12,13 +12,14 @@ from app.api.internal.recommend import router as internal_recommend_router
 from app.api.test import router as test_router
 from app.schemas.common import ErrorResponse
 from app.services.errors import AppError
-from app.services.qdrant_client import close_qdrant_client, get_qdrant_client
+from app.services.qdrant_client import close_qdrant_client, get_qdrant_client, init_collections
 from app.services.profile_analyzer import run_integrated_analysis
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     get_qdrant_client()
+    init_collections()
     try:
         yield
     finally:

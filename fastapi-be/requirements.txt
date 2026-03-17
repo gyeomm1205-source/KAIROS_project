@@ -1,4 +1,20 @@
+# Web framework
 fastapi==0.115.8
 uvicorn[standard]==0.34.0
-qdrant-client==1.16.2
 python-dotenv==1.0.1
+pydantic==2.11.1
+
+# HTTP client
+aiohttp==3.11.14
+
+# Qdrant
+qdrant-client==1.16.2
+
+# LangChain
+langchain==0.3.21
+langchain-core==0.3.49
+langchain-openai==0.3.9
+langchain-google-genai==2.1.2
+
+# OpenAI (임베딩용)
+openai==1.70.0
