@@ -3,9 +3,11 @@ package com.ssafy.springbootbe.common.exception;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubRedirectGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
@@ -34,6 +36,13 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidOnboardingTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidOnboardingTokenException(
+            InvalidOnboardingTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(GoogleUserInfoFetchFailedException.class)
     public ResponseEntity<Map<String, String>> handleGoogleUserInfoFetchFailedException(
             GoogleUserInfoFetchFailedException e) {
@@ -49,6 +58,13 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({AuthTokenGenerationException.class, AuthRedisSaveFailedException.class})
     public ResponseEntity<Map<String, String>> handleAuthInternalException(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(GithubRedirectGenerationException.class)
+    public ResponseEntity<Map<String, String>> handleGithubRedirectGenerationException(
+            GithubRedirectGenerationException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
     }

@@ -5,6 +5,7 @@ import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackRespon
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -20,13 +21,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.net.URI;
+
 @WebMvcTest(
         value = AuthController.class,
         properties = {
                 "oauth.google.auth_uri=https://accounts.google.com/o/oauth2/auth",
                 "oauth.google.client_id=test-google-client-id",
                 "oauth.google.redirect_uri=http://localhost:5173/google/redirect",
-                "oauth.google.scope=openid email profile"
+                "oauth.google.scope=openid email profile",
+                "oauth.github.auth_uri=https://github.com/login/oauth/authorize",
+                "oauth.github.client_id=test-github-client-id",
+                "oauth.github.redirect_uri=http://localhost:5173/github/redirect",
+                "oauth.github.scope=read:user repo"
         }
 )
 class AuthControllerTest {
@@ -129,5 +136,49 @@ class AuthControllerTest {
                         .param("code", "bad-userinfo"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("SERVER_ERROR"));
+    }
+
+    @Test
+    void 깃허브_연동_시작_리다이렉트_성공() throws Exception {
+        // given
+        URI redirectUri = URI.create(
+                "https://github.com/login/oauth/authorize?client_id=test-github-client-id"
+                        + "&redirect_uri=http://localhost:5173/github/redirect"
+                        + "&response_type=code&scope=read:user%20repo&state=onboarding-token"
+        );
+        given(authService.buildGithubAuthorizationRedirect("Bearer onboarding-token"))
+                .willReturn(redirectUri);
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/github")
+                        .header("Authorization", "Bearer onboarding-token"))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", Matchers.containsString("client_id=test-github-client-id")))
+                .andExpect(header().string("Location", Matchers.containsString("state=onboarding-token")));
+    }
+
+    @Test
+    void 깃허브_연동_시작_Authorization_헤더_누락_실패() throws Exception {
+        // given
+        given(authService.buildGithubAuthorizationRedirect(null))
+                .willThrow(new InvalidOnboardingTokenException("Authorization 헤더가 없습니다."));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/github"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 깃허브_연동_시작_Bearer_형식_오류_실패() throws Exception {
+        // given
+        given(authService.buildGithubAuthorizationRedirect("Token onboarding-token"))
+                .willThrow(new InvalidOnboardingTokenException("Authorization 헤더는 Bearer 형식이어야 합니다."));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/github")
+                        .header("Authorization", "Token onboarding-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
     }
 }

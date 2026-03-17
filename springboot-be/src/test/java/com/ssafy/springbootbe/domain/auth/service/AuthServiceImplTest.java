@@ -9,6 +9,10 @@ import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.JwtException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
@@ -22,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.net.URI;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -62,6 +67,10 @@ class AuthServiceImplTest {
         ));
 
         ReflectionTestUtils.setField(authService, "refreshTokenDurationTime", 168L);
+        ReflectionTestUtils.setField(authService, "githubAuthUri", "https://github.com/login/oauth/authorize");
+        ReflectionTestUtils.setField(authService, "githubClientId", "test-github-client-id");
+        ReflectionTestUtils.setField(authService, "githubRedirectUri", "http://localhost:5173/github/redirect");
+        ReflectionTestUtils.setField(authService, "githubScope", "read:user repo");
     }
 
     @Test
@@ -265,5 +274,97 @@ class AuthServiceImplTest {
         // when & then
         assertThatThrownBy(() -> authService.handleGoogleCallback("valid-code"))
                 .isInstanceOf(AuthRedisSaveFailedException.class);
+    }
+
+    @Test
+    void 깃허브_연동_시작_리다이렉트_URL_생성_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+
+        // when
+        URI result = authService.buildGithubAuthorizationRedirect("Bearer onboarding-token");
+
+        // then
+        assertThat(result.toString()).startsWith("https://github.com/login/oauth/authorize");
+        assertThat(result.toString()).contains("client_id=test-github-client-id");
+        assertThat(result.toString()).contains("redirect_uri=http://localhost:5173/github/redirect");
+        assertThat(result.toString()).contains("response_type=code");
+        assertThat(result.toString()).contains("scope=read:user%20repo");
+        assertThat(result.toString()).contains("state=onboarding-token");
+        verify(redisService).hasKey("onboarding:google-sub");
+    }
+
+    @Test
+    void 깃허브_연동_시작_Authorization_헤더_누락_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect(null))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("Authorization 헤더가 없습니다.");
+    }
+
+    @Test
+    void 깃허브_연동_시작_Bearer_형식_오류_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Token onboarding-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("Bearer 형식");
+    }
+
+    @Test
+    void 깃허브_연동_시작_만료된_onboarding_token_실패() {
+        // given
+        given(jwtUtils.getClaims("expired-token"))
+                .willThrow(new ExpiredJwtException(null, null, "expired"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer expired-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("유효하지 않은 onboarding token");
+    }
+
+    @Test
+    void 깃허브_연동_시작_purpose_불일치_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("wrong-purpose-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("access");
+
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer wrong-purpose-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("purpose");
+    }
+
+    @Test
+    void 깃허브_연동_시작_Redis_onboarding_정보가_없으면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer onboarding-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("Redis에 onboarding 정보가 없습니다.");
+    }
+
+    @Test
+    void 깃허브_연동_시작_서명_오류_onboarding_token_실패() {
+        // given
+        given(jwtUtils.getClaims("invalid-token")).willThrow(new JwtException("invalid signature"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer invalid-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("유효하지 않은 onboarding token");
     }
 }

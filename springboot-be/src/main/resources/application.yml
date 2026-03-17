@@ -53,7 +53,6 @@ oauth:
     client_secret: ${GITHUB_CLIENT_SECRET}
     auth_uri: ${GITHUB_AUTH_URL}
     redirect_uri: ${GITHUB_REDIRECT_URL}
-    csrf_code: ${GITHUB_CSRF_CODE}
     token-url: ${GITHUB_TOKEN_URL}
     scope: ${GITHUB_CLIENT_SCOPE}
 ai:

@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -66,6 +67,15 @@ public class AuthController {
         }
 
         return responseBuilder.body(tokenBundle.getResponse());
+    }
+
+    @GetMapping("/oauth2/github")
+    public ResponseEntity<Void> redirectToGithubLogin(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        URI redirectUri = authService.buildGithubAuthorizationRedirect(authorizationHeader);
+        return ResponseEntity.status(302)
+                .location(redirectUri)
+                .build();
     }
 
     private ResponseCookie createRefreshTokenCookie(String refreshToken) {
