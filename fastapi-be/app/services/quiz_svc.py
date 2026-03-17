@@ -1,23 +1,24 @@
 """
-quiz service — post /internal/quizzes
-issue: s14p21a506-121
+퀴즈 서비스 — POST /internal/quizzes
+이슈: S14P21A506-121
 
-execution flow:
+실행 흐름:
     run_quiz(request)
         │
-        ├─ 1. build_generation_context()    ← compile target_skill, level, hint into prompt vars
-        ├─ 2. retrieve_reference_context()  ← qdrant search (real client, fallback: recent_references)
-        ├─ 3. generate_questions()          ← gpt-4o rag-grounded, personalized, with_structured_output
-        ├─ 4. generate_rubric()             ← gpt-4o keyword-based rubric, with_structured_output
-        └─ 5. _assemble_response()          ← build QuizResponse (100% schema compliant)
+        ├─ 1. build_generation_context()         ← target_skill, level, hint → 프롬프트 변수 조립
+        ├─ 2. retrieve_reference_context()       ← Qdrant 검색 (폴백: recent_references)
+        ├─ 3. generate_questions_and_rubric()    ← gpt-4o 단일 호출: 문항 + 채점 기준 동시 생성
+        │      폴백 → generate_questions() + generate_rubric() (2-call 순차)
+        └─ 4. _assemble_response()               ← QuizResponse 조립 (스키마 100% 준수)
 
-design decisions:
-  - questions are grounded exclusively in qdrant chunks (anti-hallucination)
-  - recommendation_hint injects "why this document" context for personalization
-  - question type mix is dynamic: varies by both quiz_type AND difficulty
-  - rubric includes per-question keyword requirements for essay/coding grading
-  - all llm calls use with_structured_output — no raw string parsing
-  - any llm failure triggers rule-based fallback without raising to the caller
+설계 결정:
+  - 문항은 Qdrant 청크에만 근거해 출제 (할루시네이션 방지)
+  - recommendation_hint로 "왜 이 자료인가" 맥락을 주입해 문항 개인화
+  - 문항 유형 구성은 quiz_type과 difficulty에 따라 동적으로 결정
+  - 채점 기준에는 서술형/코딩 문항별 필수 키워드가 포함됨
+  - 모든 LLM 호출은 with_structured_output 사용 — 문자열 파싱 없음
+  - LLM 실패 시 규칙 기반 폴백으로 호출자에게 예외를 올리지 않음
+  - combined 단일 호출로 문항+채점 기준 생성 시 순차 latency 제거
 """
 
 from __future__ import annotations
@@ -46,31 +47,27 @@ from app.services.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# constants
-# ---------------------------------------------------------------------------
-
-# maximum qdrant chunks to fetch as question-generation grounding context
+# 문항 생성 grounding용 Qdrant 청크 최대 개수
 _MAX_CONTEXT_CHUNKS = 5
 
-# truncation limit per chunk to stay within token budget
+# 토큰 예산 유지를 위한 청크당 최대 글자 수
 _CHUNK_CONTENT_MAX_CHARS = 600
 
-# question count table: [quiz_type][difficulty] -> int
+# 문항 수 테이블: [quiz_type][difficulty] → int
 _QUESTION_COUNT: dict[QuizType, dict[RelativeRank, int]] = {
     QuizType.pre_assessment: {RelativeRank.low: 3, RelativeRank.mid: 4, RelativeRank.high: 5},
     QuizType.review:         {RelativeRank.low: 3, RelativeRank.mid: 4, RelativeRank.high: 5},
     QuizType.interview:      {RelativeRank.low: 2, RelativeRank.mid: 3, RelativeRank.high: 4},
 }
 
-# question type distribution table: [quiz_type][difficulty] -> ordered list of QuestionType
-# rationale:
-#   pre_assessment/low  → mostly mc to diagnose recognition-level knowledge
-#   pre_assessment/high → deeper sa to measure conceptual depth
-#   review/low          → sa+mc mix for recall + recognition
-#   review/high         → sa+coding to test application ability
-#   interview/low       → sa only to practice verbal explanation
-#   interview/high      → sa+coding to simulate real interview pressure
+# 문항 유형 분배 테이블: [quiz_type][difficulty] → QuestionType 순서 리스트
+# 설계 근거:
+#   pre_assessment/low  → MC 위주로 인지 수준 진단
+#   pre_assessment/high → SA 위주로 개념 깊이 측정
+#   review/low          → SA+MC 혼합 (회상 + 인식)
+#   review/high         → SA+코딩 (적용 능력 검증)
+#   interview/low       → SA 전용 (구술 연습)
+#   interview/high      → SA+코딩 (실전 면접 압박 시뮬레이션)
 _QUESTION_TYPE_MIX: dict[QuizType, dict[RelativeRank, list[QuestionType]]] = {
     QuizType.pre_assessment: {
         RelativeRank.low:  [QuestionType.multiple_choice, QuestionType.multiple_choice, QuestionType.short_answer],
@@ -90,12 +87,10 @@ _QUESTION_TYPE_MIX: dict[QuizType, dict[RelativeRank, list[QuestionType]]] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# internal llm output schemas (not exposed to spring boot)
-# ---------------------------------------------------------------------------
+# LLM 출력 스키마 (Spring Boot에 노출되지 않는 내부 스키마)
 
 class _SingleQuestion(BaseModel):
-    """llm output schema for one quiz question."""
+    """문항 하나에 대한 LLM 출력 스키마."""
     question: str = Field(
         description=(
             "질문 본문. 개인화 맥락이 있으면 서두에 '당신이 최근 학습한 {skill} 개념 관련' 같은 문구를 포함. "
@@ -125,7 +120,7 @@ class _SingleQuestion(BaseModel):
 
 
 class _QuestionsOutput(BaseModel):
-    """llm must return this exact structure for question generation."""
+    """문항 생성 시 LLM이 반환해야 하는 구조."""
     questions: list[_SingleQuestion] = Field(
         description=(
             "question_types에 명시된 순서와 수량을 정확히 지킨 문항 리스트. "
@@ -135,7 +130,7 @@ class _QuestionsOutput(BaseModel):
 
 
 class _PerQuestionRubric(BaseModel):
-    """per-question grading criteria for the rubric."""
+    """문항별 채점 기준."""
     question_id: int = Field(description="문항 번호 (1-based)")
     required_keywords: list[str] = Field(
         description=(
@@ -154,7 +149,7 @@ class _PerQuestionRubric(BaseModel):
 
 
 class _RubricOutput(BaseModel):
-    """llm must return this exact structure for rubric generation."""
+    """채점 기준 생성 시 LLM이 반환해야 하는 구조."""
     full_score_criteria: list[str] = Field(
         description="퀴즈 전체 만점 기준. 2~3개의 전반적인 기준.",
         min_length=1,
@@ -170,9 +165,7 @@ class _RubricOutput(BaseModel):
     )
 
 
-# ---------------------------------------------------------------------------
-# prompts — question generation
-# ---------------------------------------------------------------------------
+# 프롬프트 — 문항 생성
 
 _QUESTION_SYSTEM_PROMPT = """\
 당신은 KAIROS의 AI 학습 멘토이자 시니어 개발자 인터뷰어입니다.
@@ -233,9 +226,7 @@ _QUESTION_USER_TEMPLATE = """\
 """
 
 
-# ---------------------------------------------------------------------------
-# prompts — rubric generation
-# ---------------------------------------------------------------------------
+# 프롬프트 — 채점 기준 생성
 
 _RUBRIC_SYSTEM_PROMPT = """\
 당신은 KAIROS의 채점 기준 설계 전문가입니다.
@@ -286,15 +277,98 @@ required_keywords는 반드시 [출제 근거 자료 요약] 내용에서만 추
 """
 
 
-# ---------------------------------------------------------------------------
-# step 1 — build generation context
-# ---------------------------------------------------------------------------
+# combined 출력 스키마 — 문항 + 채점 기준을 한 번에
+
+class _CombinedOutput(BaseModel):
+    """_QuestionsOutput과 _RubricOutput을 병합한 단일 structured output."""
+    questions: list[_SingleQuestion] = Field(
+        description=(
+            "question_types에 명시된 순서와 수량을 정확히 지킨 문항 리스트. "
+            "각 문항은 반드시 [참고 자료]에 근거해야 함."
+        )
+    )
+    full_score_criteria: list[str] = Field(
+        description="퀴즈 전체 만점 기준. 2~3개의 전반적인 기준.",
+        min_length=1,
+        max_length=3,
+    )
+    partial_score_criteria: list[str] = Field(
+        default_factory=list,
+        description="퀴즈 전체 부분 점수 기준. 1~2개.",
+        max_length=2,
+    )
+    per_question_rubrics: list[_PerQuestionRubric] = Field(
+        description="문항별 세부 채점 기준. 모든 문항에 대해 작성."
+    )
+
+
+# 프롬프트 — 문항 + 채점 기준 combined 생성
+
+_COMBINED_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토이자 채점 기준 설계 전문가입니다.
+개발자의 학습 맥락과 참고 자료를 바탕으로 퀴즈 문항과 채점 기준을 한 번에 생성합니다.
+
+━━━ [파트 1] 문항 생성 원칙 ━━━
+1. 오직 [참고 자료] 내용만을 근거로 출제하세요. 자료에 없는 내용은 창작하지 마세요.
+2. [학습 맥락]이 제공된 경우, 문항 서두에 개인화 문구를 자연스럽게 포함하세요.
+   예: "당신이 최근 학습한 OAuth 흐름을 바탕으로, JWT signature가 필요한 이유를 설명하세요."
+
+━━━ 난이도 기준 ━━━
+• low  → 기초: 용어 정의, 개념 설명
+• mid  → 중급: 비교 분석, 적용 방법, 트레이드오프
+• high → 심화: 설계 결정, 엣지 케이스, 실무 최적화
+
+━━━ quiz_type별 성격 ━━━
+• pre_assessment : 현재 지식 수준 진단 (판단적 어조 금지)
+• review         : 학습 내용 재확인 ("다시 떠올려보세요" 어조)
+• interview      : 실무 면접 상황, 근거와 경험 서술 유도
+
+━━━ 문항 유형 규칙 ━━━
+• multiple_choice : 정답 1개 + 오답 3개, correct_option_index 필수
+• short_answer    : scoring_keywords에 참고 자료 핵심 용어 2~5개
+• coding          : 실행 가능한 최소 코드, 언어/프레임워크 명시
+
+━━━ [파트 2] 채점 기준 설계 원칙 ━━━
+• full_score_criteria    : 핵심 개념 정확히 이해 + 실무 맥락 연결 + 구체적 예시 포함 (2~3개)
+• partial_score_criteria : 방향은 맞으나 설명 불완전 (1~2개)
+• per_question_rubrics   : 생성한 모든 문항에 대해 작성
+  - short_answer  → required_keywords: 참고 자료에서 추출한 핵심 용어 2~5개
+  - multiple_choice → required_keywords: 빈 리스트
+  - coding        → required_keywords: 핵심 api/메서드명
+
+━━━ 공통 규칙 ━━━
+• 모든 출력은 한국어
+• required_keywords는 반드시 [참고 자료]에서만 추출\
+"""
+
+_COMBINED_USER_TEMPLATE = """\
+━━━ 학습자 프로필 ━━━
+• 학습 중인 기술  : {target_skill}
+• 현재 수준      : {current_level}
+• 퀴즈 목적      : {quiz_type}
+• 목표 포지션    : {target_positions}
+
+━━━ 학습 맥락 ━━━
+{recommendation_hint_text}
+
+━━━ 출제 조건 ━━━
+• 총 문항 수     : {question_count}개
+• 제한 시간      : {time_limit}분
+• 문항 유형 순서 (이 순서와 수량을 정확히 지키세요):
+{question_types}
+
+━━━ 참고 자료 ━━━
+{reference_context}
+
+문항 {question_count}개와 채점 기준을 함께 생성하세요.
+[참고 자료]에 없는 내용은 절대 출제하지 마세요.\
+"""
+
+
+# 단계 1 — 생성 컨텍스트 조립
 
 def build_generation_context(request: QuizRequest) -> dict[str, Any]:
-    """
-    compile all prompt-injection variables from the request into one dict.
-    passed to both generate_questions() and generate_rubric().
-    """
+    """요청에서 프롬프트 주입용 변수를 하나의 dict로 조립한다."""
     question_count = _QUESTION_COUNT[request.quiz_type].get(request.difficulty, 3)
     question_types = _select_question_types(
         request.quiz_type, request.difficulty, question_count
@@ -317,32 +391,25 @@ def _select_question_types(
     difficulty: RelativeRank,
     count: int,
 ) -> list[QuestionType]:
-    """
-    return an ordered list of question types for the given quiz_type + difficulty.
-    cycles through the mix table if count exceeds the defined pattern length.
-    """
+    """quiz_type + difficulty에 맞는 문항 유형 순서 리스트를 반환한다. count가 패턴 길이를 초과하면 순환한다."""
     mix = _QUESTION_TYPE_MIX[quiz_type][difficulty]
     return [mix[i % len(mix)] for i in range(count)]
 
 
-# ---------------------------------------------------------------------------
-# step 2 — retrieve reference context from qdrant
-# ---------------------------------------------------------------------------
+# 단계 2 — Qdrant에서 참고 컨텍스트 조회
 
 def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
     """
-    search qdrant for content chunks relevant to target_skill.
-    chunks serve as the exclusive factual grounding for question generation.
+    target_skill과 관련된 Qdrant 청크를 검색한다.
+    청크는 문항 생성의 유일한 사실 근거로 사용된다.
 
-    primary  : qdrant client with query_text composed from target_skill + hint context
-    fallback : recent_references passed by spring boot in the request body
+    주 경로: Qdrant 클라이언트 (target_skill + hint 컨텍스트로 query_text 구성)
+    폴백:    Qdrant 연결 불가 시 요청 본문의 recent_references 사용
 
-    TODO (once collection is populated):
-      - add payload filter: must={"skill_tags": {"$in": [target_skill]}, "allowed": true}
-      - switch query_text to hint.title if recommendation_hint is present
-        (more focused retrieval on the specific recommended document)
-      - consider hybrid retrieval (keyword + dense) for better chunk coverage
-    see: ai tech spec v3, §11-4 (qdrant search rules)
+    TODO (컬렉션 구축 후):
+      - payload filter 추가: must={"skill_tags": {"$in": [target_skill]}, "allowed": true}
+      - recommendation_hint 있으면 hint.title로 query_text 교체 (더 정밀한 청크 검색)
+      - 하이브리드 검색(키워드 + dense) 고려
     """
     query_text = _build_qdrant_query(request)
 
@@ -362,14 +429,14 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
             for hit in results
         ]
         logger.info(
-            "[retrieve_reference_context] qdrant returned %d chunks  skill=%s  query=%r",
+            "[retrieve_reference_context] Qdrant 반환 %d개 청크  skill=%s  query=%r",
             len(chunks), request.target_skill, query_text,
         )
         return chunks
 
     except Exception as exc:
         logger.warning(
-            "[retrieve_reference_context] qdrant unavailable (%s) — fallback to recent_references",
+            "[retrieve_reference_context] Qdrant 연결 불가 (%s) — recent_references 폴백",
             exc,
         )
         return [
@@ -383,42 +450,35 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
 
 
 def _build_qdrant_query(request: QuizRequest) -> str:
-    """
-    compose a qdrant query string.
-    if recommendation_hint is present, use the document title for focused retrieval.
-    otherwise, fall back to a generic skill-based query.
-    """
+    """Qdrant query 문자열을 구성한다. recommendation_hint가 있으면 문서 제목 기반으로 더 정밀하게 검색한다."""
     if request.recommendation_hint:
         return f"{request.recommendation_hint.title} — {request.target_skill} 핵심 개념"
     return f"{request.target_skill} 개념과 사용 방법"
 
 
-# ---------------------------------------------------------------------------
-# step 3 — generate questions  ← key function
-# ---------------------------------------------------------------------------
+# 단계 3 — 문항 생성
 
 async def generate_questions(
     context: dict[str, Any],
     reference_chunks: list[dict[str, Any]],
 ) -> list[_SingleQuestion]:
     """
-    generate rag-grounded, personalized quiz questions via gpt-4o.
+    gpt-4o로 RAG 기반 개인화 문항을 생성한다.
 
-    primary  : gpt-4o with_structured_output(_QuestionsOutput)
-               — questions are grounded exclusively in qdrant chunks
-               — recommendation_hint injects "why this document" personalization
-               — question type mix is driven by quiz_type + difficulty
-    fallback : rule-based placeholder questions (no llm call)
+    주 경로: gpt-4o with_structured_output(_QuestionsOutput)
+             - Qdrant 청크에만 근거해 출제 (할루시네이션 방지)
+             - recommendation_hint로 "왜 이 자료인가" 개인화 주입
+             - 문항 유형 구성은 quiz_type + difficulty에 따라 동적 결정
+    폴백:    규칙 기반 placeholder 문항 (LLM 호출 없음)
 
-    to improve output quality, tune the prompts in this file
-    (_QUESTION_SYSTEM_PROMPT, _QUESTION_USER_TEMPLATE) and bump
-    PROMPT_VERSIONS[TaskType.QUIZ_GENERATION] in core/model_router.py.
+    출력 품질 개선 시 이 파일의 프롬프트(_QUESTION_SYSTEM_PROMPT, _QUESTION_USER_TEMPLATE)를 수정하고
+    core/model_router.py의 PROMPT_VERSIONS[TaskType.QUIZ_GENERATION]을 올린다.
     """
     try:
         return await _generate_questions_with_llm(context, reference_chunks)
     except Exception as exc:
         logger.warning(
-            "[generate_questions] llm call failed (%s) — using placeholder fallback",
+            "[generate_questions] LLM 호출 실패 (%s) — placeholder 폴백 사용",
             exc,
         )
         return _generate_questions_placeholder(context)
@@ -428,7 +488,7 @@ async def _generate_questions_with_llm(
     context: dict[str, Any],
     reference_chunks: list[dict[str, Any]],
 ) -> list[_SingleQuestion]:
-    """call gpt-4o with_structured_output to generate questions."""
+    """gpt-4o with_structured_output으로 문항을 생성한다."""
     llm = get_model(TaskType.QUIZ_GENERATION, temperature=0.4)
     structured_llm = llm.with_structured_output(_QuestionsOutput)
 
@@ -451,7 +511,7 @@ async def _generate_questions_with_llm(
     })
 
     logger.debug(
-        "[_generate_questions_with_llm] model=%s  prompt_version=%s  questions=%d",
+        "[_generate_questions_with_llm] model=%s  prompt_version=%s  문항=%d",
         get_model_name(TaskType.QUIZ_GENERATION),
         get_prompt_version(TaskType.QUIZ_GENERATION),
         len(result.questions),
@@ -460,10 +520,7 @@ async def _generate_questions_with_llm(
 
 
 def _generate_questions_placeholder(context: dict[str, Any]) -> list[_SingleQuestion]:
-    """
-    rule-based placeholder — no llm call.
-    activated when api key is missing or llm fails.
-    """
+    """규칙 기반 placeholder — API 키 없거나 LLM 실패 시 활성화됨."""
     skill    = context["target_skill"]
     level    = context["current_level"]
     quiz_type = context["quiz_type"]
@@ -504,9 +561,7 @@ def _generate_questions_placeholder(context: dict[str, Any]) -> list[_SingleQues
     return questions
 
 
-# ---------------------------------------------------------------------------
-# step 4 — generate rubric  ← key function
-# ---------------------------------------------------------------------------
+# 단계 4 — 채점 기준 생성
 
 async def generate_rubric(
     context: dict[str, Any],
@@ -514,21 +569,21 @@ async def generate_rubric(
     reference_chunks: list[dict[str, Any]],
 ) -> _RubricOutput:
     """
-    generate keyword-based, per-question rubric via gpt-4o.
+    gpt-4o로 키워드 기반 문항별 채점 기준을 생성한다.
 
-    primary  : gpt-4o with_structured_output(_RubricOutput)
-               — required_keywords extracted from qdrant chunks (not hallucinated)
-               — per_question_rubrics provides granular criteria per question type
-    fallback : rule-based rubric (no llm call)
+    주 경로: gpt-4o with_structured_output(_RubricOutput)
+             - required_keywords는 Qdrant 청크에서만 추출 (할루시네이션 방지)
+             - per_question_rubrics로 문항 유형별 세분화된 기준 제공
+    폴백:    규칙 기반 채점 기준 (LLM 호출 없음)
 
-    note: reference_chunks are passed here so the llm can extract
-    accurate scoring_keywords from the actual retrieved material.
+    reference_chunks를 여기서도 전달하는 이유: LLM이 실제 검색된 자료에서
+    정확한 scoring_keywords를 추출하게 하기 위함.
     """
     try:
         return await _generate_rubric_with_llm(context, questions, reference_chunks)
     except Exception as exc:
         logger.warning(
-            "[generate_rubric] llm call failed (%s) — using rule-based fallback",
+            "[generate_rubric] LLM 호출 실패 (%s) — 규칙 기반 폴백 사용",
             exc,
         )
         return _generate_rubric_fallback(context, questions)
@@ -539,7 +594,7 @@ async def _generate_rubric_with_llm(
     questions: list[_SingleQuestion],
     reference_chunks: list[dict[str, Any]],
 ) -> _RubricOutput:
-    """call gpt-4o with_structured_output to generate the rubric."""
+    """gpt-4o with_structured_output으로 채점 기준을 생성한다."""
     llm = get_model(TaskType.QUIZ_GENERATION, temperature=0.2)
     structured_llm = llm.with_structured_output(_RubricOutput)
 
@@ -557,17 +612,79 @@ async def _generate_rubric_with_llm(
         "reference_context_summary": _fmt_reference_chunks_summary(reference_chunks),
     })
     logger.debug(
-        "[_generate_rubric_with_llm] per_question_rubrics=%d",
+        "[_generate_rubric_with_llm] 문항별 채점 기준=%d",
         len(result.per_question_rubrics),
     )
     return result
+
+
+async def generate_questions_and_rubric(
+    context: dict[str, Any],
+    reference_chunks: list[dict[str, Any]],
+) -> tuple[list[_SingleQuestion], _RubricOutput]:
+    """
+    문항과 채점 기준을 단일 LLM 호출로 함께 생성한다.
+
+    generate_questions() → generate_rubric() 순차 호출의 latency를 제거한다.
+    combined 호출 실패 시 2-call 순차 경로로 폴백한다.
+    """
+    try:
+        return await _generate_combined_with_llm(context, reference_chunks)
+    except Exception as exc:
+        logger.warning(
+            "[generate_questions_and_rubric] combined 호출 실패 (%s) — 2-call 경로 폴백",
+            exc,
+        )
+        questions = await generate_questions(context, reference_chunks)
+        rubric = await generate_rubric(context, questions, reference_chunks)
+        return questions, rubric
+
+
+async def _generate_combined_with_llm(
+    context: dict[str, Any],
+    reference_chunks: list[dict[str, Any]],
+) -> tuple[list[_SingleQuestion], _RubricOutput]:
+    """문항과 채점 기준을 gpt-4o 단일 호출로 생성한다."""
+    llm = get_model(TaskType.QUIZ_GENERATION, temperature=0.4)
+    structured_llm = llm.with_structured_output(_CombinedOutput)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", _COMBINED_SYSTEM_PROMPT),
+        ("human",  _COMBINED_USER_TEMPLATE),
+    ])
+    chain = prompt | structured_llm
+
+    result: _CombinedOutput = await chain.ainvoke({
+        "target_skill":             context["target_skill"],
+        "current_level":            context["current_level"],
+        "quiz_type":                context["quiz_type"],
+        "target_positions":         context["target_positions"],
+        "question_count":           context["question_count"],
+        "question_types":           _fmt_question_types(context["question_types"]),
+        "time_limit":               context["time_limit"],
+        "recommendation_hint_text": context["hint_text"],
+        "reference_context":        _fmt_reference_chunks(reference_chunks),
+    })
+
+    rubric = _RubricOutput(
+        full_score_criteria=result.full_score_criteria,
+        partial_score_criteria=result.partial_score_criteria,
+        per_question_rubrics=result.per_question_rubrics,
+    )
+
+    logger.debug(
+        "[_generate_combined_with_llm] 문항=%d  만점 기준=%d",
+        len(result.questions),
+        len(result.full_score_criteria),
+    )
+    return result.questions, rubric
 
 
 def _generate_rubric_fallback(
     context: dict[str, Any],
     questions: list[_SingleQuestion],
 ) -> _RubricOutput:
-    """rule-based fallback rubric — no llm call."""
+    """규칙 기반 채점 기준 폴백 — LLM 호출 없음."""
     skill = context["target_skill"]
 
     per_q: list[_PerQuestionRubric] = []
@@ -607,9 +724,7 @@ def _generate_rubric_fallback(
     )
 
 
-# ---------------------------------------------------------------------------
-# step 5 — assemble response
-# ---------------------------------------------------------------------------
+# 단계 5 — 응답 조립
 
 def _assemble_response(
     request: QuizRequest,
@@ -617,10 +732,10 @@ def _assemble_response(
     rubric: _RubricOutput,
 ) -> QuizResponse:
     """
-    build the final QuizResponse, 100% compliant with schemas.QuizResponse.
+    schemas.QuizResponse를 100% 준수하는 최종 응답을 조립한다.
 
-    scoring_keywords from _SingleQuestion are appended to expected_points so
-    spring boot can surface them in the ui without schema changes:
+    _SingleQuestion의 scoring_keywords는 Spring Boot가 UI에 표시할 수 있도록
+    expected_points 마지막 항목으로 추가된다:
       "필수 키워드: keyword1, keyword2, ..."
     """
     question_types = _select_question_types(
@@ -631,7 +746,7 @@ def _assemble_response(
     for idx, (q, q_type) in enumerate(zip(questions, question_types)):
         points = list(q.expected_points)
 
-        # append scoring keywords as the last expected_point for grader visibility
+        # 채점자 가시성을 위해 scoring_keywords를 마지막 expected_point로 추가
         if q.scoring_keywords and q_type != QuestionType.multiple_choice:
             points.append(f"필수 키워드: {', '.join(q.scoring_keywords)}")
 
@@ -644,7 +759,7 @@ def _assemble_response(
             correct=q.correct_option_index if q_type == QuestionType.multiple_choice else None,
         ))
 
-    # flatten per_question_rubrics into full_score_criteria for easy reading
+    # per_question_rubrics를 full_score_criteria에 병합해 읽기 편하게 평탄화
     rubric_full = list(rubric.full_score_criteria)
     for pq in rubric.per_question_rubrics:
         if pq.required_keywords:
@@ -668,17 +783,12 @@ def _assemble_response(
     )
 
 
-# ---------------------------------------------------------------------------
-# public entry point
-# ---------------------------------------------------------------------------
+# 공개 엔트리 포인트
 
 async def run_quiz(request: QuizRequest) -> QuizResponse:
-    """
-    main entry point for post /internal/quizzes.
-    orchestrates all steps and returns a fully populated QuizResponse.
-    """
+    """POST /internal/quizzes의 메인 엔트리 포인트. 전체 단계를 오케스트레이션하고 QuizResponse를 반환한다."""
     logger.info(
-        "run_quiz start  request_id=%s  user_id=%s  skill=%s  type=%s  level=%s  hint=%s",
+        "run_quiz 시작  request_id=%s  user_id=%s  skill=%s  type=%s  level=%s  hint=%s",
         request.request_id,
         request.user.user_id,
         request.target_skill,
@@ -687,23 +797,20 @@ async def run_quiz(request: QuizRequest) -> QuizResponse:
         bool(request.recommendation_hint),
     )
 
-    # 1. compile prompt variables
+    # 1. 프롬프트 변수 조립
     context = build_generation_context(request)
 
-    # 2. retrieve rag grounding context from qdrant
+    # 2. Qdrant에서 RAG grounding 컨텍스트 조회
     reference_chunks = retrieve_reference_context(request)
 
-    # 3. generate questions — rag-grounded + personalized (llm / fallback)
-    questions = await generate_questions(context, reference_chunks)
+    # 3. 문항 + 채점 기준 단일 LLM 호출 (폴백: 2-call 순차)
+    questions, rubric = await generate_questions_and_rubric(context, reference_chunks)
 
-    # 4. generate rubric — keyword-based per-question criteria (llm / fallback)
-    rubric = await generate_rubric(context, questions, reference_chunks)
-
-    # 5. assemble and return (100% schema compliant)
+    # 4. 응답 조립 및 반환 (스키마 100% 준수)
     response = _assemble_response(request, questions, rubric)
 
     logger.info(
-        "run_quiz done  request_id=%s  questions=%d  model=%s",
+        "run_quiz 완료  request_id=%s  문항=%d  model=%s",
         request.request_id,
         len(response.questions),
         response.model_meta.model,
@@ -711,15 +818,13 @@ async def run_quiz(request: QuizRequest) -> QuizResponse:
     return response
 
 
-# ---------------------------------------------------------------------------
-# format helpers
-# ---------------------------------------------------------------------------
+# 포매팅 헬퍼
 
 def _fmt_recommendation_hint(hint: RecommendationHint | None, skill: str) -> str:
     """
-    format the recommendation hint for prompt injection.
-    when hint is present, frames the "why this document" context explicitly
-    so the llm can generate questions that connect to the user's learning journey.
+    recommendation_hint를 프롬프트 주입용으로 포매팅한다.
+    hint가 있으면 "왜 이 자료인가" 맥락을 명시적으로 프레이밍하여
+    LLM이 사용자의 학습 여정과 연결된 문항을 생성하도록 유도한다.
     """
     if hint is None:
         return "없음 — 사용자가 직접 퀴즈를 요청했습니다."
@@ -733,7 +838,7 @@ def _fmt_recommendation_hint(hint: RecommendationHint | None, skill: str) -> str
 
 
 def _fmt_reference_chunks(chunks: list[dict[str, Any]]) -> str:
-    """format qdrant chunks as the grounding context for question generation."""
+    """문항 생성용 Qdrant 청크를 grounding 컨텍스트로 포매팅한다."""
     if not chunks:
         return "참고 자료 없음 — 일반적인 지식을 기반으로 출제하세요."
     parts = []
@@ -749,7 +854,7 @@ def _fmt_reference_chunks(chunks: list[dict[str, Any]]) -> str:
 
 
 def _fmt_reference_chunks_summary(chunks: list[dict[str, Any]]) -> str:
-    """compact format for the rubric prompt — titles + first 200 chars only."""
+    """채점 기준 프롬프트용 간결 포맷 — 제목 + 앞 200자만 포함한다."""
     if not chunks:
         return "참고 자료 없음"
     return "\n".join(
@@ -759,7 +864,7 @@ def _fmt_reference_chunks_summary(chunks: list[dict[str, Any]]) -> str:
 
 
 def _fmt_question_types(types: list[QuestionType]) -> str:
-    """format the question type sequence as a numbered instruction list."""
+    """문항 유형 순서를 번호가 붙은 지시 목록으로 포매팅한다."""
     labels = {
         QuestionType.short_answer:    "서술형(단답/논술)",
         QuestionType.multiple_choice: "객관식(4지선다)",
@@ -772,7 +877,7 @@ def _fmt_questions_with_types(
     questions: list[_SingleQuestion],
     types: list[QuestionType],
 ) -> str:
-    """format questions with their type labels for the rubric prompt."""
+    """채점 기준 프롬프트용으로 문항과 유형 레이블을 함께 포매팅한다."""
     labels = {
         QuestionType.short_answer:    "서술형",
         QuestionType.multiple_choice: "객관식",
