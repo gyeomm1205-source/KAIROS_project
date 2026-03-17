@@ -1,6 +1,8 @@
 spring:
   application:
     name: springboot-be
+  jackson:
+    default-property-inclusion: non_null
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL}
@@ -54,3 +56,5 @@ oauth:
     csrf_code: ${GITHUB_CSRF_CODE}
     token-url: ${GITHUB_TOKEN_URL}
     scope: ${GITHUB_CLIENT_SCOPE}
+ai:
+  server-url: ${AI_SERVER_URL}
