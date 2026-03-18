@@ -24,6 +24,7 @@ public class UserProfileResponse {
     private String profileImageUrl;
     private UserPosition position;
     private Boolean darkModeEnabled;
+    private Boolean considerPersonalSchedule;
     private List<DevPositionInfo> desiredPositions;
     private List<TechStackInfo> techStacks;
     private List<CurriculumCategory> curriculumCategories;
@@ -39,6 +40,7 @@ public class UserProfileResponse {
                 .profileImageUrl(user.getProfileImageUrl())
                 .position(user.getPosition())
                 .darkModeEnabled(user.getDarkModeEnabled())
+                .considerPersonalSchedule(user.getCalendarSyncEnabled())
                 .desiredPositions(desiredPositions)
                 .techStacks(techStacks)
                 .curriculumCategories(curriculumCategories)
