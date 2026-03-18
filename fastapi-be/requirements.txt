@@ -9,6 +9,7 @@ aiohttp==3.11.14
 httpx==0.28.1
 beautifulsoup4==4.13.3
 lxml==5.3.1
+curl_cffi==0.14.0
 
 # Qdrant
 qdrant-client==1.16.2

@@ -5,7 +5,7 @@ discovery.py가 수집한 글 목록을 입력받아 각 URL의 본문 텍스트
 import asyncio
 import re
 
-import aiohttp
+from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 
 CRAWL_DELAY = 1.0
@@ -13,29 +13,35 @@ REQUEST_TIMEOUT = 15
 
 HEADERS = {
     "User-Agent": (
-        "Mozilla/5.0 (compatible; KairosBot/1.0; "
-        "+https://github.com/ssafy-kairos)"
-    )
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "max-age=0",
+    "Sec-Ch-Ua": "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": "\"Windows\""
 }
 
 
-async def fetch_article(session: aiohttp.ClientSession, article: dict) -> dict:
+async def fetch_article(session: AsyncSession, article: dict) -> dict:
     """
     단일 글(article dict)의 URL을 방문해서 본문 텍스트와 메타데이터를 추출합니다.
     article dict에 'raw_text', 'updated_at', 'skill'(태그에서 보강) 키를 추가해 반환합니다.
     """
     url = article["url"]
     try:
-        async with session.get(
+        resp = await session.get(
             url,
             headers=HEADERS,
-            timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
-            ssl=False,
-        ) as resp:
-            if resp.status != 200:
-                print(f"  [Crawler] HTTP {resp.status}: {url}")
-                return {**article, "raw_text": "", "updated_at": ""}
-            html = await resp.text(errors="replace")
+            timeout=REQUEST_TIMEOUT,
+        )
+        if resp.status_code != 200:
+            print(f"  [Crawler] HTTP {resp.status_code}: {url}")
+            return {**article, "raw_text": "", "updated_at": ""}
+        html = resp.text
     except Exception as e:
         print(f"  [Crawler] 요청 실패 ({url}): {e}")
         return {**article, "raw_text": "", "updated_at": ""}
@@ -114,7 +120,7 @@ async def crawl_all(articles: list[dict]) -> list[dict]:
         raw_text, updated_at, skill이 추가된 article dict 목록
     """
     results = []
-    async with aiohttp.ClientSession() as session:
+    async with AsyncSession(impersonate="chrome120") as session:
         for i, article in enumerate(articles):
             print(f"  [Crawler] ({i+1}/{len(articles)}) {article['title'][:40]}")
             result = await fetch_article(session, article)

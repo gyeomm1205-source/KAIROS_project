@@ -11,13 +11,23 @@ import asyncio
 import re
 from datetime import datetime
 
-import aiohttp
+from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
 
 from app.services.ingestion.seeds import ALL_SEEDS, BLOG_META
 
-HEADERS ={
-"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/122.0.0.0 Safari/537.36"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+    "Cache-Control": "max-age=0",
+    "Sec-Ch-Ua": "\"Chromium\";v=\"122\", \"Not(A:Brand\";v=\"24\", \"Google Chrome\";v=\"122\"",
+    "Sec-Ch-Ua-Mobile": "?0",
+    "Sec-Ch-Ua-Platform": "\"Windows\""
 }
 
 REQUEST_TIMEOUT = 15
@@ -32,17 +42,23 @@ def _parse_woowa_list(html: str, skill: list[str]) -> list[dict]:
     soup = BeautifulSoup(html, "lxml")
     articles = []
 
-    for wrapper in soup.select("div.posts-list > a"):
-        url = wrapper.get("href", "").strip()
-        if not url:
+    # 변경된 구조: <div class="item"> 안에 <a> 태그로 감싸진 형태
+    for item in soup.find_all("div", class_="item"):
+        a_tag = item.find("a", href=True)
+        if not a_tag:
+            continue
+            
+        url = a_tag["href"].strip()
+        if not url or 'techblog.woowahan.com' not in url or len(url.split('/')) < 4:
             continue
 
-        title_tag = wrapper.find("h1")
+        # 보통 h2 안에 제목이 있음
+        title_tag = a_tag.find("h2")
         title = title_tag.get_text(strip=True) if title_tag else ""
 
-        # 날짜: "Aug.19.2025" → "2025-08-19"
+        # 날짜 구조: <p><span>Aug.19.2025</span></p> 등
         date_str = ""
-        span = wrapper.select_one("p > span")
+        span = a_tag.find("span")
         if span:
             date_str = _parse_woowa_date(span.get_text(strip=True))
 
@@ -75,18 +91,18 @@ PARSERS = {
 
 # ─── 디스커버리 메인 ────────────────────────────────────────────────
 
-async def _fetch_html(session: aiohttp.ClientSession, url: str) -> str:
+async def _fetch_html(session: AsyncSession, url: str) -> str:
     try:
-        async with session.get(
+        resp = await session.get(
             url,
             headers=HEADERS,
-            timeout=aiohttp.ClientTimeout(total=REQUEST_TIMEOUT),
-            ssl=False,
-        ) as resp:
-            if resp.status != 200:
-                print(f"  [Discovery] HTTP {resp.status}: {url}")
-                return ""
-            return await resp.text(errors="replace")
+            timeout=REQUEST_TIMEOUT,
+        )
+        print(f"  [Debug] GET {url} -> Status: {resp.status_code}, Length: {len(resp.text)}")
+        if resp.status_code != 200:
+            print(f"  [Discovery] HTTP {resp.status_code}: {url}")
+            return ""
+        return resp.text
     except Exception as e:
         print(f"  [Discovery] 요청 실패 ({url}): {e}")
         return ""
@@ -104,7 +120,7 @@ async def discover_articles(seeds: dict | None = None) -> list[dict]:
 
     all_articles: list[dict] = []
 
-    async with aiohttp.ClientSession() as session:
+    async with AsyncSession(impersonate="chrome120") as session:
         for blog_name, seed_list in seeds.items():
             if not seed_list:
                 continue
