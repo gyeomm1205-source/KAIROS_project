@@ -1,5 +1,7 @@
 package com.ssafy.springbootbe.common.exception;
 
+import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
+import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
@@ -30,6 +32,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ActivityNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleActivityNotFoundException(ActivityNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ActivityAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleActivityAccessDeniedException(ActivityAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

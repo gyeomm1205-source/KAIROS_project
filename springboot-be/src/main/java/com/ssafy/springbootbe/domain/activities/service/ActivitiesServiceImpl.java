@@ -1,7 +1,11 @@
 package com.ssafy.springbootbe.domain.activities.service;
 
+import com.ssafy.springbootbe.domain.activities.dto.request.ActivityInclusionRequest;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityHistoryResponse;
+import com.ssafy.springbootbe.domain.activities.dto.response.ActivityInclusionResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageResponse;
+import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
+import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
@@ -58,6 +62,26 @@ public class ActivitiesServiceImpl implements ActivitiesService {
                 .page(page)
                 .size(size)
                 .items(items)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public ActivityInclusionResponse updateInclusion(Long userId, Long activityHistoryId, ActivityInclusionRequest request) {
+        ActivityHistory activity = activityHistoryRepository.findById(activityHistoryId)
+                .orElseThrow(() -> new ActivityNotFoundException(activityHistoryId));
+
+        if (!activity.getUser().getUserId().equals(userId)) {
+            throw new ActivityAccessDeniedException(activityHistoryId);
+        }
+
+        activity.toggleInclusion(request.getIsIncluded());
+
+        log.info("활동 이력 포함 여부 수정. userId={}, activityHistoryId={}, isIncluded={}", userId, activityHistoryId, request.getIsIncluded());
+
+        return ActivityInclusionResponse.builder()
+                .activityHistoryId(activity.getActivityHistoryId())
+                .isIncluded(activity.getIsIncluded())
                 .build();
     }
 }
