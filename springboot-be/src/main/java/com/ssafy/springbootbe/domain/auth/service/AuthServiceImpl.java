@@ -2,6 +2,8 @@ package com.ssafy.springbootbe.domain.auth.service;
 
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.request.GithubCollectAsyncRequest;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
@@ -64,6 +66,7 @@ public class AuthServiceImpl implements AuthService {
     private final UserRepository userRepository;
     private final RedisService redisService;
     private final JWTUtils jwtUtils;
+    private final OAuthTokenCryptoService oAuthTokenCryptoService;
 
     @Value("${oauth.google.client_id}")
     private String googleClientId;
@@ -115,6 +118,9 @@ public class AuthServiceImpl implements AuthService {
 
     @Value("${ai.server-url}")
     private String aiServerUrl;
+
+    @Value("${ai.collect-async-path}")
+    private String aiCollectAsyncPath;
 
     @Value("${oauth.github.user-info-url}")
     private String githubUserInfoUrl;
@@ -335,11 +341,11 @@ public class AuthServiceImpl implements AuthService {
                 .githubToken(githubAccessToken)
                 .githubUsername(githubUsername)
                 .build();
-        System.out.println(githubUsername+", "+githubAccessToken);
+
         try {
-            GithubCollectAsyncResponse response = RestClient.create()
+            GithubCollectAsyncResponse response = AIRestClient.buildAiRestClient()
                     .post()
-                    .uri(aiServerUrl + "/api/v1/ai/github/collect-async")
+                    .uri(aiServerUrl + aiCollectAsyncPath)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(request)
                     .retrieve()
@@ -521,8 +527,9 @@ public class AuthServiceImpl implements AuthService {
             User user,
             OnboardingData onboardingData,
             GithubUserInfoResponse githubUserInfoResponse,
-            String githubAccessToken
-    ) {
+            String githubAccessToken) {
+        String encryptedGithubAccessToken = oAuthTokenCryptoService.encrypt(githubAccessToken);
+
         OAuthAccount googleAccount = OAuthAccount.builder()
                 .user(user)
                 .provider(OAuthProvider.GOOGLE)
@@ -532,7 +539,7 @@ public class AuthServiceImpl implements AuthService {
                 .user(user)
                 .provider(OAuthProvider.GITHUB)
                 .providerAccountId(String.valueOf(githubUserInfoResponse.getId()))
-                .refreshToken(githubAccessToken)
+                .refreshToken(encryptedGithubAccessToken)
                 .build();
 
         try {

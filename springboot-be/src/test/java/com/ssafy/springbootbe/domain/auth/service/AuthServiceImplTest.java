@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.auth.service;
 
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubTokenResponse;
@@ -64,6 +65,9 @@ class AuthServiceImplTest {
     @Mock
     private JWTUtils jwtUtils;
 
+    @Mock
+    private OAuthTokenCryptoService oAuthTokenCryptoService;
+
     private AuthServiceImpl authService;
 
     @BeforeEach
@@ -72,7 +76,8 @@ class AuthServiceImplTest {
                 oAuthAccountRepository,
                 userRepository,
                 redisService,
-                jwtUtils
+                jwtUtils,
+                oAuthTokenCryptoService
         ));
 
         ReflectionTestUtils.setField(authService, "refreshTokenDurationTime", 168L);
@@ -88,6 +93,7 @@ class AuthServiceImplTest {
         ReflectionTestUtils.setField(authService, "githubUserAgent", "Kairos_Github_App");
         ReflectionTestUtils.setField(authService, "oauthContentType", "application/x-www-form-urlencoded");
         ReflectionTestUtils.setField(authService, "aiServerUrl", "http://localhost:8000");
+        ReflectionTestUtils.setField(authService, "aiCollectAsyncPath", "/api/v1/ai/github/collect-async");
     }
 
     @Test
@@ -419,6 +425,7 @@ class AuthServiceImplTest {
         given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
         given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
+        given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
 
         // when
         GithubAuthTokenBundle result = authService.handleGithubCallback("valid-code", "onboarding-token");
@@ -588,6 +595,7 @@ class AuthServiceImplTest {
         given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
         given(jwtUtils.createAccessToken(savedUser))
                 .willThrow(new AuthTokenGenerationException("access token 발급에 실패했습니다.", new RuntimeException("jwt error")));
+        given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
 
         // when & then
         assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
@@ -627,6 +635,7 @@ class AuthServiceImplTest {
         given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
         given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
+        given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
         doThrow(new RestClientException("fastapi error"))
                 .when(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
 
