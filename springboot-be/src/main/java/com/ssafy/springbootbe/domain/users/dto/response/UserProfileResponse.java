@@ -1,7 +1,7 @@
 package com.ssafy.springbootbe.domain.users.dto.response;
 
-import com.ssafy.springbootbe.domain.common.dto.DevPositionInfo;
-import com.ssafy.springbootbe.domain.common.dto.TechStackInfo;
+import com.ssafy.springbootbe.common.dto.DevPositionInfo;
+import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import com.ssafy.springbootbe.persistence.user.type.CurriculumCategory;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
