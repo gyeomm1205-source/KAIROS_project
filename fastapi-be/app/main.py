@@ -7,15 +7,13 @@ from fastapi.responses import JSONResponse
 from starlette import status
 import uuid
 
-from app.api.internal.ingestion import router as internal_ingestion_router
 from app.api.internal.quiz import router as internal_quiz_router
 from app.api.internal.recommend import router as internal_recommend_router
 from app.api.test import router as test_router
 from app.schemas.common import ErrorResponse
 from app.services.errors import AppError
 from app.services.qdrant_client import close_qdrant_client, get_qdrant_client, init_collections
-from app.services.profile_analyzer import start_github_collection, start_velog_and_analysis
-from pydantic import BaseModel
+from app.services.profile_analyzer import run_integrated_analysis
 
 
 @asynccontextmanager
@@ -38,46 +36,16 @@ app = FastAPI(
 app.include_router(test_router)
 app.include_router(internal_quiz_router)
 app.include_router(internal_recommend_router)
-app.include_router(internal_ingestion_router)
 
 # 데모용 인메모리 저장소 (실제로는 DB로 교체 필요)
 fake_db = {}
 
 
-class GithubCollectRequest(BaseModel):
-    userId: int
-    githubToken: str
-    githubUsername: str
-
-class ProfileAnalyzeRequest(BaseModel):
-    userId: int
-    velogUsername: str
-    githubTaskId: str
-
-async def github_collect_worker(task_id: str, req: GithubCollectRequest):
-    """GitHub 사전 수집 백그라운드 워커"""
+async def background_sync_worker(task_id: str, github_id: str):
+    """실제 분석이 일어나는 백그라운드 함수"""
     try:
         fake_db[task_id] = {"status": "processing", "data": None}
-        # 본래는 req에서 받은 파라미터를 넘겨야 하지만 구조상 현재는 기존 함수 사용
-        github_context = await start_github_collection()
-        fake_db[task_id]["status"] = "completed"
-        fake_db[task_id]["data"] = {"github_context": github_context}
-    except Exception as e:
-        fake_db[task_id]["status"] = "failed"
-        fake_db[task_id]["error_message"] = str(e)
-
-async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
-    """Velog 수집 및 LLM 통합 분석 워커"""
-    try:
-        fake_db[task_id] = {"status": "processing", "data": None}
-        
-        # 이전 GitHub 수집 결과 가져오기 (fake_db)
-        github_info = fake_db.get(req.githubTaskId)
-        github_context = None
-        if github_info and github_info["status"] == "completed":
-            github_context = github_info["data"].get("github_context")
-            
-        results = await start_velog_and_analysis(github_context)
+        results = await run_integrated_analysis()
         fake_db[task_id]["status"] = "completed"
         fake_db[task_id]["data"] = {
             "profile": results["profile"],
@@ -88,46 +56,34 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
         fake_db[task_id]["error_message"] = str(e)
 
 
-@app.post("/api/v1/ai/github/collect-async", status_code=202)
-async def trigger_github_collect(req: GithubCollectRequest, background_tasks: BackgroundTasks):
-    """GitHub 데이터 사전 비동기 수집 트리거"""
-    task_id = "task_" + str(uuid.uuid4()).replace("-", "")[:6]
+@app.post("/api/profile/sync", status_code=202)
+async def start_profile_sync(background_tasks: BackgroundTasks, github_id: str):
+    """유저의 최신 기술 스택과 활동 내역을 동기화합니다 (즉시 응답, 백그라운드 진행)"""
+    task_id = str(uuid.uuid4())
     fake_db[task_id] = {"status": "pending"}
-    background_tasks.add_task(github_collect_worker, task_id, req)
+    background_tasks.add_task(background_sync_worker, task_id, github_id)
     return {
-        "message": "GitHub Background collection started.",
-        "taskId": task_id
+        "message": "데이터 분석이 백그라운드에서 시작되었습니다. 최대 1분 정도 소요됩니다.",
+        "task_id": task_id
     }
 
 
-@app.post("/api/v1/ai/profile/analyze-async", status_code=202)
-async def trigger_profile_analyze(req: ProfileAnalyzeRequest, background_tasks: BackgroundTasks):
-    """Velog 수집 및 LLM 프로필 분석 비동기 시작"""
-    task_id = "task_" + str(uuid.uuid4()).replace("-", "")[:6]
-    fake_db[task_id] = {"status": "pending"}
-    background_tasks.add_task(profile_analyze_worker, task_id, req)
-    return {
-        "message": "Velog Collection and AI Analysis started.",
-        "taskId": task_id
-    }
-
-
-@app.get("/api/v1/ai/status/stream/{taskId}")
-async def check_sync_status(taskId: str):
-    """현재 백그라운드 분석 진행 상황을 확인합니다 (임시 JSON 반환 방식)"""
-    task_info = fake_db.get(taskId)
+@app.get("/api/profile/status/{task_id}")
+async def check_sync_status(task_id: str):
+    """현재 백그라운드 분석 진행 상황 또는 결과 JSON을 반환합니다"""
+    task_info = fake_db.get(task_id)
     if not task_info:
         raise HTTPException(status_code=404, detail="해당 분석 작업(Task)을 찾을 수 없습니다.")
     s = task_info["status"]
     if s in ["pending", "processing"]:
-        return {"status": s, "message": "열심히 유저의 데이터를 수집/분석하고 통계를 내고 있습니다... ⏳"}
+        return {"status": s, "message": "열심히 유저의 코드를 분석하고 통계를 내고 있습니다... ⏳"}
     elif s == "failed":
         return {"status": "failed", "error": task_info.get("error_message")}
     elif s == "completed":
         return {
             "status": "completed",
-            "message": "작업 완료!",
-            "data": task_info.get("data")
+            "message": "분석 완료! 프론트엔드 맞춤형 데이터를 전송합니다.",
+            "data": task_info["data"]["profile"]
         }
 
 
