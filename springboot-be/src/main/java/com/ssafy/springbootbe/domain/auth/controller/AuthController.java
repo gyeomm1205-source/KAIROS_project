@@ -6,6 +6,7 @@ import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
+import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -105,13 +106,41 @@ public class AuthController {
                 .body(tokenBundle.getResponse());
     }
 
-    private ResponseCookie createRefreshTokenCookie(String refreshToken) {
-        return ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .sameSite("Strict")
-                .path(REFRESH_COOKIE_PATH)
-                .maxAge(Duration.ofDays(7))
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
+        authService.logout(authorizationHeader);
+
+        return ResponseEntity.noContent()
+                .header(HttpHeaders.SET_COOKIE, createExpiredRefreshTokenCookie().toString())
                 .build();
+    }
+
+    private ResponseCookie createRefreshTokenCookie(String refreshToken) {
+        try {
+            return ResponseCookie.from(REFRESH_COOKIE_NAME, refreshToken)
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Strict")
+                    .path(REFRESH_COOKIE_PATH)
+                    .maxAge(Duration.ofDays(7))
+                    .build();
+        } catch (RuntimeException e) {
+            throw new AuthCookieProcessingException("refresh token cookie 생성에 실패했습니다.", e);
+        }
+    }
+
+    private ResponseCookie createExpiredRefreshTokenCookie() {
+        try {
+            return ResponseCookie.from(REFRESH_COOKIE_NAME, "")
+                    .httpOnly(true)
+                    .secure(true)
+                    .sameSite("Strict")
+                    .path(REFRESH_COOKIE_PATH)
+                    .maxAge(Duration.ZERO)
+                    .build();
+        } catch (RuntimeException e) {
+            throw new AuthCookieProcessingException("refresh token cookie 만료 처리에 실패했습니다.", e);
+        }
     }
 }

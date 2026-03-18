@@ -20,6 +20,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -40,6 +41,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -757,5 +759,111 @@ class AuthServiceImplTest {
         // when & then
         assertThatThrownBy(() -> authService.reissueAccessToken("valid-refresh-token"))
                 .isInstanceOf(AuthRedisSaveFailedException.class);
+    }
+
+    @Test
+    void 로그아웃_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        long remainingMillis = 60_000L;
+        Date expiration = new Date(System.currentTimeMillis() + remainingMillis);
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.getExpiration()).willReturn(expiration);
+        given(claims.get("userId")).willReturn(1L);
+
+        // when
+        authService.logout("Bearer valid-access-token");
+
+        // then
+        verify(redisService).save(
+                org.mockito.ArgumentMatchers.eq("blacklist:valid-access-token"),
+                org.mockito.ArgumentMatchers.eq("deleted"),
+                org.mockito.ArgumentMatchers.longThat(ttl -> ttl > 0L && ttl <= remainingMillis),
+                org.mockito.ArgumentMatchers.eq(TimeUnit.MILLISECONDS)
+        );
+        verify(redisService).delete("refreshToken:1");
+    }
+
+    @Test
+    void 로그아웃_Authorization_헤더_누락_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.logout(null))
+                .isInstanceOf(InvalidAccessTokenException.class)
+                .hasMessageContaining("Authorization 헤더가 없습니다.");
+    }
+
+    @Test
+    void 로그아웃_Bearer_형식_오류_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.logout("Token access-token"))
+                .isInstanceOf(InvalidAccessTokenException.class)
+                .hasMessageContaining("Bearer 형식");
+    }
+
+    @Test
+    void 로그아웃_만료된_access_token_실패() {
+        // given
+        given(jwtUtils.getClaims("expired-access-token"))
+                .willThrow(new ExpiredJwtException(null, null, "expired"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.logout("Bearer expired-access-token"))
+                .isInstanceOf(InvalidAccessTokenException.class)
+                .hasMessageContaining("유효하지 않은 access token");
+    }
+
+    @Test
+    void 로그아웃_subject가_accessToken이_아니면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("wrong-subject-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("refreshToken");
+
+        // when & then
+        assertThatThrownBy(() -> authService.logout("Bearer wrong-subject-token"))
+                .isInstanceOf(InvalidAccessTokenException.class)
+                .hasMessageContaining("subject");
+    }
+
+    @Test
+    void 로그아웃_blacklist_Redis_저장_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        Date expiration = new Date(System.currentTimeMillis() + 60_000L);
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.getExpiration()).willReturn(expiration);
+        given(claims.get("userId")).willReturn(1L);
+        doThrow(new RuntimeException("redis error")).when(redisService)
+                .save(
+                        org.mockito.ArgumentMatchers.eq("blacklist:valid-access-token"),
+                        org.mockito.ArgumentMatchers.eq("deleted"),
+                        org.mockito.ArgumentMatchers.anyLong(),
+                        org.mockito.ArgumentMatchers.eq(TimeUnit.MILLISECONDS)
+                );
+
+        // when & then
+        assertThatThrownBy(() -> authService.logout("Bearer valid-access-token"))
+                .isInstanceOf(AuthRedisSaveFailedException.class)
+                .hasMessageContaining("blacklist 저장");
+    }
+
+    @Test
+    void 로그아웃_refresh_token_삭제_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        Date expiration = new Date(System.currentTimeMillis() + 60_000L);
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.getExpiration()).willReturn(expiration);
+        given(claims.get("userId")).willReturn(1L);
+        doThrow(new RuntimeException("redis error")).when(redisService)
+                .delete("refreshToken:1");
+
+        // when & then
+        assertThatThrownBy(() -> authService.logout("Bearer valid-access-token"))
+                .isInstanceOf(AuthRedisSaveFailedException.class)
+                .hasMessageContaining("refresh token 삭제");
     }
 }

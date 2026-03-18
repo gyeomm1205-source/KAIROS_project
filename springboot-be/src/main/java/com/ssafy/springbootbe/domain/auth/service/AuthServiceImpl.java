@@ -28,6 +28,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
@@ -52,6 +53,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.net.URI;
+import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +67,9 @@ public class AuthServiceImpl implements AuthService {
     private static final String ONBOARDING_TOKEN_SUBJECT = "onboarding";
     private static final String ONBOARDING_TOKEN_PURPOSE = "onboarding";
     private static final String ONBOARDING_REDIS_KEY_PREFIX = "onboarding:";
+    private static final String ACCESS_TOKEN_SUBJECT = "accessToken";
+    private static final String BLACKLIST_REDIS_KEY_PREFIX = "blacklist:";
+    private static final String BLACKLIST_VALUE = "deleted";
     private static final String REFRESH_TOKEN_SUBJECT = "refreshToken";
     private static final String REFRESH_TOKEN_REDIS_KEY_PREFIX = "refreshToken:";
     private static final long REFRESH_TOKEN_TTL_DAYS = 7L;
@@ -178,6 +183,15 @@ public class AuthServiceImpl implements AuthService {
                 .response(AuthReissueResponse.of(newAccessToken))
                 .refreshToken(newRefreshToken)
                 .build();
+    }
+
+    @Override
+    public void logout(String authorizationHeader) {
+        String accessToken = extractAccessToken(authorizationHeader);
+        Claims claims = validateAccessToken(accessToken);
+        Long userId = extractUserId(claims);
+        blacklistAccessToken(accessToken, claims);
+        deleteRefreshToken(userId);
     }
 
     @Override
@@ -413,6 +427,16 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
+    private Claims validateAccessToken(String accessToken) {
+        try {
+            Claims claims = jwtUtils.getClaims(accessToken);
+            validateAccessTokenClaims(claims);
+            return claims;
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new InvalidAccessTokenException("유효하지 않은 access token 입니다.", e);
+        }
+    }
+
     private Claims validateOnboardingTokenWithState(String state) {
         if (state == null || state.isBlank()) {
             throw new InvalidOnboardingTokenException("Authorization 헤더가 없습니다.");
@@ -477,6 +501,23 @@ public class AuthServiceImpl implements AuthService {
         return token;
     }
 
+    private String extractAccessToken(String authorizationHeader) {
+        if (authorizationHeader == null || authorizationHeader.isBlank()) {
+            throw new InvalidAccessTokenException("Authorization 헤더가 없습니다.");
+        }
+
+        if (!authorizationHeader.startsWith(BEARER_PREFIX)) {
+            throw new InvalidAccessTokenException("Authorization 헤더는 Bearer 형식이어야 합니다.");
+        }
+
+        String accessToken = authorizationHeader.substring(BEARER_PREFIX.length()).trim();
+        if (accessToken.isBlank()) {
+            throw new InvalidAccessTokenException("access token 이 없습니다.");
+        }
+
+        return accessToken;
+    }
+
     private void validateOnboardingClaims(Claims claims) {
         if (!ONBOARDING_TOKEN_SUBJECT.equals(claims.getSubject())) {
             throw new InvalidOnboardingTokenException("onboarding token subject가 올바르지 않습니다.");
@@ -485,6 +526,12 @@ public class AuthServiceImpl implements AuthService {
         String purpose = claims.get("purpose", String.class);
         if (!ONBOARDING_TOKEN_PURPOSE.equals(purpose)) {
             throw new InvalidOnboardingTokenException("onboarding token purpose가 올바르지 않습니다.");
+        }
+    }
+
+    private void validateAccessTokenClaims(Claims claims) {
+        if (!ACCESS_TOKEN_SUBJECT.equals(claims.getSubject())) {
+            throw new InvalidAccessTokenException("access token subject가 올바르지 않습니다.");
         }
     }
 
@@ -587,6 +634,37 @@ public class AuthServiceImpl implements AuthService {
             );
         } catch (RuntimeException e) {
             throw new AuthRedisSaveFailedException("refresh token 저장에 실패했습니다.", e);
+        }
+    }
+
+    private void deleteRefreshToken(Long userId) {
+        try {
+            redisService.delete(buildRefreshTokenRedisKey(userId));
+        } catch (RuntimeException e) {
+            throw new AuthRedisSaveFailedException("refresh token 삭제에 실패했습니다.", e);
+        }
+    }
+
+    private void blacklistAccessToken(String accessToken, Claims claims) {
+        Date expiration = claims.getExpiration();
+        if (expiration == null) {
+            throw new InvalidAccessTokenException("access token 만료 시간이 없습니다.");
+        }
+
+        long remainingMillis = expiration.getTime() - System.currentTimeMillis();
+        if (remainingMillis <= 0) {
+            throw new InvalidAccessTokenException("유효하지 않은 access token 입니다.");
+        }
+
+        try {
+            redisService.save(
+                    BLACKLIST_REDIS_KEY_PREFIX + accessToken,
+                    BLACKLIST_VALUE,
+                    remainingMillis,
+                    TimeUnit.MILLISECONDS
+            );
+        } catch (RuntimeException e) {
+            throw new AuthRedisSaveFailedException("access token blacklist 저장에 실패했습니다.", e);
         }
     }
 

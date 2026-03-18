@@ -12,6 +12,8 @@ public interface AuthService {
 
     AuthReissueTokenBundle reissueAccessToken(String refreshToken);
 
+    void logout(String authorizationHeader);
+
     URI buildGithubAuthorizationRedirect(String authorizationHeader);
 
     GithubAuthTokenBundle handleGithubCallback(String code, String state);

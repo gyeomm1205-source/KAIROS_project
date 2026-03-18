@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.common.exception;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
@@ -15,6 +16,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
@@ -73,6 +75,13 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
     }
 
+    @ExceptionHandler(InvalidAccessTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidAccessTokenException(
+            InvalidAccessTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(AlreadyUsedRefreshTokenException.class)
     public ResponseEntity<Map<String, String>> handleAlreadyUsedRefreshTokenException(
             AlreadyUsedRefreshTokenException e) {
@@ -107,7 +116,12 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "DUPLICATE_USER", "message", e.getMessage()));
     }
 
-    @ExceptionHandler({AuthTokenGenerationException.class, AuthRedisSaveFailedException.class, AuthPersistenceException.class})
+    @ExceptionHandler({
+            AuthTokenGenerationException.class,
+            AuthRedisSaveFailedException.class,
+            AuthPersistenceException.class,
+            AuthCookieProcessingException.class
+    })
     public ResponseEntity<Map<String, String>> handleAuthInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));

@@ -14,6 +14,7 @@ import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
@@ -25,6 +26,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.willDoNothing;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -329,5 +332,60 @@ class AuthControllerTest {
                         .cookie(new Cookie("refresh_token", "reused-refresh-token")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("ALREADY_USED_TOKEN"));
+    }
+
+    @Test
+    void 로그아웃_성공() throws Exception {
+        // given
+        willDoNothing().given(authService).logout("Bearer valid-access-token");
+
+        // when & then
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer valid-access-token"))
+                .andExpect(status().isNoContent())
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("refresh_token=")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Max-Age=0")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Secure")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("SameSite=Strict")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Path=/api/v1/auth/reissue")));
+    }
+
+    @Test
+    void 로그아웃_Authorization_헤더_누락_실패() throws Exception {
+        // given
+        willThrow(new InvalidAccessTokenException("Authorization 헤더가 없습니다."))
+                .given(authService).logout(null);
+
+        // when & then
+        mockMvc.perform(post("/auth/logout"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 로그아웃_Bearer_형식_오류_실패() throws Exception {
+        // given
+        willThrow(new InvalidAccessTokenException("Authorization 헤더는 Bearer 형식이어야 합니다."))
+                .given(authService).logout("Token invalid");
+
+        // when & then
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Token invalid"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 로그아웃_유효하지_않은_access_token_실패() throws Exception {
+        // given
+        willThrow(new InvalidAccessTokenException("유효하지 않은 access token 입니다."))
+                .given(authService).logout("Bearer expired-access-token");
+
+        // when & then
+        mockMvc.perform(post("/auth/logout")
+                        .header("Authorization", "Bearer expired-access-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
     }
 }
