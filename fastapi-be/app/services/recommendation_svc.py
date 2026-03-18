@@ -45,8 +45,10 @@ from app.models.schemas import (
 
 logger = logging.getLogger(__name__)
 
-# 요청당 반환할 최대 자료 수
-TOP_K = 5
+# 요청당 반환할 최대 자료 수 (약점 보완 1 + 강점 심화 1)
+TOP_K = 2
+_WEAKNESS_SLOTS = 1
+_STRENGTH_SLOTS = 1
 MOCK_DATA_PATH = Path(__file__).parent.parent.parent / "tests" / "mock_recommendation_data.json"
 
 # relative_rank → 추천 아이템 난이도 레이블 매핑
@@ -283,6 +285,60 @@ def _select_with_difficulty_balance(
     return selected[:k]
 
 
+def _select_with_direction_balance(
+    candidates: list[dict[str, Any]],
+    learning_states: list[LearningState],
+) -> list[dict[str, Any]]:
+    """
+    약점 보완(_WEAKNESS_SLOTS개) + 강점 심화(_STRENGTH_SLOTS개) 방향으로 분기 선택한다.
+
+    - 약점 버킷: 매칭 스킬 rank가 low 또는 mid인 후보
+    - 강점 버킷: 매칭 스킬 rank가 high인 후보
+    - 각 버킷 내 순서는 _rank_by_learning_priority 결과(약점 우선 정렬)를 유지한다.
+    - 한쪽 버킷이 부족하면 반대 버킷에서 보충한다.
+    """
+    rank_index: dict[str, RelativeRank] = {
+        ls.skill.lower(): ls.relative_rank for ls in learning_states
+    }
+
+    def _best_rank(candidate: dict[str, Any]) -> RelativeRank | None:
+        best: RelativeRank | None = None
+        for tag in candidate.get("skill_tags", []):
+            for skill_lower, rank in rank_index.items():
+                if tag.lower() in skill_lower or skill_lower in tag.lower():
+                    if best is None or _RANK_PRIORITY[rank] < _RANK_PRIORITY[best]:
+                        best = rank
+        return best
+
+    weakness_bucket: list[dict[str, Any]] = []
+    strength_bucket: list[dict[str, Any]] = []
+
+    for c in candidates:
+        best = _best_rank(c)
+        if best == RelativeRank.high:
+            strength_bucket.append(c)
+        else:
+            weakness_bucket.append(c)
+
+    selected: list[dict[str, Any]] = []
+    selected.extend(weakness_bucket[:_WEAKNESS_SLOTS])
+    selected.extend(strength_bucket[:_STRENGTH_SLOTS])
+
+    # 한쪽이 부족하면 반대 버킷으로 보충
+    remaining = TOP_K - len(selected)
+    if remaining > 0:
+        surplus = weakness_bucket[_WEAKNESS_SLOTS:] + strength_bucket[_STRENGTH_SLOTS:]
+        selected.extend(surplus[:remaining])
+
+    logger.debug(
+        "[select_direction_balance] 약점=%d 강점=%d 총=%d",
+        min(len(weakness_bucket), _WEAKNESS_SLOTS),
+        min(len(strength_bucket), _STRENGTH_SLOTS),
+        len(selected),
+    )
+    return selected[:TOP_K]
+
+
 # 단계 6 — 추천 이유 생성
 
 class _ReasonOutput(BaseModel):
@@ -297,15 +353,16 @@ class _ReasonOutput(BaseModel):
 
 _SYSTEM_PROMPT = """\
 당신은 KAIROS의 AI 학습 멘토입니다.
-개발자의 학습 이력과 현재 역량 수준을 분석해, 지금 이 순간 가장 효과적인 학습 자료를 추천하는 것이 당신의 역할입니다.
+개발자의 현재 역량과 최근 활동을 바탕으로, 약점 보완과 강점 심화 두 방향의 추천 이유를 함께 제시하는 것이 당신의 역할입니다.
 
 [응답 원칙]
-1. 사용자의 약점 스킬(relative_rank=low)을 반드시 언급하고, 그것을 지금 보완해야 하는 이유를 설명하세요.
-2. 최근 활동 맥락을 연결해서 '지금 이 추천이 자연스러운 다음 단계'임을 보여주세요.
-3. 추천 자료 제목을 1~2개 직접 언급해 구체성을 높이세요.
-4. 근거 없는 칭찬이나 막연한 표현은 쓰지 마세요.
-5. 반드시 한국어로 작성하세요.
-6. reason은 3문장 이내, assumptions는 2~3개로 제한하세요.\
+1. 약점 보완 방향: 약점 스킬(relative_rank=low)이 왜 지금 필요한지 최근 활동과 연결해서 설명하세요.
+2. 강점 심화 방향: 강점 스킬(relative_rank=high)을 더 발전시키면 어떤 이점이 있는지 목표 포지션과 연결해서 설명하세요.
+3. 두 방향을 자연스럽게 이어서 사용자가 스스로 선택할 수 있도록 제시하세요.
+4. 추천 자료 제목을 각 방향에서 1개씩 직접 언급해 구체성을 높이세요.
+5. 근거 없는 칭찬이나 막연한 표현은 쓰지 마세요.
+6. 반드시 한국어로 작성하세요.
+7. reason은 4문장 이내, assumptions는 2~3개로 제한하세요.\
 """
 
 _USER_TEMPLATE = """\
@@ -319,9 +376,10 @@ _USER_TEMPLATE = """\
 {recent_summary}
 
 [이번에 추천할 자료 목록]
-{selected_titles}
+- 약점 보완: {weakness_titles}
+- 강점 심화: {strength_titles}
 
-위 정보를 바탕으로 추천 전략 이유와 가정 조건을 생성하세요.\
+위 정보를 바탕으로 약점 보완과 강점 심화 두 방향의 추천 이유와 가정 조건을 생성하세요.\
 """
 
 
@@ -370,13 +428,31 @@ async def _generate_reason_with_llm(
 
     chain = prompt | structured_llm
 
+    # 선택된 후보를 약점 보완 / 강점 심화 방향으로 분류
+    rank_index: dict[str, RelativeRank] = {
+        ls.skill.lower(): ls.relative_rank for ls in learning_states
+    }
+
+    def _best_rank_for(candidate: dict[str, Any]) -> RelativeRank | None:
+        best: RelativeRank | None = None
+        for tag in candidate.get("skill_tags", []):
+            for skill_lower, rank in rank_index.items():
+                if tag.lower() in skill_lower or skill_lower in tag.lower():
+                    if best is None or _RANK_PRIORITY[rank] < _RANK_PRIORITY[best]:
+                        best = rank
+        return best
+
+    weakness_candidates = [c for c in selected_candidates if _best_rank_for(c) != RelativeRank.high]
+    strength_candidates = [c for c in selected_candidates if _best_rank_for(c) == RelativeRank.high]
+
     result: _ReasonOutput = await chain.ainvoke({
-        "job_role":         user.job_role,
-        "target_positions": ", ".join(user.target_positions),
-        "weak_skills":      _fmt_weak_skills(learning_states),
-        "strong_skills":    _fmt_strong_skills(learning_states),
-        "recent_summary":   _fmt_recent_activities(recent_activities),
-        "selected_titles":  _fmt_candidate_titles(selected_candidates),
+        "job_role":          user.job_role,
+        "target_positions":  ", ".join(user.target_positions),
+        "weak_skills":       _fmt_weak_skills(learning_states),
+        "strong_skills":     _fmt_strong_skills(learning_states),
+        "recent_summary":    _fmt_recent_activities(recent_activities),
+        "weakness_titles":   _fmt_candidate_titles(weakness_candidates) or "없음",
+        "strength_titles":   _fmt_candidate_titles(strength_candidates) or "없음",
     })
 
     logger.debug(
@@ -432,6 +508,7 @@ async def _generate_item_reason(
     """
     skill_rank_map = {ls.skill.lower(): ls.relative_rank for ls in learning_states}
     matched_weak: list[str] = []
+    matched_strong: list[str] = []
     matched_other: list[str] = []
 
     for tag in candidate.get("skill_tags", []):
@@ -439,6 +516,8 @@ async def _generate_item_reason(
             if tag.lower() in skill_lower or skill_lower in tag.lower():
                 if rank == RelativeRank.low:
                     matched_weak.append(tag)
+                elif rank == RelativeRank.high:
+                    matched_strong.append(tag)
                 else:
                     matched_other.append(tag)
 
@@ -448,6 +527,9 @@ async def _generate_item_reason(
             f"{skill_hint} 역량이 현재 낮은 수준이므로, "
             f"이 자료로 기초를 탄탄히 다지는 것을 추천합니다."
         )
+    if matched_strong:
+        skill_hint = matched_strong[0]
+        return f"이미 강점인 {skill_hint}를 더 깊이 발전시킬 수 있는 자료입니다."
     if matched_other:
         skill_hint = matched_other[0]
         return f"{skill_hint} 관련 이해도를 높이는 데 도움이 되는 자료입니다."
@@ -558,9 +640,9 @@ async def run_recommendation(request: RecommendationRequest) -> RecommendationRe
     # 4. 약점 스킬 / 낮은 percentile 우선 정렬
     candidates = _rank_by_learning_priority(candidates, request.learning_states)
 
-    # 5. 1:2:1 (high:mid:low) 난이도 균형 선택
-    candidates = _select_with_difficulty_balance(
-        candidates, request.learning_states, TOP_K
+    # 5. 약점 보완 3개 + 강점 심화 3개 방향 분기 선택
+    candidates = _select_with_direction_balance(
+        candidates, request.learning_states
     )
 
     if not candidates:
