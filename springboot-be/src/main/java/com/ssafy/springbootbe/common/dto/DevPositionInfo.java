@@ -1,4 +1,4 @@
-package com.ssafy.springbootbe.domain.common.dto;
+package com.ssafy.springbootbe.common.dto;
 
 import com.ssafy.springbootbe.persistence.position.entity.DevPosition;
 import lombok.AllArgsConstructor;
