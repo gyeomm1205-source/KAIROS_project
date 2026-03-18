@@ -1,6 +1,8 @@
 package com.ssafy.springbootbe.domain.activities.controller;
 
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.domain.activities.dto.request.ActivityInclusionRequest;
+import com.ssafy.springbootbe.domain.activities.dto.response.ActivityInclusionResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageResponse;
 import com.ssafy.springbootbe.domain.activities.service.ActivitiesService;
 import io.jsonwebtoken.Claims;
@@ -26,6 +28,15 @@ public class ActivitiesController {
             @RequestParam(defaultValue = "20") int size) {
         Long userId = extractUserId(authorizationHeader);
         return ResponseEntity.ok(activitiesService.findActivities(userId, year, month, sort, page, size));
+    }
+
+    @PatchMapping("/{activityId}/inclusion")
+    public ResponseEntity<ActivityInclusionResponse> updateInclusion(
+            @PathVariable Long activityId,
+            @RequestHeader("Authorization") String authorizationHeader,
+            @RequestBody ActivityInclusionRequest request) {
+        Long userId = extractUserId(authorizationHeader);
+        return ResponseEntity.ok(activitiesService.updateInclusion(userId, activityId, request));
     }
 
     private Long extractUserId(String authorizationHeader) {
