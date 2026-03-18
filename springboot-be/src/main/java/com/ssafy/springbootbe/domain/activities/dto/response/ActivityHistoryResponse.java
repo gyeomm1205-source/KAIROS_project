@@ -1,6 +1,6 @@
 package com.ssafy.springbootbe.domain.activities.dto.response;
 
-import com.ssafy.springbootbe.domain.common.dto.TechStackInfo;
+import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.user.type.CurriculumCategory;

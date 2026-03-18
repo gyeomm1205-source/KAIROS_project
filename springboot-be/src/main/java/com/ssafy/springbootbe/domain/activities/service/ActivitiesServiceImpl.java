@@ -2,7 +2,7 @@ package com.ssafy.springbootbe.domain.activities.service;
 
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityHistoryResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageResponse;
-import com.ssafy.springbootbe.domain.common.dto.TechStackInfo;
+import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
