@@ -1,9 +1,12 @@
 package com.ssafy.springbootbe.domain.auth.controller;
 
+import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
+import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
@@ -11,6 +14,7 @@ import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import org.hamcrest.Matchers;
@@ -22,12 +26,14 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.net.URI;
+import jakarta.servlet.http.Cookie;
 
 @WebMvcTest(
         value = AuthController.class,
@@ -276,5 +282,52 @@ class AuthControllerTest {
                         .param("state", "onboarding-token"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("DUPLICATE_USER"));
+    }
+
+    @Test
+    void 토큰_재발급_성공() throws Exception {
+        // given
+        AuthReissueTokenBundle tokenBundle = AuthReissueTokenBundle.builder()
+                .response(AuthReissueResponse.of("new-access-token"))
+                .refreshToken("new-refresh-token")
+                .build();
+        given(authService.reissueAccessToken("valid-refresh-token")).willReturn(tokenBundle);
+
+        // when & then
+        mockMvc.perform(post("/auth/reissue")
+                        .cookie(new Cookie("refresh_token", "valid-refresh-token")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("refresh_token=new-refresh-token")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("HttpOnly")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Secure")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("SameSite=Strict")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Path=/api/v1/auth/reissue")));
+    }
+
+    @Test
+    void 토큰_재발급_refresh_token_cookie_누락_실패() throws Exception {
+        // given
+        given(authService.reissueAccessToken(null))
+                .willThrow(new InvalidRefreshTokenException("refresh token cookie가 없습니다."));
+
+        // when & then
+        mockMvc.perform(post("/auth/reissue"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 토큰_재발급_RTR_위반_실패() throws Exception {
+        // given
+        given(authService.reissueAccessToken("reused-refresh-token"))
+                .willThrow(new AlreadyUsedRefreshTokenException("이미 사용된 refresh token 입니다."));
+
+        // when & then
+        mockMvc.perform(post("/auth/reissue")
+                        .cookie(new Cookie("refresh_token", "reused-refresh-token")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("ALREADY_USED_TOKEN"));
     }
 }

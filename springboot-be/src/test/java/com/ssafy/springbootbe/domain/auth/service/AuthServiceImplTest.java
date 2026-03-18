@@ -4,9 +4,11 @@ import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleUserInfoResponse;
@@ -18,6 +20,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
@@ -172,10 +175,10 @@ class AuthServiceImplTest {
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
         assertThat(oAuthAccount.getRefreshToken()).isEqualTo("new-provider-refresh");
         verify(redisService).save(
-                org.mockito.ArgumentMatchers.eq("auth:refresh:1"),
+                org.mockito.ArgumentMatchers.eq("refreshToken:1"),
                 anyString(),
-                org.mockito.ArgumentMatchers.eq(168L),
-                org.mockito.ArgumentMatchers.eq(TimeUnit.HOURS)
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS)
         );
         verify(userRepository, never()).findByEmail(anyString());
     }
@@ -292,7 +295,7 @@ class AuthServiceImplTest {
         given(jwtUtils.createAccessToken(user)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(user)).willReturn("service-refresh-token");
         doThrow(new RuntimeException("redis error")).when(redisService)
-                .save(org.mockito.ArgumentMatchers.eq("auth:refresh:1"), anyString(), org.mockito.ArgumentMatchers.eq(168L), org.mockito.ArgumentMatchers.eq(TimeUnit.HOURS));
+                .save(org.mockito.ArgumentMatchers.eq("refreshToken:1"), anyString(), org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS));
 
         // when & then
         assertThatThrownBy(() -> authService.handleGoogleCallback("valid-code"))
@@ -446,10 +449,10 @@ class AuthServiceImplTest {
                         && "github-access-token".equals(account.getRefreshToken())
         ));
         verify(redisService).save(
-                org.mockito.ArgumentMatchers.eq("auth:refresh:11"),
+                org.mockito.ArgumentMatchers.eq("refreshToken:11"),
                 org.mockito.ArgumentMatchers.eq("service-refresh-token"),
-                org.mockito.ArgumentMatchers.eq(168L),
-                org.mockito.ArgumentMatchers.eq(TimeUnit.HOURS)
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS)
         );
         verify(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
         verify(redisService).delete("onboarding:google-sub");
@@ -646,5 +649,113 @@ class AuthServiceImplTest {
         assertThat(result.getResponse().getUserId()).isEqualTo(11L);
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
         verify(redisService).delete("onboarding:google-sub");
+    }
+
+    @Test
+    void 토큰_재발급_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User user = User.builder()
+                .userId(1L)
+                .email("existing@gmail.com")
+                .nickname("existing")
+                .status(UserStatus.ACTIVE)
+                .build();
+        given(jwtUtils.getClaims("valid-refresh-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("refreshToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(redisService.get("refreshToken:1")).willReturn("valid-refresh-token");
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtils.createAccessToken(user)).willReturn("new-access-token");
+        given(jwtUtils.createRefreshToken(user)).willReturn("new-refresh-token");
+
+        // when
+        AuthReissueTokenBundle result = authService.reissueAccessToken("valid-refresh-token");
+
+        // then
+        assertThat(result.getResponse().getAccessToken()).isEqualTo("new-access-token");
+        assertThat(result.getResponse().getTokenType()).isEqualTo("Bearer");
+        assertThat(result.getRefreshToken()).isEqualTo("new-refresh-token");
+        verify(redisService).save(
+                org.mockito.ArgumentMatchers.eq("refreshToken:1"),
+                org.mockito.ArgumentMatchers.eq("new-refresh-token"),
+                org.mockito.ArgumentMatchers.eq(7L),
+                org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS)
+        );
+    }
+
+    @Test
+    void 토큰_재발급_refresh_token_cookie_누락_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.reissueAccessToken(null))
+                .isInstanceOf(InvalidRefreshTokenException.class)
+                .hasMessageContaining("refresh token cookie가 없습니다.");
+    }
+
+    @Test
+    void 토큰_재발급_만료된_refresh_token_실패() {
+        // given
+        given(jwtUtils.getClaims("expired-refresh-token"))
+                .willThrow(new ExpiredJwtException(null, null, "expired"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissueAccessToken("expired-refresh-token"))
+                .isInstanceOf(InvalidRefreshTokenException.class)
+                .hasMessageContaining("유효하지 않은 refresh token");
+    }
+
+    @Test
+    void 토큰_재발급_Redis_저장값이_없으면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("valid-refresh-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("refreshToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(redisService.get("refreshToken:1")).willReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissueAccessToken("valid-refresh-token"))
+                .isInstanceOf(InvalidRefreshTokenException.class)
+                .hasMessageContaining("Redis에 refresh token 정보가 없습니다.");
+    }
+
+    @Test
+    void 토큰_재발급_Redis_저장값과_불일치하면_RTR_위반_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("reused-refresh-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("refreshToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(redisService.get("refreshToken:1")).willReturn("latest-refresh-token");
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissueAccessToken("reused-refresh-token"))
+                .isInstanceOf(AlreadyUsedRefreshTokenException.class)
+                .hasMessageContaining("이미 사용된 refresh token");
+    }
+
+    @Test
+    void 토큰_재발급_refresh_token_Redis_갱신_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User user = User.builder()
+                .userId(1L)
+                .email("existing@gmail.com")
+                .nickname("existing")
+                .status(UserStatus.ACTIVE)
+                .build();
+        given(jwtUtils.getClaims("valid-refresh-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("refreshToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(redisService.get("refreshToken:1")).willReturn("valid-refresh-token");
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(jwtUtils.createAccessToken(user)).willReturn("new-access-token");
+        given(jwtUtils.createRefreshToken(user)).willReturn("new-refresh-token");
+        doThrow(new RuntimeException("redis error")).when(redisService)
+                .save(org.mockito.ArgumentMatchers.eq("refreshToken:1"), org.mockito.ArgumentMatchers.eq("new-refresh-token"), org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS));
+
+        // when & then
+        assertThatThrownBy(() -> authService.reissueAccessToken("valid-refresh-token"))
+                .isInstanceOf(AuthRedisSaveFailedException.class);
     }
 }

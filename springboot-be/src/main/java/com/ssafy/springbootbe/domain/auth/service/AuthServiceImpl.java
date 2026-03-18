@@ -5,6 +5,8 @@ import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.request.GithubCollectAsyncRequest;
+import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubCollectAsyncResponse;
@@ -18,6 +20,7 @@ import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
+import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubRedirectGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
@@ -25,6 +28,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
@@ -61,6 +65,9 @@ public class AuthServiceImpl implements AuthService {
     private static final String ONBOARDING_TOKEN_SUBJECT = "onboarding";
     private static final String ONBOARDING_TOKEN_PURPOSE = "onboarding";
     private static final String ONBOARDING_REDIS_KEY_PREFIX = "onboarding:";
+    private static final String REFRESH_TOKEN_SUBJECT = "refreshToken";
+    private static final String REFRESH_TOKEN_REDIS_KEY_PREFIX = "refreshToken:";
+    private static final long REFRESH_TOKEN_TTL_DAYS = 7L;
 
     private final OAuthAccountRepository oAuthAccountRepository;
     private final UserRepository userRepository;
@@ -151,6 +158,26 @@ public class AuthServiceImpl implements AuthService {
         }
 
         return handleNewUser(userInfoResponse);
+    }
+
+    @Override
+    @Transactional
+    public AuthReissueTokenBundle reissueAccessToken(String refreshToken) {
+        Claims claims = validateRefreshToken(refreshToken);
+        Long userId = extractUserId(claims);
+        validateStoredRefreshToken(userId, refreshToken);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidRefreshTokenException("refresh token에 해당하는 사용자가 없습니다."));
+
+        String newAccessToken = jwtUtils.createAccessToken(user);
+        String newRefreshToken = jwtUtils.createRefreshToken(user);
+        saveRefreshToken(userId, newRefreshToken);
+
+        return AuthReissueTokenBundle.builder()
+                .response(AuthReissueResponse.of(newAccessToken))
+                .refreshToken(newRefreshToken)
+                .build();
     }
 
     @Override
@@ -553,14 +580,67 @@ public class AuthServiceImpl implements AuthService {
     private void saveRefreshToken(Long userId, String refreshToken) {
         try {
             redisService.save(
-                    "auth:refresh:" + userId,
+                    buildRefreshTokenRedisKey(userId),
                     refreshToken,
-                    refreshTokenDurationTime,
-                    TimeUnit.HOURS
+                    REFRESH_TOKEN_TTL_DAYS,
+                    TimeUnit.DAYS
             );
         } catch (RuntimeException e) {
             throw new AuthRedisSaveFailedException("refresh token 저장에 실패했습니다.", e);
         }
+    }
+
+    private Claims validateRefreshToken(String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new InvalidRefreshTokenException("refresh token cookie가 없습니다.");
+        }
+
+        try {
+            Claims claims = jwtUtils.getClaims(refreshToken);
+            validateRefreshTokenClaims(claims);
+            return claims;
+        } catch (JwtException | IllegalArgumentException e) {
+            throw new InvalidRefreshTokenException("유효하지 않은 refresh token 입니다.", e);
+        }
+    }
+
+    private void validateRefreshTokenClaims(Claims claims) {
+        if (!REFRESH_TOKEN_SUBJECT.equals(claims.getSubject())) {
+            throw new InvalidRefreshTokenException("refresh token subject가 올바르지 않습니다.");
+        }
+    }
+
+    private Long extractUserId(Claims claims) {
+        Object userIdClaim = claims.get("userId");
+        if (userIdClaim == null) {
+            throw new InvalidRefreshTokenException("refresh token에 userId가 없습니다.");
+        }
+
+        if (userIdClaim instanceof Number number) {
+            return number.longValue();
+        }
+
+        try {
+            return Long.parseLong(String.valueOf(userIdClaim));
+        } catch (NumberFormatException e) {
+            throw new InvalidRefreshTokenException("refresh token의 userId 형식이 올바르지 않습니다.", e);
+        }
+    }
+
+    private void validateStoredRefreshToken(Long userId, String refreshToken) {
+        String storedRefreshToken = redisService.get(buildRefreshTokenRedisKey(userId));
+
+        if (storedRefreshToken == null || storedRefreshToken.isBlank()) {
+            throw new InvalidRefreshTokenException("Redis에 refresh token 정보가 없습니다.");
+        }
+
+        if (!storedRefreshToken.equals(refreshToken)) {
+            throw new AlreadyUsedRefreshTokenException("이미 사용된 refresh token 입니다.");
+        }
+    }
+
+    private String buildRefreshTokenRedisKey(Long userId) {
+        return REFRESH_TOKEN_REDIS_KEY_PREFIX + userId;
     }
 
     private void deleteOnboardingData(String googleSub) {

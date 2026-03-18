@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.common.exception;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
+import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
@@ -12,6 +13,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
@@ -60,6 +62,20 @@ public class GlobalExceptionHandler {
             InvalidOnboardingTokenException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<Map<String, String>> handleInvalidRefreshTokenException(
+            InvalidRefreshTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(AlreadyUsedRefreshTokenException.class)
+    public ResponseEntity<Map<String, String>> handleAlreadyUsedRefreshTokenException(
+            AlreadyUsedRefreshTokenException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "ALREADY_USED_TOKEN", "message", e.getMessage()));
     }
 
     @ExceptionHandler(GoogleUserInfoFetchFailedException.class)
