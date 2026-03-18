@@ -47,8 +47,9 @@ public class UsersController {
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteUser(
             @RequestHeader("Authorization") String authorizationHeader) {
+        String token = authorizationHeader.replace("Bearer ", "");
         Long userId = extractUserId(authorizationHeader);
-        usersService.deleteUser(userId);
+        usersService.deleteUser(userId, token);
         return ResponseEntity.noContent().build();
     }
 

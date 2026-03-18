@@ -15,5 +15,5 @@ public interface UsersService {
 
     Map<String, Boolean> updateDarkMode(Long userId, DarkModeUpdateRequest request);
 
-    void deleteUser(Long userId);
+    void deleteUser(Long userId, String token);
 }
