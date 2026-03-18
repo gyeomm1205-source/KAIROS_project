@@ -14,4 +14,6 @@ public interface UsersService {
     UserProfileUpdateResponse updateProfile(Long userId, UserProfileUpdateRequest request);
 
     Map<String, Boolean> updateDarkMode(Long userId, DarkModeUpdateRequest request);
+
+    void deleteUser(Long userId, String token);
 }

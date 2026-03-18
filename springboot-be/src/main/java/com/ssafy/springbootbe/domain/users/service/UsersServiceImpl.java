@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.users.service;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.common.dto.DevPositionInfo;
 import com.ssafy.springbootbe.domain.common.dto.TechStackInfo;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -47,6 +49,7 @@ public class UsersServiceImpl implements UsersService {
     private final TechStackRepository techStackRepository;
     private final RedisService redisService;
     private final ObjectMapper objectMapper;
+    private final JWTUtils jwtUtils;
 
     @Override
     @Transactional(readOnly = true)
@@ -131,6 +134,24 @@ public class UsersServiceImpl implements UsersService {
         return Map.of("darkModeEnabled", user.getDarkModeEnabled());
     }
 
+
+    @Override
+    @Transactional
+    public void deleteUser(Long userId, String token) {
+        User user = findUserByIdOrThrow(userId);
+        redisService.delete(buildProfileCacheKey(userId));
+        userRepository.delete(user);
+        blacklistToken(token);
+        log.info("회원 탈퇴 완료. userId={}", userId);
+    }
+
+    private void blacklistToken(String token) {
+        Date expiration = jwtUtils.getClaims(token).getExpiration();
+        long remainingMillis = expiration.getTime() - System.currentTimeMillis();
+        if (remainingMillis > 0) {
+            redisService.save("blacklist:" + token, "deleted", remainingMillis, TimeUnit.MILLISECONDS);
+        }
+    }
 
     protected User findUserByIdOrThrow(Long userId) {
         return userRepository.findById(userId)
