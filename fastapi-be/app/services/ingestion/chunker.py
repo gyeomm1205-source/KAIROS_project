@@ -37,8 +37,8 @@ def split_into_chunks(text: str) -> list[str]:
         if len(chunk) >= MIN_CHUNK_SIZE:
             chunks.append(chunk)
 
-        start = end - CHUNK_OVERLAP  # overlap 적용
-        if start < 0:
-            start = 0
+        next_start = end - CHUNK_OVERLAP
+        # OOM 방지: start가 무조건 전진하도록 보장 (중복 루프 방지)
+        start = max(next_start, start + 1)
 
     return chunks

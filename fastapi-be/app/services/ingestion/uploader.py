@@ -71,8 +71,12 @@ def upload_document(
         )
         points.append(point)
 
+    # 안정적인 업로드를 위해 100개 단위로 배치 업로드 진행 (Payload limit 방지)
+    BATCH_SIZE = 100
     if points:
-        client.upsert(collection_name=QDRANT_COLLECTION_NAME, points=points)
+        for j in range(0, len(points), BATCH_SIZE):
+            batch = points[j : j + BATCH_SIZE]
+            client.upsert(collection_name=QDRANT_COLLECTION_NAME, points=batch)
 
     return len(points)
 

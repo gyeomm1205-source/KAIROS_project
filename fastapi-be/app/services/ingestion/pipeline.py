@@ -66,11 +66,12 @@ async def run_ingestion(seeds: dict | None = None) -> dict:
             print(f"  [skip] 청크 없음: {doc.get('title', '')}")
             continue
 
-        print(f"  [{doc.get('title', '')[:35]}] {len(chunks)}개 청크")
+        print(f"  [{doc.get('title', '')[:35]}] {len(chunks)}개 청크 생성 완료. 임베딩 시작...", flush=True)
         vectors = embed_chunks(chunks)
+        print(f"    → 임베딩 완료. Qdrant 업로드 중...", flush=True)
         uploaded = upload_document(doc, chunks, vectors)
         total_points += uploaded
-        print(f"    → {uploaded}개 업로드")
+        print(f"    → {uploaded}개 업로드 세이브 완료!", flush=True)
 
     elapsed = time.time() - start
     print(f"\n[Ingestion] 완료 - 총 {total_points}개 포인트 / {elapsed:.1f}초 소요")
