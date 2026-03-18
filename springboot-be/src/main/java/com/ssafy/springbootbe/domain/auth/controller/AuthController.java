@@ -1,6 +1,8 @@
 package com.ssafy.springbootbe.domain.auth.controller;
 
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +78,17 @@ public class AuthController {
         return ResponseEntity.status(302)
                 .location(redirectUri)
                 .build();
+    }
+
+    @GetMapping("/oauth2/callback/github")
+    public ResponseEntity<GithubOAuthCallbackResponse> handleGithubCallback(
+            @RequestParam(required = false) String code,
+            @RequestParam(required = false) String state) {
+        GithubAuthTokenBundle tokenBundle = authService.handleGithubCallback(code, state);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(tokenBundle.getRefreshToken()).toString())
+                .body(tokenBundle.getResponse());
     }
 
     private ResponseCookie createRefreshTokenCookie(String refreshToken) {

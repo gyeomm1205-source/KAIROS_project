@@ -1,10 +1,16 @@
 package com.ssafy.springbootbe.domain.auth.controller;
 
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
+import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import org.hamcrest.Matchers;
@@ -180,5 +186,95 @@ class AuthControllerTest {
                         .header("Authorization", "Token onboarding-token"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 깃허브_콜백_성공() throws Exception {
+        // given
+        GithubOAuthCallbackResponse response = GithubOAuthCallbackResponse.of("service-access-token", 11L);
+        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .willReturn(GithubAuthTokenBundle.builder()
+                        .response(response)
+                        .refreshToken("service-refresh-token")
+                        .build());
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("code", "valid-code")
+                        .param("state", "onboarding-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.accessToken").value("service-access-token"))
+                .andExpect(jsonPath("$.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.userId").value(11L))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("refresh_token=service-refresh-token")))
+                .andExpect(header().string("Set-Cookie", Matchers.containsString("Path=/api/v1/auth/reissue")));
+    }
+
+    @Test
+    void 깃허브_콜백_state_누락_실패() throws Exception {
+        // given
+        given(authService.handleGithubCallback("valid-code", null))
+                .willThrow(new InvalidOnboardingTokenException("Authorization 헤더가 없습니다."));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("code", "valid-code"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 깃허브_콜백_code_누락_실패() throws Exception {
+        // given
+        given(authService.handleGithubCallback(null, "onboarding-token"))
+                .willThrow(new GithubAuthorizationCodeMissingException());
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("state", "onboarding-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
+    }
+
+    @Test
+    void 깃허브_콜백_토큰_교환_실패() throws Exception {
+        // given
+        given(authService.handleGithubCallback("bad-code", "onboarding-token"))
+                .willThrow(new GithubTokenExchangeFailedException("GitHub token 교환에 실패했습니다."));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("code", "bad-code")
+                        .param("state", "onboarding-token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
+
+    @Test
+    void 깃허브_콜백_사용자정보_조회_실패() throws Exception {
+        // given
+        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .willThrow(new GithubUserInfoFetchFailedException("GitHub 사용자 정보 조회에 실패했습니다."));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("code", "valid-code")
+                        .param("state", "onboarding-token"))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.error").value("SERVER_ERROR"));
+    }
+
+    @Test
+    void 깃허브_콜백_중복_계정_실패() throws Exception {
+        // given
+        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .willThrow(new DuplicateGithubAccountException("github-login"));
+
+        // when & then
+        mockMvc.perform(get("/auth/oauth2/callback/github")
+                        .param("code", "valid-code")
+                        .param("state", "onboarding-token"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("DUPLICATE_USER"));
     }
 }

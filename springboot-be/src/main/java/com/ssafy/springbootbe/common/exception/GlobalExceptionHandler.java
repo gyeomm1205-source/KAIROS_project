@@ -1,9 +1,14 @@
 package com.ssafy.springbootbe.common.exception;
 
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
+import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubRedirectGenerationException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
@@ -29,9 +34,23 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "INVALID_INPUT", "message", e.getMessage()));
     }
 
+    @ExceptionHandler(GithubAuthorizationCodeMissingException.class)
+    public ResponseEntity<Map<String, String>> handleGithubAuthorizationCodeMissingException(
+            GithubAuthorizationCodeMissingException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "INVALID_INPUT", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(GoogleTokenExchangeFailedException.class)
     public ResponseEntity<Map<String, String>> handleGoogleTokenExchangeFailedException(
             GoogleTokenExchangeFailedException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(GithubTokenExchangeFailedException.class)
+    public ResponseEntity<Map<String, String>> handleGithubTokenExchangeFailedException(
+            GithubTokenExchangeFailedException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(Map.of("error", "INVALID_TOKEN", "message", e.getMessage()));
     }
@@ -50,13 +69,27 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
     }
 
+    @ExceptionHandler(GithubUserInfoFetchFailedException.class)
+    public ResponseEntity<Map<String, String>> handleGithubUserInfoFetchFailedException(
+            GithubUserInfoFetchFailedException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(DuplicateOAuthEmailException.class)
     public ResponseEntity<Map<String, String>> handleDuplicateOAuthEmailException(DuplicateOAuthEmailException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", "DUPLICATE_USER", "message", e.getMessage()));
     }
 
-    @ExceptionHandler({AuthTokenGenerationException.class, AuthRedisSaveFailedException.class})
+    @ExceptionHandler(DuplicateGithubAccountException.class)
+    public ResponseEntity<Map<String, String>> handleDuplicateGithubAccountException(
+            DuplicateGithubAccountException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "DUPLICATE_USER", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler({AuthTokenGenerationException.class, AuthRedisSaveFailedException.class, AuthPersistenceException.class})
     public ResponseEntity<Map<String, String>> handleAuthInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));

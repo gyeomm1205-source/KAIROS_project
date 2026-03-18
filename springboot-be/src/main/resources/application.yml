@@ -55,5 +55,8 @@ oauth:
     redirect_uri: ${GITHUB_REDIRECT_URL}
     token-url: ${GITHUB_TOKEN_URL}
     scope: ${GITHUB_CLIENT_SCOPE}
+    user-agent: ${GITHUB_USER_AGENT}
+    user-info-url: ${GITHUB_USER_INFO_URL}
 ai:
   server-url: ${AI_SERVER_URL}
+  collect-async-path: ${AI_COLECT_ASYNC_PATH}

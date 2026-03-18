@@ -3,9 +3,17 @@ package com.ssafy.springbootbe.domain.auth.service;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubTokenResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.GithubUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
+import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedException;
@@ -25,6 +33,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.client.RestClientException;
 
 import java.net.URI;
 import java.util.Optional;
@@ -71,6 +80,14 @@ class AuthServiceImplTest {
         ReflectionTestUtils.setField(authService, "githubClientId", "test-github-client-id");
         ReflectionTestUtils.setField(authService, "githubRedirectUri", "http://localhost:5173/github/redirect");
         ReflectionTestUtils.setField(authService, "githubScope", "read:user repo");
+        ReflectionTestUtils.setField(authService, "githubClientSecret", "test-github-client-secret");
+        ReflectionTestUtils.setField(authService, "githubTokenUrl", "https://github.com/login/oauth/access_token");
+        ReflectionTestUtils.setField(authService, "githubAcceptVnd", "application/vnd.github+json");
+        ReflectionTestUtils.setField(authService, "githubApiVersion", "2026-03-10");
+        ReflectionTestUtils.setField(authService, "githubUserInfoUrl", "https://api.github.com/user");
+        ReflectionTestUtils.setField(authService, "githubUserAgent", "Kairos_Github_App");
+        ReflectionTestUtils.setField(authService, "oauthContentType", "application/x-www-form-urlencoded");
+        ReflectionTestUtils.setField(authService, "aiServerUrl", "http://localhost:8000");
     }
 
     @Test
@@ -366,5 +383,259 @@ class AuthServiceImplTest {
         assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer invalid-token"))
                 .isInstanceOf(InvalidOnboardingTokenException.class)
                 .hasMessageContaining("유효하지 않은 onboarding token");
+    }
+
+    @Test
+    void 깃허브_콜백_신규_GUEST_유저_생성_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User savedUser = User.builder()
+                .userId(11L)
+                .email("new-user@gmail.com")
+                .nickname("github-login")
+                .status(UserStatus.GUEST)
+                .build();
+        GithubTokenResponse githubTokenResponse = GithubTokenResponse.builder()
+                .accessToken("github-access-token")
+                .tokenType("bearer")
+                .build();
+        GithubUserInfoResponse githubUserInfoResponse = GithubUserInfoResponse.builder()
+                .id(321L)
+                .login("github-login")
+                .build();
+
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
+        given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
+                .willReturn(Optional.empty());
+        given(userRepository.existsByEmail("new-user@gmail.com")).willReturn(false);
+        given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
+        given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
+        given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
+
+        // when
+        GithubAuthTokenBundle result = authService.handleGithubCallback("valid-code", "onboarding-token");
+
+        // then
+        assertThat(result.getResponse().getAccessToken()).isEqualTo("service-access-token");
+        assertThat(result.getResponse().getTokenType()).isEqualTo("Bearer");
+        assertThat(result.getResponse().getUserId()).isEqualTo(11L);
+        assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
+        verify(oAuthAccountRepository).save(org.mockito.ArgumentMatchers.argThat(account ->
+                account.getProvider() == OAuthProvider.GOOGLE
+                        && "google-sub".equals(account.getProviderAccountId())
+                        && account.getRefreshToken() == null
+        ));
+        verify(oAuthAccountRepository).save(org.mockito.ArgumentMatchers.argThat(account ->
+                account.getProvider() == OAuthProvider.GITHUB
+                        && "321".equals(account.getProviderAccountId())
+                        && "github-access-token".equals(account.getRefreshToken())
+        ));
+        verify(redisService).save(
+                org.mockito.ArgumentMatchers.eq("auth:refresh:11"),
+                org.mockito.ArgumentMatchers.eq("service-refresh-token"),
+                org.mockito.ArgumentMatchers.eq(168L),
+                org.mockito.ArgumentMatchers.eq(TimeUnit.HOURS)
+        );
+        verify(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
+        verify(redisService).delete("onboarding:google-sub");
+    }
+
+    @Test
+    void 깃허브_콜백_state_누락_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", null))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("Authorization 헤더가 없습니다.");
+    }
+
+    @Test
+    void 깃허브_콜백_인가코드_누락_실패() {
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback(null, "onboarding-token"))
+                .isInstanceOf(GithubAuthorizationCodeMissingException.class);
+    }
+
+    @Test
+    void 깃허브_콜백_Redis_onboarding_정보가_없으면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .isInstanceOf(InvalidOnboardingTokenException.class)
+                .hasMessageContaining("Redis에 onboarding 정보가 없습니다.");
+    }
+
+    @Test
+    void 깃허브_콜백_토큰_교환_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doThrow(new GithubTokenExchangeFailedException("GitHub token 교환에 실패했습니다."))
+                .when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .isInstanceOf(GithubTokenExchangeFailedException.class);
+    }
+
+    @Test
+    void 깃허브_콜백_사용자정보_조회_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        GithubTokenResponse githubTokenResponse = GithubTokenResponse.builder()
+                .accessToken("github-access-token")
+                .build();
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doThrow(new GithubUserInfoFetchFailedException("GitHub 사용자 정보 조회에 실패했습니다."))
+                .when(authService).fetchGithubUserInfo("github-access-token");
+
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .isInstanceOf(GithubUserInfoFetchFailedException.class);
+    }
+
+    @Test
+    void 깃허브_콜백_이미_가입된_GitHub_계정이면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        GithubTokenResponse githubTokenResponse = GithubTokenResponse.builder()
+                .accessToken("github-access-token")
+                .build();
+        GithubUserInfoResponse githubUserInfoResponse = GithubUserInfoResponse.builder()
+                .id(321L)
+                .login("github-login")
+                .build();
+        OAuthAccount githubAccount = OAuthAccount.builder()
+                .oauthAccountId(77L)
+                .provider(OAuthProvider.GITHUB)
+                .providerAccountId("321")
+                .build();
+
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
+        given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
+                .willReturn(Optional.of(githubAccount));
+
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .isInstanceOf(DuplicateGithubAccountException.class);
+    }
+
+    @Test
+    void 깃허브_콜백_service_token_발급_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User savedUser = User.builder()
+                .userId(11L)
+                .email("new-user@gmail.com")
+                .nickname("github-login")
+                .status(UserStatus.GUEST)
+                .build();
+        GithubTokenResponse githubTokenResponse = GithubTokenResponse.builder()
+                .accessToken("github-access-token")
+                .build();
+        GithubUserInfoResponse githubUserInfoResponse = GithubUserInfoResponse.builder()
+                .id(321L)
+                .login("github-login")
+                .build();
+
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
+        given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
+                .willReturn(Optional.empty());
+        given(userRepository.existsByEmail("new-user@gmail.com")).willReturn(false);
+        given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
+        given(jwtUtils.createAccessToken(savedUser))
+                .willThrow(new AuthTokenGenerationException("access token 발급에 실패했습니다.", new RuntimeException("jwt error")));
+
+        // when & then
+        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+                .isInstanceOf(AuthTokenGenerationException.class);
+    }
+
+    @Test
+    void 깃허브_콜백_FastAPI_호출_실패여도_회원생성은_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User savedUser = User.builder()
+                .userId(11L)
+                .email("new-user@gmail.com")
+                .nickname("github-login")
+                .status(UserStatus.GUEST)
+                .build();
+        GithubTokenResponse githubTokenResponse = GithubTokenResponse.builder()
+                .accessToken("github-access-token")
+                .build();
+        GithubUserInfoResponse githubUserInfoResponse = GithubUserInfoResponse.builder()
+                .id(321L)
+                .login("github-login")
+                .build();
+
+        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("onboarding");
+        given(claims.get("purpose", String.class)).willReturn("onboarding");
+        given(claims.get("googleSub", String.class)).willReturn("google-sub");
+        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
+        given(redisService.get("onboarding:google-sub"))
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
+        given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
+                .willReturn(Optional.empty());
+        given(userRepository.existsByEmail("new-user@gmail.com")).willReturn(false);
+        given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
+        given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
+        given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
+        doThrow(new RestClientException("fastapi error"))
+                .when(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
+
+        // when
+        GithubAuthTokenBundle result = authService.handleGithubCallback("valid-code", "onboarding-token");
+
+        // then
+        assertThat(result.getResponse().getUserId()).isEqualTo(11L);
+        assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
+        verify(redisService).delete("onboarding:google-sub");
     }
 }
