@@ -57,7 +57,7 @@ async def github_collect_worker(task_id: str, req: GithubCollectRequest):
     try:
         fake_db[task_id] = {"status": "processing", "data": None}
         # 본래는 req에서 받은 파라미터를 넘겨야 하지만 구조상 현재는 기존 함수 사용
-        github_context = await start_github_collection()
+        github_context = await start_github_collection(req.githubToken, req.githubUsername)
         fake_db[task_id]["status"] = "completed"
         fake_db[task_id]["data"] = {"github_context": github_context}
     except Exception as e:
@@ -75,7 +75,7 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
         if github_info and github_info["status"] == "completed":
             github_context = github_info["data"].get("github_context")
             
-        results = await start_velog_and_analysis(github_context)
+        results = await start_velog_and_analysis(req.velogUsername, github_context)
         fake_db[task_id]["status"] = "completed"
         fake_db[task_id]["data"] = {
             "profile": results["profile"],

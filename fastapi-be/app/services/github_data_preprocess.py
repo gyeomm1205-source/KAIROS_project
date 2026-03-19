@@ -13,23 +13,26 @@ load_dotenv()
 # ==========================================
 # [Spring Boot가 FastAPI로 넘겨주었다고 가정하는 데이터]
 # GitHub OAuth 구현 전 임시 테스트용 — .env 파일에서 로드
+# 테스트 시 아래 주석을 풀고 넘겨받은 파라미터 대신 사용할 수 있습니다.
 # ==========================================
-GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
-USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
+# GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
+# USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
 
-HEADERS = {
-    "Authorization": f"token {GITHUB_TOKEN}",
-    "Accept": "application/vnd.github.v3+json"
-}
+def get_headers(github_token: str) -> dict:
+    return {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
 
-async def get_user_repositories(session):
+async def get_user_repositories(session, github_token: str):
     """1. 유저가 소유하거나 참여 중인(팀/조직 포함) 모든 레포지토리를 최근 업데이트 순으로 가져옵니다."""
     print("🔍 유저가 참여 중인 레포지토리 목록을 가져옵니다...")
     repos = []
     page = 1
+    headers = get_headers(github_token)
     while True:
         url = f"https://api.github.com/user/repos?sort=updated&per_page=100&page={page}"
-        async with session.get(url, headers=HEADERS) as response:
+        async with session.get(url, headers=headers) as response:
             if response.status == 200:
                 data = await response.json()
                 if not data:
@@ -41,18 +44,19 @@ async def get_user_repositories(session):
     print(f"✅ 총 {len(repos)}개의 레포지토리를 찾았습니다.")
     return repos
 
-async def fetch_changed_files(session, files_url):
+async def fetch_changed_files(session, files_url, github_token: str):
     """수정된 파일명 목록을 가져옵니다."""
-    async with session.get(files_url, headers=HEADERS) as res:
+    headers = get_headers(github_token)
+    async with session.get(files_url, headers=headers) as res:
         if res.status == 200:
             data = await res.json()
             return [f["filename"] for f in data if "filename" in f][:5]
     return []
 
-async def fetch_readme(session, repo_owner, repo_name):
+async def fetch_readme(session, repo_owner, repo_name, github_token: str):
     """README 파일을 가져와서 정규식으로 정제한 후 첫 150자만 추출합니다."""
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/readme"
-    headers = HEADERS.copy()
+    headers = get_headers(github_token)
     headers["Accept"] = "application/vnd.github.v3.raw"
     async with session.get(url, headers=headers) as res:
         if res.status == 200:
@@ -64,9 +68,9 @@ async def fetch_readme(session, repo_owner, repo_name):
             return summary + ("..." if len(summary) >= 150 else "")
     return "README 정보 없음"
 
-async def fetch_dependencies(session, repo_owner, repo_name):
+async def fetch_dependencies(session, repo_owner, repo_name, github_token: str):
     """설정 파일들을 분석해 기술 스택을 가져옵니다 (최대 15개)."""
-    headers = HEADERS.copy()
+    headers = get_headers(github_token)
     headers["Accept"] = "application/vnd.github.v3.raw"
     
     # 1. package.json (Node.js/React/Vue 계열)
@@ -141,7 +145,7 @@ async def fetch_dependencies(session, repo_owner, repo_name):
 
     # 6. 둘 다 없으면 Github 언어 통계로 대체
     url_lang = f"https://api.github.com/repos/{repo_owner}/{repo_name}/languages"
-    async with session.get(url_lang, headers=HEADERS) as res:
+    async with session.get(url_lang, headers=headers) as res:
          if res.status == 200:
              data = await res.json()
              if data:
@@ -149,7 +153,7 @@ async def fetch_dependencies(session, repo_owner, repo_name):
     
     return "의존성 정보 없음"
 
-async def process_repository(session, repo):
+async def process_repository(session, repo, github_token: str, username: str):
     """2. 레포지토리 1개를 분석하여 PR 또는 Commit 단위의 활동(Activity)을 추출하고 메타데이터를 덧붙입니다."""
     repo_owner = repo['owner']['login']
     repo_name = repo['name']
@@ -158,10 +162,11 @@ async def process_repository(session, repo):
     print(f"📂 분석 중: [{repo_full_name}]")
     
     activities = []
+    headers = get_headers(github_token)
 
     # [로직 A] PR 가져오기
-    pr_search_url = f"https://api.github.com/search/issues?q=repo:{repo_full_name}+is:pr+is:merged+author:{USERNAME}"
-    async with session.get(pr_search_url, headers=HEADERS) as pr_res:
+    pr_search_url = f"https://api.github.com/search/issues?q=repo:{repo_full_name}+is:pr+is:merged+author:{username}"
+    async with session.get(pr_search_url, headers=headers) as pr_res:
         if pr_res.status == 200:
             data = await pr_res.json()
             prs = data.get("items", [])
@@ -174,7 +179,7 @@ async def process_repository(session, repo):
         async def fetch_pr_files(pr):
             pr_num = pr["number"]
             files_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls/{pr_num}/files"
-            files = await fetch_changed_files(session, files_url)
+            files = await fetch_changed_files(session, files_url, github_token)
             return {
                 "date": pr["closed_at"][:10],
                 "type": "PR",
@@ -188,8 +193,8 @@ async def process_repository(session, repo):
     # [로직 B] PR이 없으면 Commit 가져오기
     else:
         print(f"   [{repo_name}] => ⚠️ PR 없음! 직접 푸시한 Commit 내역을 수집합니다.")
-        commits_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?author={USERNAME}&per_page=3"
-        async with session.get(commits_url, headers=HEADERS) as commits_res:
+        commits_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits?author={username}&per_page=3"
+        async with session.get(commits_url, headers=headers) as commits_res:
             if commits_res.status == 200:
                 commits = await commits_res.json()
                 
@@ -199,7 +204,7 @@ async def process_repository(session, repo):
                     date = c["commit"]["author"]["date"][:10]
                     
                     detail_url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/commits/{sha}"
-                    async with session.get(detail_url, headers=HEADERS) as detail_res:
+                    async with session.get(detail_url, headers=headers) as detail_res:
                         files = []
                         if detail_res.status == 200:
                             data = await detail_res.json()
@@ -220,8 +225,8 @@ async def process_repository(session, repo):
         return None
         
     # 레포지토리 메타데이터 (README, 의존성) 수집 - 여기서 추가됩니다!
-    readme = await fetch_readme(session, repo_owner, repo_name)
-    dependencies = await fetch_dependencies(session, repo_owner, repo_name)
+    readme = await fetch_readme(session, repo_owner, repo_name, github_token)
+    dependencies = await fetch_dependencies(session, repo_owner, repo_name, github_token)
     
     return {
         "repo_name": repo_name,
@@ -260,16 +265,16 @@ def convert_to_markdown_format(repo_data_list):
         
     return "\n---\n\n".join(output)
 
-async def main():
+async def main(github_token: str, username: str):
     start_time = time.time()
     
     async with aiohttp.ClientSession() as session:
-        repos = await get_user_repositories(session)
+        repos = await get_user_repositories(session, github_token)
         if not repos:
             print("❌ 접근 가능한 레포지토리가 없거나 토큰이 유효하지 않습니다.")
             return None
             
-        tasks = [process_repository(session, repo) for repo in repos]
+        tasks = [process_repository(session, repo, github_token, username) for repo in repos]
         results = await asyncio.gather(*tasks)
         
         # 데이터가 있는 레포지토리만 리스트에 담기
@@ -288,7 +293,11 @@ if __name__ == "__main__":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
     # 테스트 실행 시 프롬프트 출력
-    formatted_text = asyncio.run(main())
+    # 테스트 시에는 실제 토큰과 유저네임을 넣어주세요. (혹은 주석 처리된 env 변수를 사용)
+    # GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
+    # USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
+    # formatted_text = asyncio.run(main(GITHUB_TOKEN, USERNAME))
+    formatted_text = None
     
     if formatted_text:
         prompt = f"""너는 개발자 활동 분석 AI '카이로스'야.
