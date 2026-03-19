@@ -1,7 +1,7 @@
 package com.ssafy.springbootbe.domain.calendar.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.calendar.dto.response.CalendarCurriculumResponse;
 import com.ssafy.springbootbe.domain.calendar.dto.response.CalendarNodeResponse;
@@ -43,7 +43,7 @@ public class CalendarServiceImpl implements CalendarService {
         if (cached != null) {
             try {
                 return objectMapper.readValue(cached, CalendarResponse.class);
-            } catch (JsonProcessingException e) {
+            } catch (JacksonException e) {
                 log.warn("캘린더 캐시 역직렬화 실패. key={}", cacheKey, e);
             }
         }
@@ -110,7 +110,7 @@ public class CalendarServiceImpl implements CalendarService {
     private void cacheCalendar(String cacheKey, CalendarResponse response) {
         try {
             redisService.save(cacheKey, objectMapper.writeValueAsString(response), 1L, TimeUnit.HOURS);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.warn("캘린더 캐시 저장 실패. key={}", cacheKey, e);
         }
     }
