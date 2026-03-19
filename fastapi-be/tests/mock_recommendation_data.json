@@ -1,0 +1,317 @@
+{
+  "_comment": "Mock Qdrant retrieval results for recommendation_svc.py development.",
+  "_usage": "Load with: json.load(open('tests/mock_recommendation_data.json'))",
+
+  "mock_qdrant_hits": [
+    {
+      "doc_id": "ref_jwt_001",
+      "title": "JWT Best Current Practices (RFC 8725)",
+      "url": "https://datatracker.ietf.org/doc/html/rfc8725",
+      "skill_tags": ["JWT", "Security", "OAuth"],
+      "topic": "authentication",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2020-02-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.91,
+      "content_preview": "This document updates RFC 7519 (JSON Web Token) with a set of best practices that mitigate known attacks and weaknesses..."
+    },
+    {
+      "doc_id": "ref_spring_security_oauth_001",
+      "title": "Spring Security OAuth2 공식 레퍼런스",
+      "url": "https://docs.spring.io/spring-security/reference/servlet/oauth2/index.html",
+      "skill_tags": ["Spring Security", "OAuth", "Spring Boot"],
+      "topic": "authentication",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-11-15",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.88,
+      "content_preview": "Spring Security provides comprehensive OAuth 2.0 support covering both Resource Server and Authorization Server use cases..."
+    },
+    {
+      "doc_id": "ref_jwt_spring_002",
+      "title": "Spring Boot + JWT 인증 구현 실전 가이드",
+      "url": "https://velog.io/@example/spring-jwt-guide",
+      "skill_tags": ["JWT", "Spring Boot", "Spring Security"],
+      "topic": "authentication",
+      "source_type": "tech_blog",
+      "language": "ko",
+      "published_at": "2024-08-10",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.84,
+      "content_preview": "Spring Boot 3.x 기준으로 JWT 인증 필터와 토큰 발급/검증 로직을 단계별로 구현합니다..."
+    },
+    {
+      "doc_id": "ref_fastapi_001",
+      "title": "FastAPI 공식 문서 — Security",
+      "url": "https://fastapi.tiangolo.com/tutorial/security/",
+      "skill_tags": ["FastAPI", "Python", "OAuth"],
+      "topic": "web_framework",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2025-01-20",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.79,
+      "content_preview": "FastAPI has built-in support for common security flows using OAuth2, API keys, and HTTP Basic..."
+    },
+    {
+      "doc_id": "ref_pydantic_v2_001",
+      "title": "Pydantic v2 마이그레이션 가이드",
+      "url": "https://docs.pydantic.dev/latest/migration/",
+      "skill_tags": ["Pydantic", "Python", "FastAPI"],
+      "topic": "data_validation",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2023-06-30",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.75,
+      "content_preview": "Pydantic v2 introduces significant changes to validation logic and model configuration..."
+    },
+    {
+      "doc_id": "ref_langchain_rag_001",
+      "title": "LangChain RAG 구현 가이드",
+      "url": "https://python.langchain.com/docs/tutorials/rag/",
+      "skill_tags": ["LangChain", "RAG", "Python", "LLM"],
+      "topic": "ai_engineering",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2025-02-14",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.82,
+      "content_preview": "This tutorial shows how to build a basic RAG application using LangChain, covering document loading, splitting, embedding, and retrieval..."
+    },
+    {
+      "doc_id": "ref_qdrant_filter_001",
+      "title": "Qdrant Filtering 공식 문서",
+      "url": "https://qdrant.tech/documentation/concepts/filtering/",
+      "skill_tags": ["Qdrant", "Vector DB", "RAG"],
+      "topic": "ai_engineering",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2025-01-05",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.78,
+      "content_preview": "Qdrant supports a rich set of filtering conditions based on payload fields, enabling hybrid semantic + metadata search..."
+    },
+    {
+      "doc_id": "ref_vue3_composable_001",
+      "title": "Vue 3 Composable 패턴 가이드",
+      "url": "https://vuejs.org/guide/reusability/composables",
+      "skill_tags": ["Vue", "TypeScript", "Frontend"],
+      "topic": "web_framework",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-10-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.62,
+      "content_preview": "Composables leverage Vue's Composition API to encapsulate and reuse stateful logic across components..."
+    },
+    {
+      "doc_id": "ref_spring_jpa_002",
+      "title": "Spring Data JPA 레퍼런스 (soft delete 패턴)",
+      "url": "https://docs.spring.io/spring-data/jpa/docs/current/reference/html/",
+      "skill_tags": ["Spring Data JPA", "Spring Boot", "MySQL"],
+      "topic": "persistence",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-12-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.71,
+      "content_preview": "Spring Data JPA simplifies data access layer implementation with repositories and provides soft delete via @SQLDelete..."
+    },
+    {
+      "doc_id": "ref_oauth2_old_001",
+      "title": "OAuth 2.0 입문 블로그 포스팅 (2020)",
+      "url": "https://velog.io/@old-post/oauth2-basic",
+      "skill_tags": ["OAuth", "Security"],
+      "topic": "authentication",
+      "source_type": "tech_blog",
+      "language": "ko",
+      "published_at": "2020-03-15",
+      "freshness_grade": "warning",
+      "allowed": true,
+      "score": 0.65,
+      "content_preview": "OAuth 2.0 흐름을 쉽게 이해할 수 있도록 정리한 글입니다. (2020년 기준이므로 최신 라이브러리 API와 다를 수 있음)"
+    },
+    {
+      "doc_id": "ref_java_design_pattern_001",
+      "title": "Effective Java — 객체 생성과 설계 패턴",
+      "url": "https://www.oreilly.com/library/view/effective-java/9780134686097/",
+      "skill_tags": ["Java", "Design Pattern", "OOP"],
+      "topic": "language_advanced",
+      "source_type": "curated",
+      "language": "en",
+      "published_at": "2023-05-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.87,
+      "content_preview": "Covers best practices for Java including Builder, Singleton, and Factory patterns with modern Java 17+ idioms..."
+    },
+    {
+      "doc_id": "ref_java_jvm_001",
+      "title": "JVM 내부 구조와 GC 튜닝 가이드",
+      "url": "https://docs.oracle.com/en/java/javase/21/gctuning/",
+      "skill_tags": ["Java", "JVM", "Performance"],
+      "topic": "language_advanced",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-09-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.83,
+      "content_preview": "Deep dive into JVM internals: class loading, JIT compilation, heap structure, and GC algorithm selection for production environments..."
+    },
+    {
+      "doc_id": "ref_cpp_stl_001",
+      "title": "Modern C++ STL 완벽 가이드 (C++17/20)",
+      "url": "https://en.cppreference.com/w/cpp/algorithm",
+      "skill_tags": ["C++", "STL", "Algorithm"],
+      "topic": "language_advanced",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-06-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.85,
+      "content_preview": "Comprehensive reference for C++17/20 STL: containers, iterators, algorithms, ranges, and concurrency primitives..."
+    },
+    {
+      "doc_id": "ref_nestjs_typescript_001",
+      "title": "NestJS 공식 문서 — 모듈 & 의존성 주입",
+      "url": "https://docs.nestjs.com/modules",
+      "skill_tags": ["NestJS", "TypeScript", "Node.js"],
+      "topic": "web_framework",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2025-01-10",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.80,
+      "content_preview": "NestJS uses TypeScript-first module system with IoC container for dependency injection, enabling scalable server-side applications..."
+    },
+    {
+      "doc_id": "ref_docker_cicd_001",
+      "title": "Docker + GitHub Actions CI/CD 파이프라인 구축",
+      "url": "https://docs.docker.com/guides/ci-cd/github-actions/",
+      "skill_tags": ["Docker", "CI/CD", "GitHub Actions"],
+      "topic": "devops",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-11-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.77,
+      "content_preview": "Step-by-step guide to containerizing applications with Docker and automating build/test/deploy pipelines using GitHub Actions..."
+    },
+    {
+      "doc_id": "ref_typescript_handbook_001",
+      "title": "TypeScript 핸드북 — 타입 시스템 기초",
+      "url": "https://www.typescriptlang.org/docs/handbook/2/types-from-types.html",
+      "skill_tags": ["TypeScript", "JavaScript", "Frontend"],
+      "topic": "language_fundamentals",
+      "source_type": "official_doc",
+      "language": "en",
+      "published_at": "2024-08-01",
+      "freshness_grade": "stable",
+      "allowed": true,
+      "score": 0.74,
+      "content_preview": "TypeScript handbook covering generic types, conditional types, mapped types, and utility types for building type-safe applications..."
+    }
+  ],
+
+  "mock_ai_context_scenarios": {
+    "scenario_junior_backend": {
+      "_description": "백엔드 취준생, Spring/JWT 학습 중, 면접 준비 병행",
+      "request_id": "rec_mock_001",
+      "trace_id": "trace-mock-aaa",
+      "policy_version": "policy_v1",
+      "user": {
+        "user_id": 101,
+        "job_role": "취준생",
+        "target_positions": ["backend"],
+        "survey_context": {
+          "job_role": "취준생",
+          "target_positions": ["backend"],
+          "tech_stacks": ["Spring Boot", "Java", "MySQL"],
+          "persona": "default"
+        }
+      },
+      "learning_states": [
+        { "skill": "Spring Security", "raw_score": 1.8, "relative_rank": "mid", "percentile": 42 },
+        { "skill": "JWT",             "raw_score": 1.2, "relative_rank": "low", "percentile": 28 },
+        { "skill": "Spring Boot",     "raw_score": 2.6, "relative_rank": "high","percentile": 65 },
+        { "skill": "MySQL",           "raw_score": 1.5, "relative_rank": "mid", "percentile": 38 }
+      ],
+      "recent_activities": [
+        {
+          "source": "velog",
+          "category": "학습",
+          "tech_stacks": ["Spring Security", "OAuth"],
+          "summary": "OAuth 로그인 흐름과 Spring Security 필터 체인을 정리한 글",
+          "activity_date": "2026-03-10T14:00:00Z"
+        },
+        {
+          "source": "github",
+          "category": "개발",
+          "tech_stacks": ["Spring Boot", "JWT"],
+          "summary": "JWT 기반 인증 필터 클래스 추가 및 토큰 발급 엔드포인트 구현",
+          "activity_date": "2026-03-09T11:30:00Z"
+        }
+      ],
+      "history_exclusions": ["ref_oauth2_old_001"],
+      "calendar_constraints": [
+        { "date": "2026-03-17", "busy_slots": ["19:00-22:00"] },
+        { "date": "2026-03-18", "busy_slots": [] }
+      ],
+      "request_type": "reference"
+    },
+
+    "scenario_ai_developer": {
+      "_description": "AI 개발자, LLM 통합 및 RAG 구현 역량 강화 중",
+      "request_id": "rec_mock_002",
+      "trace_id": "trace-mock-bbb",
+      "policy_version": "policy_v1",
+      "user": {
+        "user_id": 202,
+        "job_role": "현직 개발자",
+        "target_positions": ["ai", "backend"],
+        "survey_context": {
+          "job_role": "현직 개발자",
+          "target_positions": ["ai", "backend"],
+          "tech_stacks": ["FastAPI", "Python", "LangChain"],
+          "persona": "default"
+        }
+      },
+      "learning_states": [
+        { "skill": "FastAPI",    "raw_score": 2.4, "relative_rank": "mid",  "percentile": 58 },
+        { "skill": "LangChain",  "raw_score": 1.5, "relative_rank": "low",  "percentile": 35 },
+        { "skill": "Qdrant",     "raw_score": 0.8, "relative_rank": "low",  "percentile": 20 },
+        { "skill": "Pydantic",   "raw_score": 2.1, "relative_rank": "mid",  "percentile": 52 }
+      ],
+      "recent_activities": [
+        {
+          "source": "github",
+          "category": "개발",
+          "tech_stacks": ["FastAPI", "LangChain"],
+          "summary": "LLM 기반 활동 분석 파이프라인 구현 및 JsonOutputParser 적용",
+          "activity_date": "2026-03-11T10:00:00Z"
+        }
+      ],
+      "history_exclusions": [],
+      "calendar_constraints": [
+        { "date": "2026-03-17", "busy_slots": ["09:00-18:00"] }
+      ],
+      "request_type": "reference"
+    }
+  }
+}
