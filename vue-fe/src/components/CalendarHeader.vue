@@ -61,45 +61,22 @@
     </div>
 
     <div class="header-right">
-      <div ref="legendBtnRef" class="legend-collapse-wrap">
-        <button
-          class="btn-legend-toggle"
-          :class="{ 'btn-legend-toggle--open': legendOpen }"
-          @click="toggleLegend"
-        >
-          <i class="fas fa-filter" />
-          <span>FILTER</span>
-          <i class="fas" :class="legendOpen ? 'fa-chevron-up' : 'fa-chevron-down'" style="font-size:9px;" />
-        </button>
-
-        <Teleport to="body">
-          <Transition name="legend-fade">
-            <div
-              v-if="legendOpen"
-              ref="legendPanelRef"
-              class="legend-panel-teleport"
-              :style="legendPanelStyle"
-            >
-              <div class="legend-panel-title">
-                <span>TRACK FILTER</span>
-                <button class="legend-panel-close" @click="legendOpen = false">
-                  <i class="fas fa-times" />
-                </button>
-              </div>
-              <BranchLegend
-                :hidden-tracks="hiddenTracks"
-                :visible-tracks="visibleTracks"
-                @update:hiddenTracks="$emit('update:hiddenTracks', $event)"
-                @hover-track="$emit('hover-track', $event)"
-              />
-            </div>
-          </Transition>
-        </Teleport>
+      <div class="legend-inline">
+        <span class="legend-item"><i class="fas fa-check-circle" style="color:var(--text-primary);"/> 완료</span>
+        <span class="legend-item"><i class="fas fa-spinner" style="color:var(--text-muted);"/> 진행중</span>
+        <span class="legend-item"><i class="fas fa-circle" style="color:var(--text-faint);"/> 예정</span>
+        <span class="legend-divider" />
+        <span class="legend-item"><span class="legend-dot" style="background:#6366f1;" /> 학습</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#10b981;" /> 개발</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#f59e0b;" /> 블로그</span>
+        <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6;" /> 복습</span>
       </div>
 
-
-      <button class="btn-manage" @click="$emit('open-track-modal')">
-        <i class="fas fa-layer-group" /><span>MANAGE</span>
+      <button class="btn-manage" @click="$emit('import-external')">
+        <i class="fas fa-download" /><span>외부 일정 가져오기</span>
+      </button>
+      <button class="btn-study-cal" @click="$emit('sync-schedule')">
+        <i class="fas fa-upload" /><span>내 일정 반영하기</span>
       </button>
     </div>
   </header>
@@ -107,15 +84,9 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import BranchLegend from '@/components/BranchLegend.vue'
-import { RouterLink } from 'vue-router'
 
-const props = defineProps({ dateText: String, currentView: String, currentDate: Date, visibleTracks: Array })
-const emit = defineEmits(['navigate', 'change-view', 'open-track-modal', 'jump-to-date', 'update:hiddenTracks', 'hover-track'])
-
-const legendOpen = ref(false); const legendBtnRef = ref(null); const legendPanelRef = ref(null); const hiddenTracks = ref(new Set())
-function toggleLegend() { legendOpen.value = !legendOpen.value }
-function onDocClick(e) { const inBtn = legendBtnRef.value?.contains(e.target); const inPanel = legendPanelRef.value?.contains(e.target); if (!inBtn && !inPanel) legendOpen.value = false }
+const props = defineProps({ dateText: String, currentView: String, currentDate: Date })
+const emit = defineEmits(['navigate', 'change-view', 'jump-to-date', 'import-external', 'sync-schedule'])
 
 const isPopoverOpen = ref(false); const dateWrapRef = ref(null); const activeSelect = ref(null); const selYear = ref(new Date().getFullYear()); const selMonth = ref(new Date().getMonth() + 1); const selDay = ref(new Date().getDate());
 const yearOptions = computed(() => { const current = new Date().getFullYear(); return Array.from({ length: 11 }, (_, i) => current - 5 + i) })
@@ -140,8 +111,8 @@ const legendPanelStyle = computed(() => {
 
 function handleClickOutside(e) { if (isPopoverOpen.value && dateWrapRef.value && !dateWrapRef.value.contains(e.target)) { isPopoverOpen.value = false; activeSelect.value = null; } }
 
-onMounted(() => { document.addEventListener('click', handleClickOutside); document.addEventListener('click', onDocClick, true) })
-onUnmounted(() => { document.removeEventListener('click', handleClickOutside); document.removeEventListener('click', onDocClick, true) })
+onMounted(() => { document.addEventListener('click', handleClickOutside) })
+onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 </script>
 
 <style scoped>
@@ -227,33 +198,21 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside); d
 .view-btn:hover { color: var(--text-primary); border-color: var(--border); }
 .view-btn--active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
-.btn-manage, .btn-legend-toggle, .btn-study-cal {
+.btn-manage, .btn-study-cal {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 16px; border: 1px solid var(--border); background: transparent;
   color: var(--text-primary); border-radius: 0;
   font-size: 12px; font-weight: 800; cursor: pointer;
   transition: all 0.1s; white-space: nowrap; letter-spacing: 0.05em;
 }
-.btn-manage:hover, .btn-legend-toggle:hover, .btn-legend-toggle--open { background: var(--text-primary); color: var(--bg-base); }
-
+.btn-manage:hover { background: var(--text-primary); color: var(--bg-base); }
 .btn-study-cal { border: 1px solid var(--text-primary); }
 .btn-study-cal:hover { background: var(--text-primary); color: var(--bg-base); }
 
-/* 모달 */
-.legend-panel-teleport {
-  position: absolute; z-index: 9999;
-  background: var(--bg-base); border: 1px solid var(--border);
-  padding: 20px;
-  width: max-content; min-width: 320px;
-  box-shadow: 0 12px 32px rgba(0,0,0,0.15);
-  display: flex; flex-direction: column; gap: 16px;
-  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif;
-}
-.legend-panel-title {
-  display: flex; justify-content: space-between; align-items: center;
-  font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-muted);
-  border-bottom: 1px solid var(--border); padding-bottom: 12px;
-}
-.legend-panel-close { background: none; border: 1px solid var(--border); color: var(--text-faint); font-size: 10px; cursor: pointer; transition: all 0.15s; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
-.legend-panel-close:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+/* 인라인 범례 */
+.legend-inline { display: flex; align-items: center; gap: 12px; margin-right: 8px; }
+.legend-item { display: flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; color: var(--text-muted); white-space: nowrap; }
+.legend-item i { font-size: 10px; }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.legend-divider { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
 </style>

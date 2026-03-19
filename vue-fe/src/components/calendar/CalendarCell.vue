@@ -60,7 +60,7 @@ const props = defineProps({
   dimmedNodeIds: { type: Object, default: () => new Set() },
 })
 
-const emit = defineEmits(['cell-click', 'add-schedule', 'toggle-tooltip', 'edit-schedule', 'delete-schedule', 'day-detail', 'hover-node'])
+const emit = defineEmits(['cell-click', 'add-schedule', 'toggle-tooltip', 'edit-schedule', 'delete-schedule', 'day-detail', 'hover-node', 'open-ai-modal'])
 
 const parsed = computed(() => {
   const [y, m, d] = props.dateStr.split('-').map(Number)
@@ -83,7 +83,7 @@ const visibleSchedules = computed(() => labelSchedules.value.slice(0, MAX_VISIBL
 const hiddenCount      = computed(() => Math.max(0, labelSchedules.value.length - MAX_VISIBLE))
 
 function trackColor(id) { return store.getTrackById?.(id)?.color || 'var(--text-primary)' }
-function handleCellClick() { emit('toggle-tooltip', null); emit('cell-click', props.dateStr) }
+function handleCellClick() { emit('toggle-tooltip', null); emit('cell-click', props.dateStr); if (isCurrentMonth.value) emit('day-detail', props.dateStr) }
 function handleDblClick() { emit('day-detail', props.dateStr) }
 </script>
 

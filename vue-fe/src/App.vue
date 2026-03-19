@@ -141,10 +141,9 @@ body {
   color: var(--text-primary);
   font-weight: 400;
   line-height: 1.5;
-  overflow: hidden;
 }
 
-.app-root { width: 100%; height: 100vh; overflow: hidden; }
+.app-root { width: 100%; min-height: 100vh; }
 
 /* 전역 스크롤바 - 직각으로 변경 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -189,58 +188,4 @@ body {
 .border-y { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
 
-/* ────────────────────────────────────
-   Teleport 전역 패널: BranchLegend 드롭다운
-──────────────────────────────────── */
-.legend-panel-teleport {
-  position: fixed;
-  min-width: 320px;
-  width: max-content; 
-  max-width: 90vw; 
-
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 0; /* 직각 */
-  padding: 16px 18px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.6), 0 0 0 1px var(--border);
-  z-index: 9999;
-  font-family: 'Escoredream', system-ui, sans-serif;
-}
-
-.legend-panel-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--text-muted);
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.legend-panel-title i { color: var(--text-primary); }
-
-.legend-panel-close {
-  margin-left: auto;
-  width: 24px; height: 24px;
-  border-radius: 0; /* 직각 */
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-faint);
-  cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 10px;
-  transition: all 0.15s;
-}
-.legend-panel-close:hover { 
-  color: var(--bg-base); 
-  background: var(--text-primary); 
-  border-color: var(--text-primary);
-}
-
-/* Teleport 전환 애니메이션 */
-.legend-fade-enter-active { transition: all 0.18s cubic-bezier(0.34,1.2,0.64,1); }
-.legend-fade-leave-active { transition: all 0.12s ease; }
-.legend-fade-enter-from,
-.legend-fade-leave-to   { opacity: 0; transform: translateY(-8px) scale(0.97); }
 </style>
