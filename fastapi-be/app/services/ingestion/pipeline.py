@@ -14,9 +14,11 @@ import time
 from app.services.ingestion.seeds import ALL_SEEDS
 from app.services.ingestion.discovery import discover_articles
 from app.services.ingestion.crawler import crawl_all
+from app.services.ingestion.summarizer import summarize_articles
 from app.services.ingestion.chunker import split_into_chunks
 from app.services.ingestion.embedder import embed_chunks
 from app.services.ingestion.uploader import upload_document
+from app.services.qdrant_client import init_collections
 
 
 async def run_ingestion(seeds: dict | None = None) -> dict:
@@ -29,6 +31,9 @@ async def run_ingestion(seeds: dict | None = None) -> dict:
     Returns:
         {"total_articles": int, "total_points": int, "elapsed_sec": float}
     """
+    # 컬렉션이 없으면 먼저 생성
+    init_collections()
+
     if seeds is None:
         seeds = ALL_SEEDS
 
@@ -51,11 +56,17 @@ async def run_ingestion(seeds: dict | None = None) -> dict:
     print("============================")
     crawled = await crawl_all(articles)
 
+    # ─── 2.5단계: LLM 요약 ─────────────────────────────────────────
+    print(f"\n============================")
+    print(f"▶ 2.5단계: LLM 사전 요약 ({len(crawled)}개 글)")
+    print("============================")
+    summarized_articles = await summarize_articles(crawled)
+
     # ─── 3단계: 청크 → 임베딩 → 업로드 ─────────────────────────────
     print(f"\n============================")
     print(f"▶ 3단계: 청크 → 임베딩 → Qdrant 업로드")
     print("============================")
-    for doc in crawled:
+    for doc in summarized_articles:
         raw_text = doc.get("raw_text", "")
         if not raw_text:
             print(f"  [skip] 본문 없음: {doc.get('url', '')}")
