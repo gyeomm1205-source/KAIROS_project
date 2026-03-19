@@ -78,11 +78,21 @@ public class CalendarServiceImpl implements CalendarService {
                     List<CurriculumNode> periodNodes = entry.getValue();
                     Curriculum curriculum = periodNodes.get(0).getCurriculum();
 
-                    // 줄기 렌더링용 전체 기간 조회 (조회 기간과 무관)
+                    // 줄기 연결선 렌더링용: 조회 기간 바깥의 인접 노드 날짜 산출
                     List<CurriculumNode> allNodes = curriculumNodeRepository
                             .findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
-                    LocalDate curriculumStart = allNodes.get(0).getScheduledDate();
-                    LocalDate curriculumEnd = allNodes.get(allNodes.size() - 1).getScheduledDate();
+                    LocalDate firstInPeriod = periodNodes.getFirst().getScheduledDate();
+                    LocalDate lastInPeriod = periodNodes.getLast().getScheduledDate();
+                    LocalDate prevNodeDate = allNodes.stream()
+                            .map(CurriculumNode::getScheduledDate)
+                            .filter(d -> d.isBefore(firstInPeriod))
+                            .reduce((a, b) -> b)
+                            .orElse(null);
+                    LocalDate nextNodeDate = allNodes.stream()
+                            .map(CurriculumNode::getScheduledDate)
+                            .filter(d -> d.isAfter(lastInPeriod))
+                            .findFirst()
+                            .orElse(null);
 
                     List<CalendarNodeResponse> nodeResponses = periodNodes.stream()
                             .map(CalendarNodeResponse::from)
@@ -91,8 +101,8 @@ public class CalendarServiceImpl implements CalendarService {
                     return CalendarCurriculumResponse.builder()
                             .curriculumId(curriculumId)
                             .status(curriculum.getStatus())
-                            .startDate(curriculumStart)
-                            .endDate(curriculumEnd)
+                            .prevNodeDate(prevNodeDate)
+                            .nextNodeDate(nextNodeDate)
                             .nodes(nodeResponses)
                             .build();
                 })
