@@ -1,5 +1,5 @@
 """
-퀴즈 서비스 — POST /internal/quizzes
+퀴즈 서비스 — POST /api/v1/ai/quizzes/generate-async
 이슈: S14P21A506-121
 
 실행 흐름:
@@ -32,16 +32,11 @@ from pydantic import BaseModel, Field
 from app.core.model_router import TaskType, get_model, get_model_name, get_prompt_version
 from app.core.settings import QDRANT_COLLECTION_NAME
 from app.models.schemas import (
-    ModelMeta,
     QuestionType,
     QuizQuestion,
     QuizRequest,
     QuizResponse,
-    QuizRubric,
-    QuizType,
-    RecommendationHint,
-    ReferenceItem,
-    RelativeRank,
+    UserLevel,
 )
 from app.services.qdrant_client import get_qdrant_client
 
@@ -53,37 +48,21 @@ _MAX_CONTEXT_CHUNKS = 5
 # 토큰 예산 유지를 위한 청크당 최대 글자 수
 _CHUNK_CONTENT_MAX_CHARS = 600
 
-# 문항 수 테이블: [quiz_type][difficulty] → int
-_QUESTION_COUNT: dict[QuizType, dict[RelativeRank, int]] = {
-    QuizType.pre_assessment: {RelativeRank.low: 3, RelativeRank.mid: 4, RelativeRank.high: 5},
-    QuizType.review:         {RelativeRank.low: 3, RelativeRank.mid: 4, RelativeRank.high: 5},
-    QuizType.interview:      {RelativeRank.low: 2, RelativeRank.mid: 3, RelativeRank.high: 4},
+# UserLevel → (quiz_type_label, difficulty_label, question_count)
+_LEVEL_CONFIG: dict[UserLevel, tuple[str, str, int]] = {
+    UserLevel.junior: ("복습", "low",  5),
+    UserLevel.mid:    ("복습", "mid",  5),
+    UserLevel.senior: ("심화", "high", 5),
 }
 
-# 문항 유형 분배 테이블: [quiz_type][difficulty] → QuestionType 순서 리스트
-# 설계 근거:
-#   pre_assessment/low  → MC 위주로 인지 수준 진단
-#   pre_assessment/high → SA 위주로 개념 깊이 측정
-#   review/low          → SA+MC 혼합 (회상 + 인식)
-#   review/high         → SA+코딩 (적용 능력 검증)
-#   interview/low       → SA 전용 (구술 연습)
-#   interview/high      → SA+코딩 (실전 면접 압박 시뮬레이션)
-_QUESTION_TYPE_MIX: dict[QuizType, dict[RelativeRank, list[QuestionType]]] = {
-    QuizType.pre_assessment: {
-        RelativeRank.low:  [QuestionType.multiple_choice, QuestionType.multiple_choice, QuestionType.short_answer],
-        RelativeRank.mid:  [QuestionType.multiple_choice, QuestionType.short_answer,   QuestionType.short_answer],
-        RelativeRank.high: [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.multiple_choice, QuestionType.short_answer],
-    },
-    QuizType.review: {
-        RelativeRank.low:  [QuestionType.short_answer,   QuestionType.multiple_choice, QuestionType.short_answer],
-        RelativeRank.mid:  [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.multiple_choice],
-        RelativeRank.high: [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.coding],
-    },
-    QuizType.interview: {
-        RelativeRank.low:  [QuestionType.short_answer,   QuestionType.short_answer],
-        RelativeRank.mid:  [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.short_answer],
-        RelativeRank.high: [QuestionType.short_answer,   QuestionType.coding,         QuestionType.short_answer],
-    },
+# 문항 유형 분배: difficulty → QuestionType 순서 리스트
+_QUESTION_TYPE_MIX: dict[str, list[QuestionType]] = {
+    "low":  [QuestionType.multiple_choice, QuestionType.multiple_choice, QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.short_answer],
+    "mid":  [QuestionType.multiple_choice, QuestionType.short_answer,   QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.short_answer],
+    "high": [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.coding,
+             QuestionType.short_answer,   QuestionType.multiple_choice],
 }
 
 
@@ -369,30 +348,27 @@ _COMBINED_USER_TEMPLATE = """\
 
 def build_generation_context(request: QuizRequest) -> dict[str, Any]:
     """요청에서 프롬프트 주입용 변수를 하나의 dict로 조립한다."""
-    question_count = _QUESTION_COUNT[request.quiz_type].get(request.difficulty, 3)
-    question_types = _select_question_types(
-        request.quiz_type, request.difficulty, question_count
-    )
+    quiz_type_label, difficulty, question_count = _LEVEL_CONFIG[request.user_level]
+    question_types = _select_question_types(difficulty, question_count)
+    target_skill = request.target_tech_stacks[0] if request.target_tech_stacks else "개발"
+    all_skills   = ", ".join(request.target_tech_stacks)
 
     return {
-        "target_skill":      request.target_skill,
-        "current_level":     request.current_level.value,
-        "quiz_type":         request.quiz_type.value,
+        "target_skill":      target_skill,
+        "all_skills":        all_skills,
+        "current_level":     difficulty,
+        "quiz_type":         quiz_type_label,
         "question_count":    question_count,
         "question_types":    question_types,
-        "hint_text":         _fmt_recommendation_hint(request.recommendation_hint, request.target_skill),
-        "target_positions":  ", ".join(request.user.target_positions) or "미지정",
-        "time_limit":        request.time_limit_minutes,
+        "hint_text":         f"커리큘럼 ID {request.curriculum_id} 기반 퀴즈입니다.",
+        "target_positions":  "개발자",
+        "time_limit":        20,
     }
 
 
-def _select_question_types(
-    quiz_type: QuizType,
-    difficulty: RelativeRank,
-    count: int,
-) -> list[QuestionType]:
-    """quiz_type + difficulty에 맞는 문항 유형 순서 리스트를 반환한다. count가 패턴 길이를 초과하면 순환한다."""
-    mix = _QUESTION_TYPE_MIX[quiz_type][difficulty]
+def _select_question_types(difficulty: str, count: int) -> list[QuestionType]:
+    """difficulty에 맞는 문항 유형 순서 리스트를 반환한다."""
+    mix = _QUESTION_TYPE_MIX.get(difficulty, _QUESTION_TYPE_MIX["mid"])
     return [mix[i % len(mix)] for i in range(count)]
 
 
@@ -400,15 +376,11 @@ def _select_question_types(
 
 def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
     """
-    target_skill과 관련된 Qdrant 청크를 검색한다.
+    targetTechStacks 기반으로 Qdrant 청크를 검색한다.
     청크는 문항 생성의 유일한 사실 근거로 사용된다.
 
-    주 경로: Qdrant 클라이언트 (target_skill + hint 컨텍스트로 query_text 구성)
-    폴백:    Qdrant 연결 불가 시 요청 본문의 recent_references 사용
-
     TODO (컬렉션 구축 후):
-      - payload filter 추가: must={"skill_tags": {"$in": [target_skill]}, "allowed": true}
-      - recommendation_hint 있으면 hint.title로 query_text 교체 (더 정밀한 청크 검색)
+      - payload filter 추가: skill_tags 기반 필터링
       - 하이브리드 검색(키워드 + dense) 고려
     """
     query_text = _build_qdrant_query(request)
@@ -429,31 +401,24 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
             for hit in results
         ]
         logger.info(
-            "[retrieve_reference_context] Qdrant 반환 %d개 청크  skill=%s  query=%r",
-            len(chunks), request.target_skill, query_text,
+            "[retrieve_reference_context] Qdrant 반환 %d개 청크  query=%r",
+            len(chunks), query_text,
         )
         return chunks
 
     except Exception as exc:
         logger.warning(
-            "[retrieve_reference_context] Qdrant 연결 불가 (%s) — recent_references 폴백",
+            "[retrieve_reference_context] Qdrant 연결 불가 (%s) — 빈 컨텍스트 폴백",
             exc,
         )
-        return [
-            {
-                "title":   ref.title,
-                "content": f"skill tags: {', '.join(ref.skill_tags)}",
-                "score":   0.0,
-            }
-            for ref in request.recent_references
-        ]
+        return []
 
 
 def _build_qdrant_query(request: QuizRequest) -> str:
-    """Qdrant query 문자열을 구성한다. recommendation_hint가 있으면 문서 제목 기반으로 더 정밀하게 검색한다."""
-    if request.recommendation_hint:
-        return f"{request.recommendation_hint.title} — {request.target_skill} 핵심 개념"
-    return f"{request.target_skill} 개념과 사용 방법"
+    """Qdrant query 문자열을 구성한다. targetTechStacks 기반 검색."""
+    primary = request.target_tech_stacks[0] if request.target_tech_stacks else "개발"
+    all_skills = " ".join(request.target_tech_stacks[:3])
+    return f"{all_skills} {primary} 개념과 사용 방법"
 
 
 # 단계 3 — 문항 생성
@@ -732,69 +697,50 @@ def _assemble_response(
     rubric: _RubricOutput,
 ) -> QuizResponse:
     """
-    schemas.QuizResponse를 100% 준수하는 최종 응답을 조립한다.
+    API 명세서 기준 QuizResponse를 조립한다.
 
-    _SingleQuestion의 scoring_keywords는 Spring Boot가 UI에 표시할 수 있도록
-    expected_points 마지막 항목으로 추가된다:
-      "필수 키워드: keyword1, keyword2, ..."
+    - questionNumber: 1-based 번호
+    - quizType: "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "CODING"
+    - correctAnswer: 객관식은 정답 텍스트, 나머지는 None
+      (Spring Boot가 Redis에 저장, 클라이언트에는 노출하지 않음)
     """
-    question_types = _select_question_types(
-        request.quiz_type, request.difficulty, len(questions)
-    )
+    _, difficulty, _ = _LEVEL_CONFIG[request.user_level]
+    question_types = _select_question_types(difficulty, len(questions))
 
     quiz_questions: list[QuizQuestion] = []
     for idx, (q, q_type) in enumerate(zip(questions, question_types)):
-        points = list(q.expected_points)
-
-        # 채점자 가시성을 위해 scoring_keywords를 마지막 expected_point로 추가
-        if q.scoring_keywords and q_type != QuestionType.multiple_choice:
-            points.append(f"필수 키워드: {', '.join(q.scoring_keywords)}")
+        # 객관식: options[correct_option_index] 텍스트를 correctAnswer로 변환
+        correct_answer: str | None = None
+        if q_type == QuestionType.multiple_choice and q.options and q.correct_option_index is not None:
+            try:
+                correct_answer = q.options[q.correct_option_index]
+            except IndexError:
+                correct_answer = None
 
         quiz_questions.append(QuizQuestion(
-            id=idx + 1,
-            type=q_type,
+            question_number=idx + 1,
             question=q.question,
-            expected_points=points,
-            options=q.options,
-            correct=q.correct_option_index if q_type == QuestionType.multiple_choice else None,
+            quiz_type=q_type.value,
+            options=q.options if q_type == QuestionType.multiple_choice else None,
+            correct_answer=correct_answer,
         ))
 
-    # per_question_rubrics를 full_score_criteria에 병합해 읽기 편하게 평탄화
-    rubric_full = list(rubric.full_score_criteria)
-    for pq in rubric.per_question_rubrics:
-        if pq.required_keywords:
-            rubric_full.append(
-                f"[{pq.question_id}번] 필수 키워드 포함: {', '.join(pq.required_keywords)}"
-            )
-
     return QuizResponse(
-        quiz_type=request.quiz_type,
+        curriculum_id=request.curriculum_id,
+        total_questions=len(quiz_questions),
         questions=quiz_questions,
-        rubric=QuizRubric(
-            full_score_criteria=rubric_full,
-            partial_score_criteria=rubric.partial_score_criteria,
-        ),
-        references=request.recent_references,
-        model_meta=ModelMeta(
-            model=get_model_name(TaskType.QUIZ_GENERATION),
-            prompt_version=get_prompt_version(TaskType.QUIZ_GENERATION),
-            policy_version=request.policy_version,
-        ),
     )
 
 
 # 공개 엔트리 포인트
 
 async def run_quiz(request: QuizRequest) -> QuizResponse:
-    """POST /internal/quizzes의 메인 엔트리 포인트. 전체 단계를 오케스트레이션하고 QuizResponse를 반환한다."""
+    """POST /api/v1/ai/quizzes/generate-async 메인 엔트리 포인트."""
     logger.info(
-        "run_quiz 시작  request_id=%s  user_id=%s  skill=%s  type=%s  level=%s  hint=%s",
-        request.request_id,
-        request.user.user_id,
-        request.target_skill,
-        request.quiz_type.value,
-        request.current_level.value,
-        bool(request.recommendation_hint),
+        "run_quiz 시작  curriculum_id=%s  stacks=%s  level=%s",
+        request.curriculum_id,
+        request.target_tech_stacks,
+        request.user_level.value,
     )
 
     # 1. 프롬프트 변수 조립
@@ -806,35 +752,18 @@ async def run_quiz(request: QuizRequest) -> QuizResponse:
     # 3. 문항 + 채점 기준 단일 LLM 호출 (폴백: 2-call 순차)
     questions, rubric = await generate_questions_and_rubric(context, reference_chunks)
 
-    # 4. 응답 조립 및 반환 (스키마 100% 준수)
+    # 4. 응답 조립 및 반환
     response = _assemble_response(request, questions, rubric)
 
     logger.info(
-        "run_quiz 완료  request_id=%s  문항=%d  model=%s",
-        request.request_id,
+        "run_quiz 완료  curriculum_id=%s  문항=%d",
+        request.curriculum_id,
         len(response.questions),
-        response.model_meta.model,
     )
     return response
 
 
 # 포매팅 헬퍼
-
-def _fmt_recommendation_hint(hint: RecommendationHint | None, skill: str) -> str:
-    """
-    recommendation_hint를 프롬프트 주입용으로 포매팅한다.
-    hint가 있으면 "왜 이 자료인가" 맥락을 명시적으로 프레이밍하여
-    LLM이 사용자의 학습 여정과 연결된 문항을 생성하도록 유도한다.
-    """
-    if hint is None:
-        return "없음 — 사용자가 직접 퀴즈를 요청했습니다."
-    return (
-        f"이 퀴즈는 아래 추천 자료를 학습한 직후 점검용으로 생성됩니다.\n"
-        f"• 추천 자료 제목 : {hint.title}\n"
-        f"• 추천 이유      : {hint.reason}\n\n"
-        f"→ 문항 서두에 \"당신이 최근 학습한 {skill} 개념과 연결해서...\" 같은 "
-        f"맥락 문구를 자연스럽게 포함하세요."
-    )
 
 
 def _fmt_reference_chunks(chunks: list[dict[str, Any]]) -> str:
