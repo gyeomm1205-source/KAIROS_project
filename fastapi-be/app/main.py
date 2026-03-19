@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 
+import uuid
+
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette import status
-import uuid
 
+from app.api.internal.curriculum import router as internal_curriculum_router
 from app.api.internal.quiz import router as internal_quiz_router
 from app.api.internal.recommend import router as internal_recommend_router
 from app.api.test import router as test_router
@@ -35,6 +37,7 @@ app = FastAPI(
 )
 
 app.include_router(test_router)
+app.include_router(internal_curriculum_router)
 app.include_router(internal_quiz_router)
 app.include_router(internal_recommend_router)
 
@@ -68,13 +71,13 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
     """Velog 수집 및 LLM 통합 분석 워커"""
     try:
         fake_db[task_id] = {"status": "processing", "data": None}
-        
+
         # 이전 GitHub 수집 결과 가져오기 (fake_db)
         github_info = fake_db.get(req.githubTaskId)
         github_context = None
         if github_info and github_info["status"] == "completed":
             github_context = github_info["data"].get("github_context")
-            
+
         results = await start_velog_and_analysis(github_context)
         fake_db[task_id]["status"] = "completed"
         fake_db[task_id]["data"] = {
@@ -127,6 +130,7 @@ async def check_sync_status(taskId: str):
             "message": "작업 완료!",
             "data": task_info.get("data")
         }
+
 
 
 @app.exception_handler(AppError)
