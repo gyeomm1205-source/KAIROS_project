@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.activities.controller;
 
 import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.activities.dto.request.ActivityInclusionRequest;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityHistoryResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityInclusionResponse;
@@ -41,6 +42,7 @@ class ActivitiesControllerTest {
 
     @MockitoBean private ActivitiesService activitiesService;
     @MockitoBean private JWTUtils jwtUtils;
+    @MockitoBean private RedisService redisService;
 
     private static final String BEARER_TOKEN = "Bearer test-token";
     private static final Long USER_ID = 1L;
