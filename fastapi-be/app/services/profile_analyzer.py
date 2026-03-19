@@ -142,17 +142,25 @@ async def regenerate_profile_with_feedback(previous_profile: dict, user_feedback
     )
 
 
-async def run_integrated_analysis():
-    print("▶️ 1. 데이터 수집 시작... (Github와 Velog를 동시에 비동기로 수집합니다! ⚡)")
+async def start_github_collection(github_token: str, github_username: str):
+    print("▶️ 1-1. GitHub 데이터만 사전 수집 시작... ⚡")
     collection_start = time.time()
     
-    github_task = get_github_context()
-    velog_task = get_velog_context()
-    
-    github_context, velog_context = await asyncio.gather(github_task, velog_task)
+    github_context = await get_github_context(github_token, github_username)
     
     collection_end = time.time()
-    print(f"\n▶️ 2. 데이터 병렬 수집 완벽히 종료! (총 소요 시간: {collection_end - collection_start:.2f}초)")
+    print(f"\n▶️ 1-1. GitHub 별도 수집 완벽히 종료! (총 소요 시간: {collection_end - collection_start:.2f}초)")
+    return github_context
+
+
+async def start_velog_and_analysis(velog_username: str, github_context: str):
+    print("▶️ 1-2. Velog 수집 및 통합 분석 대기... ⚡")
+    collection_start = time.time()
+    
+    velog_context = await get_velog_context(velog_username)
+    
+    collection_end = time.time()
+    print(f"\n▶️ 1-2. Velog 수집 종료! (소요 시간: {collection_end - collection_start:.2f}초)")
     
     github_context = github_context or "Github 활동 내역 없음"
     velog_context = velog_context or "Velog 활동 내역 없음"
@@ -229,4 +237,12 @@ if __name__ == "__main__":
     if sys.platform == 'win32':
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
     
-    asyncio.run(run_integrated_analysis())
+    # 예시 실행용 더미 래퍼
+    async def _test():
+        # 로컬 테스트 시 여기에 임시값을 넣어서 사용할 수 있습니다.
+        # gh_ctx = await start_github_collection("your_token_here", "your_github_username")
+        # res = await start_velog_and_analysis("your_velog_username", gh_ctx)
+        # print(res)
+        pass
+
+    asyncio.run(_test())

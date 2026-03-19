@@ -9,8 +9,9 @@ import re
 # ==========================================
 # [설정] 본인의 Velog 닉네임 입력 (예: zhy2on)
 # velog.io/@username 에서 username 부분
+# 테스트 시 아래 주석을 풀고 넘겨받은 파라미터 대신 사용할 수 있습니다.
 # ==========================================
-VELOG_USERNAME = "zhy2on"
+# VELOG_USERNAME = "zhy2on"
 
 # Velog는 GraphQL API를 사용합니다.
 GRAPHQL_URL = "https://v2.velog.io/graphql"
@@ -56,10 +57,10 @@ def clean_text(text):
     # 연속된 공백 압축
     return ' '.join(cleaned.split())
 
-def convert_velog_to_markdown(posts):
+def convert_velog_to_markdown(posts, velog_username: str):
     """수집된 Velog 데이터를 LLM이 좋아하는 마크다운+CSV 형태로 변환합니다."""
     
-    md = f"### 블로그: Velog (@{VELOG_USERNAME})\n"
+    md = f"### 블로그: Velog (@{velog_username})\n"
     md += f"* **블로그 특징**: 개발자 기술 블로그 (마크다운 기반 포스팅)\n"
     md += f"* **작업 데이터 (CSV 형식)**:\n"
     
@@ -89,11 +90,11 @@ def convert_velog_to_markdown(posts):
     md += csv_io.getvalue()
     return md
 
-async def main():
+async def main(velog_username: str):
     start_time = time.time()
     
     async with aiohttp.ClientSession() as session:
-        posts = await fetch_velog_posts(session, VELOG_USERNAME)
+        posts = await fetch_velog_posts(session, velog_username)
         
     collection_time = time.time()
     print(f"\n⏱️ Velog 데이터 수집 소요 시간: {collection_time - start_time:.2f}초\n")
@@ -102,7 +103,7 @@ async def main():
         return None
         
     # 메모리에 올릴 문자열 포맷팅
-    formatted_text = convert_velog_to_markdown(posts)
+    formatted_text = convert_velog_to_markdown(posts, velog_username)
     return formatted_text
 
 if __name__ == "__main__":
@@ -111,7 +112,10 @@ if __name__ == "__main__":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         
     # 테스트 실행 시 프롬프트 출력
-    formatted_text = asyncio.run(main())
+    # 테스트 시에는 실제 유저네임을 넣어주세요. (혹은 주석 처리된 변수를 사용)
+    # VELOG_USERNAME = "zhy2on"
+    # formatted_text = asyncio.run(main(VELOG_USERNAME))
+    formatted_text = None
     
     if formatted_text:
         prompt = f"""너는 시니어 개발자 프로필 분석 AI '카이로스'야.
