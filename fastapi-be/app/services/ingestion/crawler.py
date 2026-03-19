@@ -48,31 +48,26 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
 
     soup = BeautifulSoup(html, "lxml")
 
-    # 마지막 수정일 (meta 태그에서 추출)
-    updated_at = _extract_updated_at(soup)
-
     # 본문 텍스트 추출 (article 본문 기준)
     raw_text = _extract_text(soup)
 
     # 글 본문 하단의 기술 태그로 skill 보강 (우아한형제들 기준)
     page_tags = _extract_skill_tags(soup)
-    skill = list(dict.fromkeys(article.get("skill", []) + page_tags))  # 중복 제거
+    raw_skills = article.get("skill", []) + page_tags
+    # 대소문자 통일(소문자) 및 중복 제거
+    skill = list(dict.fromkeys(s.lower() for s in raw_skills))
+
+    # discovery에서 가져온 원본 제목/날짜(published_at)를 무조건 신뢰
+    title = article.get("title", "")
+    if not title:
+        title = _extract_title(soup)
 
     return {
         **article,
+        "title": title,
         "raw_text": raw_text,
-        "updated_at": updated_at,
         "skill": skill,
     }
-
-
-def _extract_updated_at(soup: BeautifulSoup) -> str:
-    """meta 태그에서 마지막 수정일 추출."""
-    for prop in ["article:modified_time", "og:updated_time"]:
-        tag = soup.find("meta", property=prop)
-        if tag and tag.get("content"):
-            return tag["content"][:10]  # YYYY-MM-DD 만 반환
-    return ""
 
 
 def _extract_skill_tags(soup: BeautifulSoup) -> list[str]:
@@ -83,6 +78,25 @@ def _extract_skill_tags(soup: BeautifulSoup) -> list[str]:
         if text:
             tags.append(text)
     return tags
+
+
+def _extract_title(soup: BeautifulSoup) -> str:
+    """본문 페이지의 <title> 또는 <h1>, og:title에서 제목 추출"""
+    og_title = soup.find("meta", property="og:title")
+    if og_title and og_title.get("content"):
+        # 보통 og:title은 사이트 이름 없이 깔끔함
+        return og_title["content"].strip()
+        
+    h1 = soup.find("h1")
+    if h1:
+        return h1.get_text(strip=True)
+        
+    title_tag = soup.find("title")
+    if title_tag:
+        # title 태그에 보통 "제목 | 우아한형제들 기술블로그" 형태로 들어감
+        return title_tag.get_text(strip=True).split("|")[0].strip()
+        
+    return ""
 
 
 def _extract_text(soup: BeautifulSoup) -> str:
