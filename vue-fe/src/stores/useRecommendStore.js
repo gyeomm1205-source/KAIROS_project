@@ -1,0 +1,128 @@
+import { defineStore } from 'pinia'
+import { ref } from 'vue'
+
+export const useRecommendStore = defineStore('recommend', () => {
+  const recentActivities = ref([
+    {
+      id: "rsc",
+      title: "React Server Components 심화 학습",
+      type: "study",
+      date: "3월 9일 ~ 진행 중",
+      status: "in-progress",
+      tags: ["React", "SSR", "Next.js"],
+    },
+    {
+      id: "zustand",
+      title: "Zustand 상태관리 실습",
+      type: "dev",
+      date: "3월 3일",
+      status: "done",
+      tags: ["React", "Zustand"],
+    },
+    {
+      id: "blog-ssr",
+      title: "SSR vs CSR 비교 블로그 작성",
+      type: "blog",
+      date: "3월 5일",
+      status: "done",
+      tags: ["SSR", "CSR", "블로그"],
+    },
+    {
+      id: "quiz-state",
+      title: "React 상태관리 복습 퀴즈",
+      type: "review",
+      date: "3월 7일",
+      status: "done",
+      tags: ["React", "복습"],
+    },
+    {
+      id: "ts-generic",
+      title: "TypeScript 제네릭 학습",
+      type: "study",
+      date: "3월 9일 ~ 진행 중",
+      status: "in-progress",
+      tags: ["TypeScript", "제네릭"],
+    },
+  ])
+
+  const recentFlow = ref([
+    { label: "React 상태관리 학습", status: "done" },
+    { label: "Zustand 실습", status: "done" },
+    { label: "블로그 작성", status: "done" },
+    { label: "복습 퀴즈", status: "done" },
+    { label: "TypeScript 제네릭", status: "in-progress" },
+  ])
+
+  const missions = ref([
+    {
+      key: "quiz",
+      icon: "fas fa-brain",
+      title: "복습 퀴즈",
+      desc: "React Server Components와 렌더링 흐름 핵심 개념 점검",
+      time: "15분",
+      tag: "복습",
+      badge: "추천",
+    },
+    {
+      key: "velog",
+      icon: "fas fa-pen-nib",
+      title: "velog 글 작성하기",
+      desc: "글을 바로 써주기보다, 글 작성에 필요한 레퍼런스를 추천합니다",
+      time: "40분",
+      tag: "정리",
+      badge: "레퍼런스",
+    },
+  ])
+
+  const references = ref([
+    {
+      title: "React 공식 문서 - Server Components",
+      reason: "RSC의 핵심 개념과 제약 사항을 가장 정확하게 확인할 수 있습니다.",
+      type: "공식 문서",
+      freshness: "2025.12 업데이트",
+    },
+    {
+      title: "Next.js App Router 실전 가이드",
+      reason: "현재 진행 중인 Next.js 흐름과 바로 연결되는 실전 예제가 포함되어 있습니다.",
+      type: "실전 가이드",
+      freshness: "2026.01 작성",
+    },
+    {
+      title: "RSC vs Client Components 비교 글",
+      reason: "velog 글을 쓰실 때 비교 기준을 잡기 좋은 정리형 레퍼런스입니다.",
+      type: "비교 아티클",
+      freshness: "2026.02 작성",
+    },
+  ])
+
+  const quizQuestions = ref([
+    {
+      question: "React Server Components의 가장 큰 목적은 무엇인가요?",
+      options: [
+        "모든 상태를 브라우저에서만 관리하기 위해",
+        "서버에서 렌더링 가능한 부분을 분리해 클라이언트 번들을 줄이기 위해",
+        "모든 컴포넌트를 CSR로 통일하기 위해",
+        "라우팅만 서버에서 처리하기 위해",
+      ],
+      correct: 1,
+    },
+    {
+      question: "Client Component가 필요한 대표 상황은 무엇인가요?",
+      options: [
+        "정적 텍스트만 보여줄 때",
+        "사용자 인터랙션과 브라우저 이벤트 처리가 필요할 때",
+        "서버 데이터만 읽어올 때",
+        "메타데이터만 정의할 때",
+      ],
+      correct: 1,
+    },
+  ])
+
+  return {
+    recentActivities,
+    recentFlow,
+    missions,
+    references,
+    quizQuestions,
+  }
+})

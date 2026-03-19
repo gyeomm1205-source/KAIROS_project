@@ -26,7 +26,7 @@
             </div>
           </div>
 
-          <div class="modal-body">
+          <div class="modal-body custom-scroll">
 
             <div v-if="!schedules.length" class="modal-empty">
               <i class="fas fa-calendar-plus" />
@@ -48,7 +48,7 @@
 
                 <div class="tl-connector">
                   <div class="tl-line-top" :class="{ invisible: idx === 0 }" />
-                  <div class="tl-dot" :style="{ background: trackColor(s.track), boxShadow: `0 0 0 3px ${trackColor(s.track)}33` }" />
+                  <div class="tl-dot" :style="{ background: trackColor(s.track), borderColor: trackColor(s.track) }" />
                   <div class="tl-line-bottom" :class="{ invisible: idx === sortedSchedules.length - 1 }" />
                 </div>
 
@@ -57,13 +57,30 @@
                     <span class="tl-track-dot" :style="{ background: trackColor(s.track) }" />
                     {{ trackName(s.track) }}
                   </div>
+                  
                   <div class="tl-card-title">{{ s.tooltip?.title || s.text }}</div>
+                  
+                  <div v-if="s.progress !== undefined" class="mt-2 mb-2">
+                    <div class="flex justify-between text-[10px] font-bold text-gray-500 mb-1">
+                      <span>PROGRESS</span>
+                      <span>{{ s.progress }}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-gray-200">
+                      <div class="h-full bg-blue-600 transition-all duration-300" :style="{ width: s.progress + '%' }"></div>
+                    </div>
+                  </div>
+
                   <div v-if="s.tooltip?.tags?.length" class="tl-card-tags">
                     <span v-for="(t, i) in s.tooltip.tags" :key="i" class="tl-tag">{{ t }}</span>
                   </div>
+
+                  <div v-if="s.reasoning" class="mt-2 p-2 border-2 border-dashed border-gray-400 bg-gray-50 text-[11px] font-bold text-gray-700">
+                    <i class="fas fa-robot text-blue-600 mr-1"></i> AI 추천: {{ s.reasoning }}
+                  </div>
+
                   <textarea
                     v-model="memos[s.id]"
-                    class="tl-memo"
+                    class="tl-memo custom-scroll mt-2"
                     placeholder="메모를 입력하세요..."
                     rows="2"
                   />
@@ -102,7 +119,6 @@ const memos = ref({})
 
 function close() { emit('update:modelValue', false) }
 
-// ESC 닫기
 watch(() => props.modelValue, (v) => {
   if (v) {
     const handler = (e) => { if (e.key === 'Escape') { close(); window.removeEventListener('keydown', handler) } }
@@ -129,7 +145,6 @@ const displayDate = computed(() => {
 const DAY_KOR = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일']
 const dayLabel = computed(() => DAY_KOR[dayOfWeek.value])
 
-// 시간순 정렬
 const sortedSchedules = computed(() => {
   return [...props.schedules].sort((a, b) => {
     const ta = a.tooltip?.time || '99:99'
@@ -138,241 +153,93 @@ const sortedSchedules = computed(() => {
   })
 })
 
-function trackColor(id) { return store.getTrackById(id)?.color || '#6b7280' }
+function trackColor(id) { return store.getTrackById(id)?.color || 'var(--text-primary)' }
 function trackName(id)  { return store.getTrackById(id)?.name  || id }
 </script>
 
 <style scoped>
+/* ── 스크롤바 숨김 (기능 유지) ── */
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
+
 .modal-backdrop {
   position: fixed; inset: 0; z-index: 1000;
-  background: rgba(0, 0, 0, 0.72);
+  background: rgba(0, 0, 0, 0.85);
   display: flex; align-items: center; justify-content: center;
-  padding: 20px;
+  padding: 20px; font-family: 'Space Grotesk', 'Escoredream', sans-serif;
 }
 
 .modal-box {
-  width: 100%; max-width: 680px;
-  max-height: 88vh;
-  background: var(--modal-bg);
-  border: 2px solid var(--modal-border);
-  border-radius: 14px;
-  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255,255,255,0.04);
-  display: flex; flex-direction: column;
-  overflow: hidden;
+  width: 100%; max-width: 680px; max-height: 88vh;
+  background: var(--bg-base);
+  border: 2px solid var(--text-primary); border-radius: 0;
+  box-shadow: 12px 12px 0 var(--text-primary);
+  display: flex; flex-direction: column; overflow: hidden;
 }
 
-/* 헤더 */
 .modal-header {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 24px 16px;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
+  padding: 20px 24px 16px; border-bottom: 2px solid var(--text-primary); flex-shrink: 0;
 }
-.modal-date-info {
-  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
-}
-.modal-day-num {
-  font-size: 22px; font-weight: 800;
-  color: var(--text-primary);
-  font-family: 'Escoredream', sans-serif;
-}
-.modal-day-label {
-  font-size: 14px; font-weight: 500;
-  color: var(--text-muted);
-  font-family: 'Escoredream', sans-serif;
-}
-.day--sat { color: var(--sat-color) !important; }
-.day--sun { color: var(--sun-color) !important; }
-.today-badge {
-  font-size: 9px; font-weight: 800;
-  color: var(--accent);
-  background: rgba(59,130,246,0.12);
-  border: 1px solid rgba(59,130,246,0.35);
-  border-radius: 4px; padding: 2px 6px;
-  letter-spacing: 0.06em;
-}
-.modal-header-actions {
-  display: flex; align-items: center; gap: 8px;
-}
-.btn-add-modal {
-  display: flex; align-items: center; gap: 6px;
-  padding: 7px 14px; background: var(--accent); color: #fff;
-  border: none; border-radius: 8px;
-  font-size: 12px; font-weight: 700;
-  font-family: 'Escoredream', sans-serif; cursor: pointer;
-  transition: opacity 0.15s;
-}
-.btn-add-modal:hover { opacity: 0.85; }
-.btn-close-modal {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  color: var(--text-muted); cursor: pointer; font-size: 13px;
-  display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s;
-}
-.btn-close-modal:hover { background: var(--bg-hover); color: var(--text-primary); }
+.modal-date-info { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.modal-day-num { font-size: 22px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; }
+.modal-day-label { font-size: 14px; font-weight: 800; color: var(--text-muted); }
+.today-badge { font-size: 10px; font-weight: 900; color: var(--bg-base); background: var(--text-primary); padding: 4px 8px; letter-spacing: 0.1em; border: 1px solid var(--text-primary); border-radius: 0; }
 
-/* 바디 */
-.modal-body {
-  flex: 1; overflow-y: auto; padding: 20px 24px;
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
-}
+.modal-header-actions { display: flex; align-items: center; gap: 8px; }
+.btn-add-modal { display: flex; align-items: center; gap: 6px; padding: 10px 16px; background: var(--text-primary); color: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0; font-size: 12px; font-weight: 900; cursor: pointer; transition: all 0.1s; letter-spacing: 0.05em; }
+.btn-add-modal:hover { background: transparent; color: var(--text-primary); box-shadow: 4px 4px 0 var(--text-primary); transform: translate(-2px, -2px); }
+.btn-close-modal { width: 36px; height: 36px; border-radius: 0; background: transparent; border: 2px solid transparent; color: var(--text-primary); cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; transition: all 0.1s; }
+.btn-close-modal:hover { transform: scale(1.2); }
 
-/* 빈 상태 */
-.modal-empty {
-  display: flex; flex-direction: column; align-items: center; gap: 14px;
-  padding: 48px 20px; color: var(--text-faint); text-align: center;
-}
-.modal-empty i { font-size: 40px; opacity: 0.25; }
-.modal-empty p { font-size: 14px; font-family: 'Escoredream', sans-serif; }
-.btn-add-empty {
-  padding: 9px 20px; border: 1px dashed var(--border-mid);
-  background: none; border-radius: 8px;
-  color: var(--text-muted); font-size: 13px; font-weight: 600;
-  cursor: pointer; font-family: 'Escoredream', sans-serif;
-  transition: all 0.15s;
-}
-.btn-add-empty:hover { border-color: var(--accent); color: var(--accent); }
+.modal-body { flex: 1; overflow-y: auto; padding: 24px; }
 
-/* 타임라인 */
-.timeline {
-  display: flex; flex-direction: column; gap: 8px;
-}
-.tl-item {
-  display: flex; align-items: stretch; gap: 0; min-height: 60px;
-  /* 카드에 그림자를 주었으므로 전체 박스(tl-item)의 배경/테두리는 제거하여 깔끔하게 분리 */
-  background: transparent;
-  border: none;
-  overflow: visible;
-  padding: 4px 0;
-}
+.modal-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 64px 20px; color: var(--text-faint); text-align: center; }
+.modal-empty i { font-size: 48px; opacity: 0.5; color: var(--border); }
+.modal-empty p { font-size: 14px; font-weight: 700; letter-spacing: 0.05em; }
+.btn-add-empty { padding: 12px 24px; border: 2px dashed var(--text-primary); background: transparent; border-radius: 0; color: var(--text-primary); font-size: 13px; font-weight: 800; cursor: pointer; transition: all 0.1s; }
+.btn-add-empty:hover { background: var(--text-primary); color: var(--bg-base); border-style: solid; }
 
-/* 시간 축 */
-.tl-time {
-  width: 56px; flex-shrink: 0;
-  display: flex; align-items: flex-start;
-  padding: 16px 0 0 14px;
-  /* 타임라인 세로선 유지 */
-  border-right: 1px solid var(--border);
-}
-.tl-time-text {
-  font-size: 11px; font-weight: 600;
-  font-family: monospace; color: var(--text-faint);
-  white-space: nowrap;
-}
+.timeline { display: flex; flex-direction: column; gap: 12px; }
+.tl-item { display: flex; align-items: stretch; gap: 0; min-height: 60px; background: transparent; border: none; padding: 4px 0; }
 
-/* 연결선 + 점 */
-.tl-connector {
-  width: 32px; flex-shrink: 0;
-  display: flex; flex-direction: column; align-items: center;
-  gap: 0; padding: 0 4px;
-}
-.tl-line-top,
-.tl-line-bottom {
-  flex: 1; width: 2px;
-  background: var(--border);
-  min-height: 16px;
-}
+.tl-time { width: 56px; flex-shrink: 0; display: flex; align-items: flex-start; padding: 16px 0 0 10px; border-right: 2px solid var(--border); }
+.tl-time-text { font-size: 12px; font-weight: 800; font-family: monospace; color: var(--text-muted); white-space: nowrap; }
+
+.tl-connector { width: 32px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; gap: 0; padding: 0 4px; }
+.tl-line-top, .tl-line-bottom { flex: 1; width: 2px; background: var(--border); min-height: 16px; }
 .tl-line-top { min-height: 18px; }
 .tl-line-bottom { min-height: 10px; }
 .invisible { background: transparent !important; }
-.tl-dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  flex-shrink: 0; position: relative; z-index: 1;
-  border: 2.5px solid var(--bg-surface);
-  transition: transform 0.15s, background 0.15s;
-}
+.tl-dot { width: 12px; height: 12px; border-radius: 0; flex-shrink: 0; position: relative; z-index: 1; border: 2px solid; }
 
-/* =========================================
-   카드 (가만히 있을 때도 확실히 보이는 테두리)
-   ========================================= */
 .tl-card {
-  flex: 1;
-  margin: 6px 12px 10px 0;
-  
-  /* 모달 배경과 묻히지 않도록 인풋 배경색이나 표면색 활용 */
-  background: var(--modal-input-bg);
-  
-  /* ★ 묻히지 않는 확실한 테두리 색상 적용 */
-  border: 1px solid var(--modal-border);
-  border-left: 4px solid; /* 트랙 색상 띠 */
-  
-  border-radius: 10px;
-  padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 7px;
-  
-  /* 그림자는 아주 연하게 (다크모드에선 거의 안보이지만 라이트모드 대비용) */
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-  transition: all 0.2s ease;
-  position: relative;
+  flex: 1; margin: 6px 0 10px 12px;
+  background: var(--bg-surface);
+  border: 2px solid var(--text-primary);
+  border-left-width: 6px; border-radius: 0;
+  padding: 16px; display: flex; flex-direction: column; gap: 8px;
+  box-shadow: 4px 4px 0 var(--border); transition: all 0.1s ease;
 }
+.tl-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--text-primary); background: var(--bg-base); }
 
-/* 카드 마우스 호버 시 효과 */
-.tl-card:hover {
-  background: var(--bg-hover);
-  
-  /* 호버 시 테두리가 더 밝아져서 반응하는 느낌 */
-  border-color: var(--text-muted);
-  
-  transform: translateY(-2px); /* 살짝 떠오름 */
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3); /* 그림자 짙어짐 */
-}
+.tl-card-track { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
+.tl-track-dot { width: 8px; height: 8px; border-radius: 0; flex-shrink: 0; border: 1px solid var(--bg-base); }
+.tl-card-title { font-size: 15px; font-weight: 800; color: var(--text-primary); line-height: 1.4; }
 
-.tl-card-track {
-  display: flex; align-items: center; gap: 6px;
-  font-size: 10px; font-weight: 700;
-  font-family: 'Escoredream', sans-serif;
-  letter-spacing: 0.03em;
-}
-.tl-track-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.tl-card-title {
-  font-size: 14px; font-weight: 700;
-  color: var(--text-primary); line-height: 1.35;
-  font-family: 'Escoredream', sans-serif;
-}
-.tl-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tl-tag {
-  font-size: 10px; color: var(--text-muted);
-  background: var(--bg-surface); border: 1px solid var(--border);
-  padding: 2px 7px; border-radius: 5px;
-  font-family: 'Escoredream', sans-serif;
-}
-.tl-memo {
-  width: 100%; background: var(--bg-surface);
-  border: 1px solid var(--border); border-radius: 7px;
-  color: var(--text-secondary); font-size: 12px;
-  font-family: 'Escoredream', sans-serif;
-  padding: 8px 10px; outline: none; resize: none;
-  transition: border-color 0.15s; line-height: 1.5;
-}
-.tl-memo:focus { border-color: var(--accent); }
-.tl-memo::placeholder { color: var(--text-faint); }
-.tl-card-actions {
-  display: flex; gap: 6px; justify-content: flex-end;
-}
-.tl-btn {
-  display: flex; align-items: center; gap: 4px;
-  padding: 4px 10px; border: none; border-radius: 6px;
-  font-size: 11px; font-weight: 600; cursor: pointer;
-  background: var(--bg-elevated); color: var(--text-muted);
-  font-family: 'Escoredream', sans-serif; transition: all 0.15s;
-}
-.tl-btn:hover { background: var(--accent); color: #fff; }
-.tl-btn--del:hover { background: #ef4444; }
+.tl-card-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tl-tag { font-size: 10px; font-weight: 800; color: var(--text-primary); background: transparent; border: 1px solid var(--text-primary); padding: 4px 8px; border-radius: 0; }
 
-/* 모달 트랜지션 */
-.modal-fade-enter-active { transition: all 0.2s ease; }
-.modal-fade-leave-active { transition: all 0.15s ease; }
-.modal-fade-enter-from, .modal-fade-leave-to {
-  opacity: 0;
-}
-.modal-fade-enter-from .modal-box,
-.modal-fade-leave-to .modal-box {
-  transform: scale(0.95) translateY(10px);
-}
-.modal-fade-enter-active .modal-box,
-.modal-fade-leave-active .modal-box {
-  transition: transform 0.2s ease;
-}
+.tl-memo { width: 100%; background: var(--bg-base); border: 2px solid var(--border); border-radius: 0; color: var(--text-primary); font-size: 13px; font-weight: 700; padding: 12px; outline: none; resize: none; transition: border-color 0.1s; line-height: 1.6; }
+.tl-memo:focus { border-color: var(--text-primary); box-shadow: 4px 4px 0 var(--border); }
+.tl-memo::placeholder { color: var(--text-faint); font-weight: 600; }
+
+.tl-card-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+.tl-btn { display: flex; align-items: center; gap: 6px; padding: 8px 12px; border: 2px solid var(--border); border-radius: 0; font-size: 11px; font-weight: 800; cursor: pointer; background: transparent; color: var(--text-primary); transition: all 0.1s; letter-spacing: 0.05em; }
+.tl-btn:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.tl-btn--del:hover { background: #ef4444; color: #fff; border-color: #ef4444; }
+
+.modal-fade-enter-active, .modal-fade-leave-active { transition: all 0.2s ease; }
+.modal-fade-enter-from, .modal-fade-leave-to { opacity: 0; }
+.modal-fade-enter-from .modal-box, .modal-fade-leave-to .modal-box { transform: scale(0.98) translateY(10px); }
 </style>

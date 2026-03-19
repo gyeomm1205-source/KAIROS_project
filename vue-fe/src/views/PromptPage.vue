@@ -35,29 +35,29 @@
                     </Transition>
                   </div>
                 </div>
-                <button class="btn-pop-confirm" @click="applyCustomDate">해당 월로 이동</button>
+                <button class="btn-pop-confirm" @click="applyCustomDate">JUMP TO DATE</button>
               </div>
             </Transition>
 
             <div class="nav-controls">
               <button class="nav-btn" @click="navigate('prev')"><i class="fas fa-chevron-left" /></button>
-              <button class="nav-btn nav-btn--text" @click="navigate('today')">오늘</button>
+              <button class="nav-btn nav-btn--text" @click="navigate('today')">TODAY</button>
               <button class="nav-btn" @click="navigate('next')"><i class="fas fa-chevron-right" /></button>
             </div>
           </div>
 
           <div class="header-title-sep" />
-          <h1 class="page-title-label"><i class="fas fa-robot" /> AI 어시스턴트</h1>
+          <h1 class="page-title-label"><i class="fas fa-terminal" /> AI ASSISTANT</h1>
         </div>
 
         <div class="header-right">
           <div class="prompt-filters">
-            <button class="p-filter-btn" :class="{ active: promptFilter === 'all' }" @click="setPromptFilter('all')">All</button>
+            <button class="p-filter-btn" :class="{ active: promptFilter === 'all' }" @click="setPromptFilter('all')">ALL</button>
             <button class="p-filter-btn" :class="{ active: promptFilter === 'prompt' }" @click="setPromptFilter('prompt')">
-              <span class="p-dot" :style="{ background: headerPromptColor }"></span> 프롬프트
+              <span class="p-dot" :style="{ background: headerPromptColor }"></span> PROMPT
             </button>
             <button class="p-filter-btn" :class="{ active: promptFilter === 'blog' }" @click="setPromptFilter('blog')">
-              <span class="p-dot" :style="{ background: headerBlogColor }"></span> 블로그
+              <span class="p-dot" :style="{ background: headerBlogColor }"></span> BLOG
             </button>
           </div>
         </div>
@@ -66,8 +66,8 @@
       <div class="prompt-view-layout">
          <div class="prompt-graph-panel">
           <div class="prompt-graph-title">
-            <div class="ptl-header-tracks">
-              <span v-for="track in promptTracks" :key="track.id" v-show="!hiddenTracks.has(track.id)" class="ptl-header-track-badge" :style="{ color: track.color }">
+            <div class="ptl-header-tracks custom-scroll">
+              <span v-for="track in promptTracks" :key="track.id" v-show="!hiddenTracks.has(track.id)" class="ptl-header-track-badge" :style="{ color: track.color, borderColor: track.color }">
                 <span class="ptl-head-dot" :style="{ background: track.color }" /> {{ track.name }}
               </span>
             </div>
@@ -78,14 +78,14 @@
               <div class="empty-icon-wrap">
                 <i class="fas fa-box-open" />
               </div>
-              <p class="empty-title">선택한 월에 해당하는 기록이 없습니다.</p>
-              <p class="empty-desc">새로운 AI 프롬프트나 블로그 포스팅을<br>진행하면 이곳에 타임라인이 그려집니다.</p>
+              <p class="empty-title">NO RECORDS FOUND</p>
+              <p class="empty-desc">선택한 월에 해당하는 AI 기록이 없습니다.</p>
             </div>
 
             <div v-else class="v-graph-timeline">
               <div class="v-graph-spines-container">
                 <div v-for="track in promptTracks" :key="`bg-spine-${track.id}`" class="v-graph-spine-line" v-show="!hiddenTracks.has(track.id)">
-                  <div class="v-graph-spine-inner" :style="{ background: track.color }"></div>
+                  <div class="v-graph-spine-inner" :style="{ borderLeftColor: track.color }"></div>
                 </div>
               </div>
 
@@ -101,13 +101,11 @@
                     <div class="v-graph-time">{{ s.tooltip?.time || '—' }}</div>
                     <div class="v-graph-lanes">
                       <div v-for="track in promptTracks" :key="track.id" class="v-graph-lane" v-show="!hiddenTracks.has(track.id)">
-                        <div v-if="s.track === track.id" class="v-graph-node" :style="{ background: 'var(--bg-surface)', borderColor: track.color }">
-                          <div class="v-graph-node-inner" :style="{ background: track.color }"></div>
-                        </div>
+                        <div v-if="s.track === track.id" class="v-graph-node" :style="{ background: track.color }"></div>
                       </div>
                     </div>
                     <div class="v-graph-content">
-                      <div class="v-graph-card" :style="{ borderLeftColor: getPromptTrackColor(s.track) }">
+                      <div class="v-graph-card" :style="{ borderColor: getPromptTrackColor(s.track) }">
                         <div class="v-graph-card-header">
                           <span class="v-graph-track-name" :style="{ color: getPromptTrackColor(s.track) }">{{ getPromptTrackName(s.track) }}</span>
                         </div>
@@ -134,8 +132,8 @@
             </template>
             <template v-else>
               <div class="prompt-welcome-info-placeholder">
-                <div class="prompt-welcome-icon-sm"><i class="fas fa-robot" /></div>
-                <div class="prompt-chat-title">일정을 선택하세요</div>
+                <div class="prompt-welcome-icon-sm"><i class="fas fa-terminal" /></div>
+                <div class="prompt-chat-title">SELECT A RECORD TO VIEW CHAT</div>
               </div>
             </template>
           </div>
@@ -150,27 +148,14 @@
           </div>
 
           <div class="prompt-input-area">
-            <textarea v-model="promptInput" class="prompt-textarea" placeholder="메시지 입력..." :disabled="!selectedPromptSchedule" rows="3" @keydown.enter.exact.prevent="sendPrompt" />
+            <textarea v-model="promptInput" class="prompt-textarea custom-scroll" placeholder="SEND MESSAGE..." :disabled="!selectedPromptSchedule" rows="3" @keydown.enter.exact.prevent="sendPrompt" />
             <button class="prompt-send-btn" @click="sendPrompt" :disabled="!promptInput.trim() || !selectedPromptSchedule">
-              <i class="fas fa-paper-plane" />
+              SEND
             </button>
           </div>
         </div>
       </div>
     </main>
-
-    <Transition name="fade">
-      <div v-if="edgeTooltip.visible" class="edge-tooltip-popup" :style="{ left: edgeTooltip.x + 'px', top: edgeTooltip.y + 'px' }">
-        <div class="et-track" :style="{ color: edgeTooltip.edge.color }">
-          {{ store.getTrackById(edgeTooltip.edge.track)?.name }}
-        </div>
-        <div class="et-nodes">
-          <span>{{ edgeTooltip.edge.from.tooltip?.title || edgeTooltip.edge.from.text || '시작' }}</span>
-          <i class="fas fa-arrow-right" />
-          <span>{{ edgeTooltip.edge.to.tooltip?.title || edgeTooltip.edge.to.text || '종료' }}</span>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
@@ -193,60 +178,31 @@ const activeSelect = ref(null)
 const selYear = ref(today.getFullYear())
 const selMonth = ref(today.getMonth() + 1)
 
-const headerDateText = computed(() => `${currentYear.value}년 ${currentMonth.value}월`)
-const yearOptions = computed(() => {
-  const cur = new Date().getFullYear()
-  return Array.from({ length: 11 }, (_, i) => cur - 5 + i)
-})
+const headerDateText = computed(() => `${currentYear.value}.${String(currentMonth.value).padStart(2,'0')}`)
+const yearOptions = computed(() => { const cur = new Date().getFullYear(); return Array.from({ length: 11 }, (_, i) => cur - 5 + i) })
 
-function toggleDatePopover() {
-  isPopoverOpen.value = !isPopoverOpen.value
-  if (isPopoverOpen.value) {
-    selYear.value = currentYear.value
-    selMonth.value = currentMonth.value
-    activeSelect.value = null
-  }
-}
-
+function toggleDatePopover() { isPopoverOpen.value = !isPopoverOpen.value; if (isPopoverOpen.value) { selYear.value = currentYear.value; selMonth.value = currentMonth.value; activeSelect.value = null } }
 function toggleSelect(type) { activeSelect.value = activeSelect.value === type ? null : type }
 function pickYear(y) { selYear.value = y; activeSelect.value = null; }
 function pickMonth(m) { selMonth.value = m; activeSelect.value = null; }
-
-function applyCustomDate() {
-  currentYear.value = selYear.value
-  currentMonth.value = selMonth.value
-  isPopoverOpen.value = false
-}
-
-function handleBackdropClick(e) {
-  if (isPopoverOpen.value && dateWrapRef.value && !dateWrapRef.value.contains(e.target)) {
-    isPopoverOpen.value = false
-  }
-}
+function applyCustomDate() { currentYear.value = selYear.value; currentMonth.value = selMonth.value; isPopoverOpen.value = false }
+function handleBackdropClick(e) { if (isPopoverOpen.value && dateWrapRef.value && !dateWrapRef.value.contains(e.target)) isPopoverOpen.value = false }
 
 function navigate(dir) {
-  if (dir === 'prev') {
-    if (currentMonth.value === 1) { currentMonth.value = 12; currentYear.value-- }
-    else currentMonth.value--
-  } else if (dir === 'next') {
-    if (currentMonth.value === 12) { currentMonth.value = 1; currentYear.value++ }
-    else currentMonth.value++
-  } else {
-    currentYear.value = today.getFullYear(); currentMonth.value = today.getMonth() + 1
-  }
+  if (dir === 'prev') { if (currentMonth.value === 1) { currentMonth.value = 12; currentYear.value-- } else currentMonth.value-- }
+  else if (dir === 'next') { if (currentMonth.value === 12) { currentMonth.value = 1; currentYear.value++ } else currentMonth.value++ }
+  else { currentYear.value = today.getFullYear(); currentMonth.value = today.getMonth() + 1 }
 }
 
 const promptFilter = ref('all')
 const hiddenTracks = ref(new Set())
-
 const promptTrack = computed(() => allTracks.value.find(t => t.id?.toLowerCase().includes('prompt') || t.name?.toLowerCase().includes('prompt')))
 const blogTrack = computed(() => allTracks.value.find(t => t.id?.toLowerCase().includes('blog') || t.name?.toLowerCase().includes('blog')))
 const headerPromptColor = computed(() => promptTrack.value?.color || '#facc15')
 const headerBlogColor = computed(() => blogTrack.value?.color || '#10b981')
 
 function setPromptFilter(type) {
-  promptFilter.value = type
-  hiddenTracks.value = new Set()
+  promptFilter.value = type; hiddenTracks.value = new Set();
   if (type === 'prompt' && blogTrack.value) hiddenTracks.value.add(blogTrack.value.id)
   if (type === 'blog' && promptTrack.value) hiddenTracks.value.add(promptTrack.value.id)
 }
@@ -269,36 +225,11 @@ function getDayOfWeek(str) { return ['일', '월', '화', '수', '목', '금', '
 const groupedPromptSchedules = computed(() => {
   const map = new Map()
   const lastDay = new Date(currentYear.value, currentMonth.value, 0).getDate()
-  for (let d = 1; d <= lastDay; d++) {
-    const ds = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-    map.set(ds, [])
-  }
+  for (let d = 1; d <= lastDay; d++) { const ds = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}-${String(d).padStart(2, '0')}`; map.set(ds, []) }
   allPromptSchedules.value.forEach(s => { if (map.has(s.day)) map.get(s.day).push(s) })
   return [...map.entries()].map(([day, schedules]) => ({ day, schedules }))
 })
 
-// ── ★ 엣지 호버: 툴팁 잘림 방지 로직 ★ ──
-const interactionState = ref({ hovered: null, clicked: null })
-const edgeTooltip = ref({ visible: false, x: 0, y: 0, edge: null })
-
-function onEdgeHover(edge, mouseEvent) {
-  if (edge) {
-    interactionState.value.hovered = { type: 'edge', data: edge }
-    if (mouseEvent) {
-      // 툴팁이 오른쪽 창 밖으로 나가지 않도록 Clamp(제한) 계산
-      // 툴팁의 예상 최대 너비의 절반 정도를 여백으로 둡니다 (약 150px)
-      const maxRightX = window.innerWidth - 150; 
-      const safeX = Math.min(mouseEvent.clientX, maxRightX);
-
-      edgeTooltip.value = { visible: true, x: Math.max(safeX, 150), y: mouseEvent.clientY - 30, edge }
-    }
-  } else {
-    if (interactionState.value.hovered?.type === 'edge') interactionState.value.hovered = null;
-    edgeTooltip.value.visible = false;
-  }
-}
-
-// ── 채팅 로직 ──
 const promptInput = ref('')
 const promptMessagesRef = ref(null)
 const selectedPromptId = ref(null)
@@ -307,7 +238,7 @@ const promptMessagesMap = ref({})
 const currentMessages = computed(() => selectedPromptId.value ? promptMessagesMap.value[selectedPromptId.value] || [] : [])
 
 function selectPromptSchedule(s) { selectedPromptId.value = s.id }
-function getPromptTrackColor(id) { return store.getTrackById(id)?.color || '#6b7280' }
+function getPromptTrackColor(id) { return store.getTrackById(id)?.color || 'var(--text-primary)' }
 function getPromptTrackName(id) { return store.getTrackById(id)?.name || id }
 
 function sendPrompt() {
@@ -323,183 +254,109 @@ function sendPrompt() {
 </script>
 
 <style scoped>
-.app-layout { display: flex; width: 100%; height: 100vh; background: var(--bg-base); font-family: 'Escoredream', sans-serif; color: var(--text-primary); }
+.app-layout { display: flex; width: 100%; height: 100vh; background: var(--bg-base); font-family: 'Space Grotesk', 'Escoredream', sans-serif; color: var(--text-primary); }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
-/* ── 헤더 (메인 캘린더 디자인 복구) ── */
-.calendar-header {
-  height: 64px; border-bottom: 1px solid var(--border); background: var(--bg-surface);
-  display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; z-index: 30;
-}
+/* ★ 스크롤바 완전히 숨김 */
+.custom-scroll { overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
+
+.calendar-header { height: 64px; border-bottom: 1px solid var(--border); background: var(--bg-surface); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; z-index: 30; }
 .header-left { display: flex; align-items: center; gap: 16px; }
-.date-nav { display: flex; align-items: center; gap: 12px; position: relative; }
-.date-text { font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 4px; padding: 4px 8px; border-radius: 8px; transition: background 0.15s; }
-.date-text:hover { background: var(--bg-hover); }
+.date-nav { display: flex; align-items: center; gap: 8px; position: relative; }
+.date-text { font-size: 20px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: 0.1s; letter-spacing: 0.05em; padding: 4px; }
+.date-text:hover { background: var(--text-primary); color: var(--bg-base); }
 
-.header-title-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
-.page-title-label { font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
-.page-title-label i { color: var(--accent); }
+.header-title-sep { width: 2px; height: 20px; background: var(--border); margin: 0 8px; }
+.page-title-label { font-size: 16px; font-weight: 900; display: flex; align-items: center; gap: 8px; letter-spacing: 0.05em; }
 
-/* 날짜 팝오버 */
-.custom-date-popover { position: absolute; top: 100%; left: 0; margin-top: 8px; background: var(--bg-elevated); border: 1px solid var(--border-mid); border-radius: 14px; padding: 16px; box-shadow: 0 12px 32px rgba(0,0,0,0.4); z-index: 100; display: flex; flex-direction: column; gap: 16px; }
-.popover-row { display: flex; gap: 8px; }
-.custom-sel-wrap { position: relative; }
-.custom-sel-display { background: var(--bg-surface); border: 1px solid var(--border); padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 95px; transition: 0.15s; }
-.custom-sel-display.active { border-color: var(--accent); }
-.custom-sel-list { position: absolute; top: 100%; left: 0; width: 100%; max-height: 180px; overflow-y: auto; background: var(--bg-elevated); border: 1px solid var(--border-mid); border-radius: 10px; padding: 6px; z-index: 110; margin-top: 4px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
-.custom-sel-item { padding: 8px; font-size: 12px; border-radius: 6px; cursor: pointer; }
-.custom-sel-item:hover { background: var(--bg-hover); }
-.custom-sel-item.selected { color: var(--accent); font-weight: 700; background: rgba(59,130,246,0.1); }
-.btn-pop-confirm { width: 100%; background: var(--accent); color: #fff; border: none; padding: 10px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.custom-date-popover { position: absolute; top: 100%; left: 0; margin-top: 12px; background: var(--bg-elevated); border: 1px solid var(--border); padding: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); z-index: 100; display: flex; flex-direction: column; gap: 16px; }
+.popover-row { display: flex; gap: 12px; }
+.custom-sel-display { background: var(--bg-surface); border: 1px solid var(--border); padding: 10px 16px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; min-width: 100px; border-radius: 8px; transition: all 0.2s; }
+.custom-sel-display.active, .custom-sel-display:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.custom-sel-list { position: absolute; top: 100%; left: 0; width: 100%; max-height: 180px; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 8px; z-index: 110; margin-top: 6px; }
+.custom-sel-item { padding: 10px 12px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.custom-sel-item:hover, .custom-sel-item.selected { background: var(--text-primary); color: white; }
+.btn-pop-confirm { width: 100%; background: var(--text-primary); color: white; border: none; padding: 12px; font-size: 12px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; border-radius: 40px; transition: all 0.2s; }
+.btn-pop-confirm:hover { opacity: 0.9; transform: translateY(-1px); }
 
-.nav-controls { display: flex; align-items: center; gap: 3px; }
-.nav-btn { width: 30px; height: 30px; border: 1px solid var(--border); background: transparent; border-radius: 7px; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-.nav-btn--text { width: auto; padding: 0 10px; font-size: 11px; font-weight: 600; }
-.nav-btn:hover { background: var(--bg-hover); border-color: var(--border-mid); color: var(--text-primary); }
+.nav-controls { display: flex; align-items: center; gap: 8px; }
+.nav-btn { width: 32px; height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 11px; border-radius: 0; transition: all 0.2s; }
+.nav-btn--text { width: auto; padding: 0 16px; font-size: 11px; font-weight: 800; letter-spacing: 0.05em; border-radius: 40px; }
+.nav-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
-.header-right { display: flex; align-items: center; }
-.prompt-filters { display: flex; gap: 4px; background: var(--bg-elevated); padding: 4px; border-radius: 8px; border: 1px solid var(--border); }
-.p-filter-btn { padding: 6px 12px; border: none; border-radius: 6px; background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.15s; }
-.p-filter-btn.active { background: var(--bg-surface); color: var(--text-primary); box-shadow: 0 1px 4px rgba(0,0,0,0.1); border: 1px solid var(--border-mid); }
-.p-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.prompt-filters { display: flex; gap: 6px; }
+.p-filter-btn { padding: 8px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-muted); font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); display: flex; align-items: center; letter-spacing: 0.05em; border-radius: 40px; }
+.p-filter-btn.active, .p-filter-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.p-dot { display: inline-block; width: 10px; height: 10px; border: 2px solid var(--border); margin-right: 6px; }
 
-/* ── 타임라인 스냅 스크롤 ── */
+/* 레이아웃 */
 .prompt-view-layout { flex: 1; display: flex; overflow: hidden; }
-
-/* ★ 하루 단위 스냅 설정 */
-.snap-container { scroll-snap-type: y mandatory; overflow-y: scroll; }
-.snap-item-wrap { scroll-snap-align: start; scroll-margin-top: 12px; border-bottom: 1px solid var(--border-subtle); }
-
 .prompt-graph-panel { width: 380px; flex-shrink: 0; background: var(--bg-surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; }
-/* ── 타임라인 상단 트랙 타이틀 영역 ── */
-.prompt-graph-title { 
-  padding: 16px 20px; /* 패딩을 키워 전체적으로 더 큼직하게 */
-  border-bottom: 1px solid var(--border); 
-  background: var(--bg-elevated); 
-  display: flex; 
-  align-items: center;
-}
 
-/* 뱃지들을 감싸는 컨테이너 (한 줄 유지) */
-.ptl-header-tracks {
-  display: flex;
-  align-items: center;
-  gap: 12px; /* 뱃지 사이 간격 추가 */
-  width: 100%;
-  overflow-x: auto; /* 항목이 많아 넘치면 가로 스크롤 허용 */
-  white-space: nowrap; /* 강제 줄바꿈 방지 */
-  
-  /* 디자인을 위해 스크롤바는 숨김 처리 */
-  -ms-overflow-style: none; /* IE, Edge */
-  scrollbar-width: none; /* Firefox */
-}
-.ptl-header-tracks::-webkit-scrollbar { 
-  display: none; /* Chrome, Safari, Opera */
-}
+.prompt-graph-title { padding: 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; }
+.ptl-header-tracks { display: flex; gap: 10px; width: 100%; overflow-x: auto; white-space: nowrap; }
+.ptl-header-track-badge { display: flex; align-items: center; gap: 8px; font-size: 11px; font-weight: 900; padding: 5px 14px; border: 1px solid; border-radius: 40px; background: var(--bg-elevated); }
+.ptl-head-dot { width: 6px; height: 6px; border-radius: 50%; }
 
-/* 개별 트랙 뱃지 디자인 개선 */
-.ptl-header-track-badge { 
-  display: flex; 
-  align-items: center; 
-  gap: 8px; 
-  font-size: 13px; /* 11px -> 13px로 폰트 크기 증가 */
-  font-weight: 800; 
-  padding: 6px 14px; /* 알약 형태의 여백 추가 */
-  background: var(--bg-base); /* 배경색 분리 */
-  border: 1px solid var(--border-mid); /* 은은한 테두리 */
-  border-radius: 999px; /* 완전 둥글게 */
-  flex-shrink: 0; /* 화면이 좁아져도 뱃지가 찌그러지지 않게 보호 */
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
-}
+.prompt-graph-inner { flex: 1; padding-bottom: 20px; }
 
-/* 뱃지 앞의 색상 동그라미(Dot) */
-.ptl-head-dot { 
-  width: 9px; /* 7px -> 9px로 크기 증가 */
-  height: 9px; 
-  border-radius: 50%; 
-}
-
-.prompt-graph-inner { flex: 1; min-height: 0; padding-bottom: 10px; }
-
-/* 데이터 없을 때 화면 */
-.prompt-tl-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; min-height: 400px; text-align: center; margin: 24px; background: var(--bg-elevated); border: 1.5px dashed var(--border-mid); border-radius: 16px; }
-.empty-icon-wrap { width: 64px; height: 64px; border-radius: 50%; background: var(--bg-surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-.empty-icon-wrap i { font-size: 26px; color: var(--text-faint); }
-.empty-title { font-size: 15px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
-.empty-desc { font-size: 12px; font-weight: 500; color: var(--text-muted); line-height: 1.6; }
+.prompt-tl-empty { text-align: center; margin: 40px 20px; padding: 40px 0; border: 2px dashed var(--border); }
+.empty-icon-wrap { font-size: 40px; margin-bottom: 16px; color: var(--text-faint); }
+.empty-title { font-size: 16px; font-weight: 900; letter-spacing: 0.05em; }
+.empty-desc { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 8px; }
 
 .v-graph-timeline { position: relative; }
-.v-graph-spines-container { position: absolute; top: 0; bottom: 0; left: 69px; display: flex; gap: 8px; opacity: 0.2; }
-.v-graph-spine-line { width: 14px; position: relative; }
-.v-graph-spine-inner { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); }
+.v-graph-spines-container { position: absolute; top: 0; bottom: 0; left: 74px; display: flex; gap: 12px; opacity: 0.3; }
+.v-graph-spine-line { width: 16px; position: relative; }
+.v-graph-spine-inner { position: absolute; top: 0; bottom: 0; left: 50%; border-left: 2px dashed; transform: translateX(-50%); }
 
-.v-graph-date-row { display: flex; align-items: center; margin: 20px 0 10px 0; position: sticky; top: 12px; z-index: 20; }
-.v-graph-date-badge { font-size: 11px; font-weight: 800; background: var(--bg-elevated); padding: 5px 12px; border-radius: 0 999px 999px 0; border: 1px solid var(--border-mid); border-left: none; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.snap-container { scroll-snap-type: y mandatory; }
+.snap-item-wrap { scroll-snap-align: start; scroll-margin-top: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+
+.v-graph-date-row { display: flex; align-items: center; margin: 24px 0 16px 0; position: sticky; top: 0; z-index: 20; }
+.v-graph-date-badge { font-size: 11px; font-weight: 900; background: var(--text-primary); color: var(--bg-base); padding: 4px 16px; border-radius: 40px; margin-left: 20px; letter-spacing: 0.05em; }
 .v-graph-empty-day { height: 20px; }
 
-.v-graph-row { display: flex; padding: 6px 20px 6px 10px; cursor: pointer; transition: 0.15s; }
+.v-graph-row { display: flex; padding: 12px 20px 12px 10px; cursor: pointer; transition: 0.1s; }
 .v-graph-row:hover { background: var(--bg-hover); }
-.v-graph-row.is-selected { background: rgba(59, 130, 246, 0.05); }
+.v-graph-row.is-selected { background: rgba(0,0,0,0.05); }
+:global(body.theme-dark) .v-graph-row.is-selected { background: rgba(255,255,255,0.05); }
 
-.v-graph-time { width: 45px; font-size: 11px; color: var(--text-faint); text-align: right; margin-right: 14px; padding-top: 14px; font-family: monospace; }
-.v-graph-lanes { display: flex; gap: 8px; }
-.v-graph-lane { width: 14px; position: relative; display: flex; justify-content: center; }
-.v-graph-node { position: absolute; top: 18px; width: 14px; height: 14px; border-radius: 50%; border: 2.5px solid; z-index: 30; }
-.v-graph-node-inner { width: 6px; height: 6px; border-radius: 50%; margin: 1.5px; }
+.v-graph-time { width: 50px; font-size: 12px; font-weight: 800; color: var(--text-muted); text-align: right; margin-right: 14px; padding-top: 14px; }
+.v-graph-lanes { display: flex; gap: 12px; }
+.v-graph-lane { width: 16px; position: relative; display: flex; justify-content: center; }
+.v-graph-node { position: absolute; top: 16px; width: 14px; height: 14px; border: 2px solid var(--bg-base); z-index: 30; } /* 점을 네모 반듯하게 변경 */
 
-.v-graph-content { flex: 1; padding-left: 18px; }
-.v-graph-card { background: var(--bg-surface); border: 1px solid var(--border); border-left: 4px solid; border-radius: 8px; padding: 12px; transition: 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-.v-graph-row:hover .v-graph-card { transform: translateX(4px); }
-.v-graph-track-name { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
-.v-graph-title { font-size: 13px; font-weight: 700; margin-top: 4px; line-height: 1.4; }
+.v-graph-content { flex: 1; padding-left: 20px; }
+.v-graph-card { background: transparent; border: 1px solid var(--border); padding: 14px; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); border-radius: 0; }
+.v-graph-row:hover .v-graph-card { border-color: var(--text-primary); background: var(--bg-hover); }
+.v-graph-track-name { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid currentColor; padding-bottom: 2px; }
+.v-graph-title { font-size: 14px; font-weight: 800; margin-top: 8px; line-height: 1.4; color: var(--text-primary); }
 
-/* 오른쪽 채팅 */
+/* 채팅 창 */
 .prompt-chat-panel { flex: 1; display: flex; flex-direction: column; background: var(--bg-base); }
-.prompt-chat-header { padding: 18px 24px; background: var(--bg-surface); border-bottom: 1px solid var(--border); height: 64px; display: flex; align-items: center; }
-.prompt-welcome-info-placeholder { display: flex; align-items: center; gap: 12px; color: var(--text-faint); }
-.prompt-chat-title { font-size: 15px; font-weight: 800; color: var(--text-primary); }
-.prompt-chat-subtitle { font-size: 11px; color: var(--text-faint); margin-top: 2px; }
+.prompt-chat-header { padding: 20px 32px; background: var(--bg-surface); border-bottom: 1px solid var(--border); height: 80px; display: flex; align-items: center; }
+.prompt-welcome-info-placeholder { display: flex; align-items: center; gap: 16px; color: var(--text-faint); }
+.prompt-welcome-icon-sm { width: 40px; height: 40px; background: var(--text-primary); color: var(--bg-base); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.prompt-chat-title { font-size: 18px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; }
+.prompt-chat-subtitle { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-top: 4px; }
+.prompt-schedule-info { display: flex; align-items: center; gap: 16px; }
+.prompt-schedule-dot { width: 16px; height: 16px; border: 2px solid var(--bg-surface); outline: 2px solid currentColor; }
 
-.prompt-schedule-info { display: flex; align-items: center; gap: 12px; }
-.prompt-schedule-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; box-shadow: 0 0 6px currentColor; }
-.prompt-welcome-icon-sm { width: 36px; height: 36px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 15px; color: #fff; opacity: 0.85; }
-
-.prompt-messages-area { flex: 1; padding: 24px; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; }
-.prompt-msg { display: flex; flex-direction: column; gap: 4px; max-width: 80%; }
+.prompt-messages-area { flex: 1; padding: 40px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; }
+.prompt-msg { display: flex; flex-direction: column; gap: 8px; max-width: 80%; }
 .prompt-msg--user { align-self: flex-end; align-items: flex-end; }
 .prompt-msg--ai { align-self: flex-start; }
-.prompt-msg-bubble { padding: 10px 14px; border-radius: 14px; font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
-.prompt-msg--user .prompt-msg-bubble { background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
-.prompt-msg--ai .prompt-msg-bubble { background: var(--bg-elevated); border: 1px solid var(--border); border-bottom-left-radius: 4px; color: var(--text-primary); }
-.prompt-msg-time { font-size: 9px; color: var(--text-faint); font-family: monospace; }
+.prompt-msg-bubble { padding: 16px 24px; font-size: 14px; font-weight: 500; line-height: 1.6; white-space: pre-wrap; word-break: break-word; border: 1px solid transparent; }
+.prompt-msg--user .prompt-msg-bubble { background: var(--text-primary); color: white; }
+.prompt-msg--ai .prompt-msg-bubble { background: var(--bg-surface); color: var(--text-primary); border-color: var(--border); }
+.prompt-msg-time { font-size: 10px; font-weight: 800; color: var(--text-muted); padding: 0 4px; }
 
-.prompt-input-area { padding: 16px 20px; border-top: 1px solid var(--border); background: var(--bg-surface); display: flex; gap: 10px; }
-.prompt-textarea { flex: 1; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-family: inherit; resize: none; outline: none; color: var(--text-primary); }
-.prompt-send-btn { width: 42px; height: 42px; border-radius: 10px; background: var(--accent); color: #fff; border: none; cursor: pointer; transition: 0.15s; }
-.prompt-send-btn:hover { opacity: 0.9; }
-
-.custom-scroll::-webkit-scrollbar { width: 6px; }
-.custom-scroll::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 10px; }
-
-/* ★ 툴팁 스타일: 찌그러짐 방지 (min-width, white-space) */
-.edge-tooltip-popup {
-  position: fixed; z-index: 9999; pointer-events: none; background: var(--bg-surface); 
-  border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; 
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15); display: flex; flex-direction: column; gap: 6px; 
-  transform: translate(-50%, -100%); margin-top: -10px;
-  
-  /* 화면 끝에서 텍스트 줄바꿈/찌그러짐 방지 */
-  min-width: max-content;
-  white-space: nowrap;
-}
-.et-track { font-size: 11px; font-weight: 800; font-family: 'Escoredream', sans-serif; }
-.et-nodes { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
-.et-nodes i { color: var(--text-faint); font-size: 11px; }
-
-.fade-pop-enter-active, .fade-pop-leave-active { transition: 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); }
-.fade-pop-enter-from, .fade-pop-leave-to { opacity: 0; transform: translateY(-10px); }
-.drop-anim-enter-active { transition: 0.2s; }
-.drop-anim-enter-from { opacity: 0; transform: translateY(-5px); }
-.fade-enter-active, .fade-leave-active { transition: opacity 0.2s; }
-.fade-enter-from, .fade-leave-to { opacity: 0; }
+.prompt-input-area { padding: 24px 32px; border-top: 1px solid var(--border); background: var(--bg-base); display: flex; gap: 16px; }
+.prompt-textarea { flex: 1; background: var(--bg-surface); border: 1px solid var(--border); padding: 16px 20px; font-size: 14px; font-weight: 500; resize: none; outline: none; color: var(--text-primary); transition: all 0.2s; }
+.prompt-textarea:focus { border-color: var(--text-primary); background: var(--bg-base); }
+.prompt-send-btn { padding: 0 28px; background: var(--text-primary); color: white; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; border: none; cursor: pointer; transition: all 0.2s; border-radius: 40px; height: 50px; align-self: flex-end; }
+.prompt-send-btn:hover:not(:disabled) { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.prompt-send-btn:disabled { opacity: 0.2; cursor: not-allowed; }
 </style>

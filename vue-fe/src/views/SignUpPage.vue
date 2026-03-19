@@ -1,135 +1,151 @@
 <template>
   <div class="auth-root">
-    <div class="auth-card">
-      <div class="auth-logo-wrap">
-        <div class="auth-avatar"><i class="fas fa-user" /></div>
-        <h2>회원가입</h2>
-        <p>계정 정보를 확인하고 서비스를 연동해주세요</p>
+    
+    <div class="global-stepper-wrap">
+      <div class="page-stepper">
+        <div class="step active">1. 계정 연동</div>
+        <div class="step">2. 사전 설문</div>
+        <div class="step">3. 데이터 분석</div>
+        <div class="step">4. 결과 확인</div>
       </div>
+    </div>
 
-      <!-- 구글 계정 정보 -->
-      <div class="auth-section">
-        <div class="section-label">
-          <div class="google-badge">G</div>
-          <span>구글 계정 정보</span>
-        </div>
-        <div class="field-row">
-          <label>이름</label>
-          <div class="field-display">홍길동</div>
-        </div>
-        <div class="field-row">
-          <label>이메일</label>
-          <div class="field-display">hong.gildong@gmail.com</div>
-        </div>
-      </div>
-
-      <!-- 서비스 연동 -->
-      <div class="auth-section auth-section--bordered">
-        <div class="section-plain-label">서비스 연동</div>
-        <button class="link-btn">
-          <div class="link-btn-left">
-            <div class="link-icon"><i class="fas fa-link" /></div>
-            <span>Velog 연동하기</span>
-          </div>
-          <i class="fas fa-chevron-right" />
+    <div class="auth-card custom-scroll">
+      <div class="header-top">
+        <button class="btn-back" @click="$router.push('/login')">
+          <i class="fas fa-arrow-left" /> BACK
         </button>
-        <button class="link-btn">
+      </div>
+      <div class="auth-header">
+        <div class="auth-icon"><i class="fas fa-plug" /></div>
+        <h2>ACCOUNT LINKING</h2>
+        <p>서비스 이용을 위해 계정을 연동해 주세요.<br>(모든 항목 연동 필수)</p>
+      </div>
+
+      <div class="auth-section">
+        <button 
+          class="link-btn" 
+          :class="{ 'is-connected': isGoogleConnected }"
+          @click="isGoogleConnected = true"
+        >
+          <div class="link-btn-left">
+            <div class="link-icon"><i class="fab fa-google" /></div>
+            <span v-if="!isGoogleConnected">Google 계정으로 시작하기</span>
+            <span v-else class="text-blue-600">user@gmail.com 연동됨</span>
+          </div>
+          <i v-if="!isGoogleConnected" class="fas fa-arrow-right" />
+          <i v-else class="fas fa-check" />
+        </button>
+      </div>
+
+      <div class="auth-section">
+        <div class="section-label">DATA SYNCHRONIZATION</div>
+        
+        <button 
+          class="link-btn"
+          :class="{ 'is-connected': isGithubConnected }"
+          @click="isGithubConnected = true"
+        >
           <div class="link-btn-left">
             <div class="link-icon"><i class="fab fa-github" /></div>
-            <span>GitHub 연동하기</span>
+            <span v-if="!isGithubConnected">GitHub 연동하기</span>
+            <span v-else class="text-blue-600">GitHub 연동 완료</span>
           </div>
-          <i class="fas fa-chevron-right" />
+          <i v-if="!isGithubConnected" class="fas fa-arrow-right" />
+          <i v-else class="fas fa-check" />
         </button>
-        <p class="link-hint">연동은 선택사항이며, 나중에 설정에서 추가할 수 있습니다</p>
+
+        <button 
+          class="link-btn"
+          :class="{ 'is-connected': isVelogConnected }"
+          @click="isVelogConnected = true"
+        >
+          <div class="link-btn-left">
+            <div class="link-icon"><i class="fas fa-v" /></div>
+            <span v-if="!isVelogConnected">Velog 연동하기</span>
+            <span v-else class="text-blue-600">Velog 연동 완료</span>
+          </div>
+          <i v-if="!isVelogConnected" class="fas fa-arrow-right" />
+          <i v-else class="fas fa-check" />
+        </button>
       </div>
 
-      <button class="btn-primary" @click="$router.push('/setup')">회원가입 완료</button>
-
-      <p class="terms-text">
-        회원가입을 진행하면<br>
-        <a href="#">이용약관</a> 및 <a href="#">개인정보처리방침</a>에 동의하는 것으로 간주됩니다
-      </p>
+      <button 
+        class="btn-primary" 
+        :disabled="!canProceed"
+        @click="$router.push('/setup')"
+      >
+        NEXT STEP
+      </button>
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed } from 'vue'
+
+const isGoogleConnected = ref(false)
+const isGithubConnected = ref(false)
+const isVelogConnected = ref(false)
+
+const canProceed = computed(() => isGoogleConnected.value && isGithubConnected.value && isVelogConnected.value)
 </script>
 
 <style scoped>
-.auth-root {
-  min-height: 100vh; display: flex; align-items: center; justify-content: center;
-  background: var(--bg-base); padding: 24px;
-  font-family: 'Escoredream', system-ui, sans-serif;
+/* 비율 보정: top padding 감소 및 max-height 정확한 calc 계산 */
+.auth-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-base); padding: 72px 24px 24px; font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative; }
+.auth-card { 
+  width: 100%; max-width: 520px; max-height: calc(100vh - 100px); 
+  overflow-y: auto; background: var(--bg-surface); 
+  border: 1px solid var(--border); padding: 40px; 
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; 
 }
-.auth-card {
-  width: 100%; max-width: 440px;
-  background: var(--bg-surface); border: 1px solid var(--border);
-  border-radius: 20px; padding: 40px 36px;
-  animation: fadeUp 0.3s ease both;
-}
-@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
-.auth-logo-wrap { text-align: center; margin-bottom: 32px; }
-.auth-avatar {
-  width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 16px;
-  background: linear-gradient(135deg, #818cf8, #38bdf8);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 22px; color: #fff;
-}
-.auth-logo-wrap h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); }
-.auth-logo-wrap p  { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
 
-.auth-section { margin-bottom: 22px; }
-.auth-section--bordered { padding-top: 20px; border-top: 1px solid var(--border); }
+.global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
+.page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
+.page-stepper .step {
+  flex: 1; text-align: center; padding: 10px 4px;
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); white-space: nowrap;
+  border-right: 1px solid var(--border);
+}
+.page-stepper .step:last-child { border-right: none; }
+.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+@media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
-.section-label {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
-  font-weight: 600; font-size: 14px; color: var(--text-secondary);
+.header-top { margin-bottom: 24px; }
+.btn-back {
+  background: transparent; border: 1px solid var(--border);
+  font-weight: 800; font-size: 11px; color: var(--text-muted);
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.1em;
+  padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px;
 }
-.google-badge {
-  width: 26px; height: 26px; border-radius: 50%; background: var(--bg-elevated);
-  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 800; color: var(--text-muted);
-}
-.section-plain-label { font-weight: 600; font-size: 14px; color: var(--text-secondary); margin-bottom: 12px; }
+.btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 
-.field-row { margin-bottom: 12px; }
-.field-row label { font-size: 12px; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 6px; }
-.field-display {
-  background: var(--bg-elevated); border: 1px solid var(--border);
-  border-radius: 10px; padding: 12px 16px; font-size: 14px;
-  color: var(--text-faint); text-align: center;
-}
+.auth-header { text-align: center; margin-bottom: 32px; }
+.auth-icon { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 16px; background: transparent; color: var(--text-primary); }
+.auth-header h2 { font-size: 24px; font-weight: 900; letter-spacing: 0.05em; margin-bottom: 8px; color: var(--text-primary); }
+.auth-header p { font-size: 13px; font-weight: 700; color: var(--text-muted); line-height: 1.5; }
 
-.link-btn {
-  width: 100%; display: flex; align-items: center; justify-content: space-between;
-  border: 1px solid var(--border); padding: 13px 16px; border-radius: 12px;
-  background: var(--bg-elevated); cursor: pointer; margin-bottom: 10px;
-  color: var(--text-secondary); transition: background 0.15s;
-}
-.link-btn:hover { background: var(--bg-hover); }
+.auth-section { margin-bottom: 24px; }
+.section-label { font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: inline-block; }
+
+.link-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 14px 16px; background: transparent; cursor: pointer; margin-bottom: 12px; color: var(--text-primary); font-weight: 700; font-size: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.link-btn:hover:not(.is-connected) { background: var(--bg-hover); border-color: var(--text-primary); }
+.link-btn:hover:not(.is-connected) .link-icon { border-color: var(--text-primary); }
+.link-btn.is-connected { background: transparent; border-color: rgba(255,255,255,0.2); color: var(--text-secondary); cursor: default; }
+.link-btn.is-connected .link-icon { border-color: rgba(255,255,255,0.2); color: var(--text-secondary); }
+
 .link-btn-left { display: flex; align-items: center; gap: 12px; }
-.link-icon {
-  width: 34px; height: 34px; background: var(--bg-base); border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  color: var(--text-muted); font-size: 14px;
-}
-.link-btn span { font-size: 14px; font-weight: 500; }
-.link-btn .fa-chevron-right { font-size: 11px; color: var(--text-faint); }
-.link-hint { text-align: center; font-size: 11px; color: var(--text-faint); margin-top: 4px; }
+.link-icon { width: 32px; height: 32px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.3s; }
 
-.btn-primary {
-  width: 100%; padding: 14px; border-radius: 12px; border: none; cursor: pointer;
-  background: linear-gradient(135deg, #818cf8, #38bdf8);
-  color: #fff; font-weight: 700; font-size: 15px; margin-top: 4px;
-  transition: opacity 0.15s; font-family: 'Escoredream', sans-serif;
-}
-.btn-primary:hover { opacity: 0.87; }
-
-.terms-text {
-  text-align: center; font-size: 11px; color: var(--text-faint);
-  margin-top: 16px; line-height: 1.9;
-}
-.terms-text a { color: var(--text-muted); text-decoration: underline; cursor: pointer; }
+.btn-primary { width: 100%; padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; margin-top: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-primary:disabled { background: transparent; border-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
+.btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
 </style>
