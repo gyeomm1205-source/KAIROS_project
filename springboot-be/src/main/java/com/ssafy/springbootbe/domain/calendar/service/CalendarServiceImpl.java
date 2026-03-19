@@ -20,10 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
+
 
 @Slf4j
 @Service
@@ -81,17 +83,15 @@ public class CalendarServiceImpl implements CalendarService {
                     // 줄기 연결선 렌더링용: 조회 기간 바깥의 인접 노드 날짜 산출
                     List<CurriculumNode> allNodes = curriculumNodeRepository
                             .findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
-                    LocalDate firstInPeriod = periodNodes.getFirst().getScheduledDate();
-                    LocalDate lastInPeriod = periodNodes.getLast().getScheduledDate();
                     LocalDate prevNodeDate = allNodes.stream()
                             .map(CurriculumNode::getScheduledDate)
-                            .filter(d -> d.isBefore(firstInPeriod))
-                            .reduce((a, b) -> b)
+                            .filter(d -> d.isBefore(startDate))
+                            .max(Comparator.naturalOrder())
                             .orElse(null);
                     LocalDate nextNodeDate = allNodes.stream()
                             .map(CurriculumNode::getScheduledDate)
-                            .filter(d -> d.isAfter(lastInPeriod))
-                            .findFirst()
+                            .filter(d -> d.isAfter(endDate))
+                            .min(Comparator.naturalOrder())
                             .orElse(null);
 
                     List<CalendarNodeResponse> nodeResponses = periodNodes.stream()
