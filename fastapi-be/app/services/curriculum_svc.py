@@ -75,13 +75,18 @@ _SYSTEM_PROMPT = """\
 사용자의 프로필, 학습 목표, 일정 제약을 바탕으로 날짜가 지정된 실현 가능한 학습 커리큘럼을 설계합니다.
 
 [응답 원칙]
-1. 오늘 날짜({today})부터 시작해 {total_days}일 범위 내에서 노드를 배치하세요.
-2. 바쁜 날짜({busy_dates})는 건너뛰고 나머지 날에만 노드를 할당하세요.
-3. 하루 1개 노드 원칙: 같은 scheduled_date를 가진 노드는 없어야 합니다.
-4. 학습 목표({topic})를 달성하는 데 집중하세요.
-5. 노드 순서는 개념 이해 → 실습 → 심화/복습 흐름으로 구성하세요.
-6. expected_minutes는 30~120분 범위에서 실제 학습량에 맞게 설정하세요.
-7. 반드시 한국어로 작성하세요.\
+1. 오늘 날짜({today})부터 시작해 노드를 배치하세요.
+2. 커리큘럼 기간은 아래 기준에 따라 결정하세요. 7일을 절대 초과하지 마세요.
+   - 단일 개념 학습 (Git 기초, 특정 라이브러리 입문 등): 2~3일
+   - 개념 이해 + 실습이 필요한 주제: 4~5일
+   - 여러 기술 통합 또는 심화가 필요한 주제: 6~7일
+3. 바쁜 날짜({busy_dates})는 건너뛰고 나머지 날에만 노드를 할당하세요.
+4. 하루 1개 노드 원칙: 같은 scheduled_date를 가진 노드는 없어야 합니다.
+5. 학습 목표({topic})를 달성하는 데 집중하세요.
+6. 노드 순서는 개념 이해 → 실습 → 심화/복습 흐름으로 구성하세요.
+7. expected_minutes는 30~120분 범위에서 실제 학습량에 맞게 설정하세요.
+8. 노드 제목과 내용은 실제 학습 활동만 포함하세요. "Q&A 세션", "전문가 상담", "리뷰 세션" 같이 혼자 할 수 없는 활동은 절대 포함하지 마세요.
+9. 반드시 한국어로 작성하세요.\
 """
 
 _USER_TEMPLATE = """\
@@ -98,10 +103,9 @@ _USER_TEMPLATE = """\
 
 [일정 정보]
 - 오늘: {today}
-- 권장 학습 기간: {total_days}일
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
-위 정보를 바탕으로 커리큘럼을 생성하세요.\
+위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).\
 """
 
 
@@ -169,21 +173,19 @@ def _build_context(request: CurriculumRequest) -> dict[str, Any]:
     tech_stacks  = _extract_tech_stacks(profile)
     positions    = _extract_positions(profile)
 
-    today        = date.today().isoformat()
-    total_days   = _calc_total_days(manual)
-    busy_dates   = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
+    today      = date.today().isoformat()
+    busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
 
     return {
-        "topic":          topic,
-        "goal_type":      goal_type,
-        "specific_goal":  specific_goal,
-        "user_level":     user_level,
-        "tech_stacks":    tech_stacks,
-        "positions":      positions,
-        "survey_text":    survey_text,
-        "today":          today,
-        "total_days":     total_days,
-        "busy_dates":     busy_dates,
+        "topic":         topic,
+        "goal_type":     goal_type,
+        "specific_goal": specific_goal,
+        "user_level":    user_level,
+        "tech_stacks":   tech_stacks,
+        "positions":     positions,
+        "survey_text":   survey_text,
+        "today":         today,
+        "busy_dates":    busy_dates,
     }
 
 
@@ -194,7 +196,7 @@ def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
     today  = date.today()
 
     busy = _get_busy_date_set(request.google_calendar_events, request.consider_personal_schedule)
-    total_days = _calc_total_days(manual)
+    total_days = 7
 
     nodes: list[_CurriculumNodeOutput] = []
     current = today
@@ -270,14 +272,6 @@ def _extract_positions(profile: dict[str, Any]) -> str:
     if isinstance(positions, list):
         return ", ".join(str(p) for p in positions) or "미지정"
     return str(positions) or "미지정"
-
-
-def _calc_total_days(manual: ManualGeneration | None) -> int:
-    """커리큘럼 기간(일)을 결정한다. 기본 14일."""
-    if manual is None:
-        return 14
-    # 주제 복잡도에 따라 조정 가능 (현재는 기본값)
-    return 14
 
 
 def _fmt_survey(manual: ManualGeneration) -> str:

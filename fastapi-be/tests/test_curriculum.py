@@ -28,6 +28,31 @@ RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
 
+def _make_simple_request() -> CurriculumRequest:
+    """간단한 주제 — 기간이 짧게 나와야 함"""
+    return CurriculumRequest(
+        userId=1,
+        considerPersonalSchedule=False,
+        googleCalendarEvents=[],
+        profileData={
+            "level": "초급",
+            "techStacks": ["Python"],
+            "desiredPositions": ["백엔드 개발자"],
+        },
+        manualGeneration=ManualGeneration(
+            isManual=True,
+            topic="Git 기초",
+            goalType="개념 이해",
+            specificGoal="git commit과 push를 혼자 할 수 있는 수준",
+            surveyAnswers={
+                "q1Concept": "거의 모름",
+                "q2Experience": "없음",
+                "q3Reason": "팀 프로젝트 시작 전 기본만 익히고 싶음",
+            },
+        ),
+    )
+
+
 def _make_request() -> CurriculumRequest:
     return CurriculumRequest(
         userId=1,
@@ -58,16 +83,12 @@ def _make_request() -> CurriculumRequest:
     )
 
 
-async def main():
-    request = _make_request()
-
+async def _run_test(request: CurriculumRequest, label: str):
     print("=" * 60)
-    print("커리큘럼 생성 테스트")
+    print(f"테스트: {label}")
     print("=" * 60)
-    print(f"  user_id              : {request.user_id}")
-    print(f"  topic                : {request.manual_generation.topic}")
-    print(f"  considerSchedule     : {request.consider_personal_schedule}")
-    print(f"  googleCalendarEvents : {len(request.google_calendar_events)}개")
+    print(f"  topic            : {request.manual_generation.topic}")
+    print(f"  considerSchedule : {request.consider_personal_schedule}")
     print()
 
     start = time.perf_counter()
@@ -75,25 +96,23 @@ async def main():
     elapsed = time.perf_counter() - start
 
     print(f"[완료] {elapsed:.2f}s  {len(response.nodes)}개 노드 생성")
-    print()
-    print("=== recommendationReason ===")
-    print(f"  summaryLine       : {response.recommendation_reason.summary_line}")
-    print(f"  userContext       : {response.recommendation_reason.user_context}")
-    print(f"  aiInterpretation  : {response.recommendation_reason.ai_interpretation}")
-    print(f"  curriculumRationale: {response.recommendation_reason.curriculum_rationale}")
-    print()
-    print("=== nodes ===")
+    print(f"  summaryLine : {response.recommendation_reason.summary_line}")
     for node in response.nodes:
         print(f"  [{node.scheduled_date}] {node.title} ({node.expected_minutes}분)")
-        if node.description:
-            print(f"         {node.description}")
+    print()
+    return response
+
+
+async def main():
+    simple_request = _make_simple_request()
+    complex_request = _make_request()
+
+    await _run_test(simple_request, "간단한 주제 (Git 기초)")
+    response = await _run_test(complex_request, "복잡한 주제 (Spring Security + JWT)")
 
     result = response.model_dump(by_alias=True)
-    result["elapsed"] = elapsed
-
     out_path = RESULTS_DIR / "curriculum_result.json"
     out_path.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-    print()
     print(f"결과 저장 → {out_path}")
 
 
