@@ -24,6 +24,12 @@ import java.util.Collections;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+    private final AuthenticationFailureHandler authenticationFailureHandler;
+
+    public SecurityConfig(AuthenticationFailureHandler authenticationFailureHandler) {
+        this.authenticationFailureHandler = authenticationFailureHandler;
+    }
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return PasswordEncoderFactories.createDelegatingPasswordEncoder();
@@ -40,6 +46,7 @@ public class SecurityConfig {
         http.formLogin(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .csrf(CsrfConfigurer::disable)
+                .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationFailureHandler))
                 .addFilterBefore(verificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()

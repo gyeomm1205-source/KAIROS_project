@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.users.controller;
 
 import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
@@ -44,6 +45,9 @@ class UsersControllerTest {
 
     @MockitoBean
     private JWTUtils jwtUtils;
+
+    @MockitoBean
+    private RedisService redisService;
 
     private static final String BEARER_TOKEN = "Bearer test-token";
     private static final Long USER_ID = 1L;
