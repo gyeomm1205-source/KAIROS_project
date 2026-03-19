@@ -32,6 +32,48 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
     article dict에 'raw_text', 'updated_at', 'skill'(태그에서 보강) 키를 추가해 반환합니다.
     """
     url = article["url"]
+    
+    # [카카오 기술블로그 예외 처리]: 클라이언트 렌더링(CSR)을 우회하기 위해 본문 데이터도 상세 API로 직접 가져옵니다.
+    if "kakao.com/posts/" in url:
+        post_id = url.split("/posts/")[-1]
+        api_url = f"https://tech.kakao.com/api/v1/posts/{post_id}"
+        try:
+            resp = await session.get(api_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            if resp.status_code == 200:
+                data = resp.json()
+                # 우선 post 딕셔너리 안에 content가 있는지, 아니면 최상단에 본문이 있는지 다양하게 탐색
+                post_data = data.get("post", data)
+                raw_text = post_data.get("content", post_data.get("body", ""))
+                # 혹시 HTML 태그가 있다면 제거하고 텍스트만 추출
+                if raw_text:
+                    soup_api = BeautifulSoup(raw_text, "lxml")
+                    raw_text = soup_api.get_text(separator=" ", strip=True)
+                
+                # 우아한형제들처럼 기술 스택 태시태그가 tags 리스트에 있을 수도 있으니 확인
+                extra_skills = []
+                tags = post_data.get("tags", [])
+                for t in tags:
+                    if isinstance(t, dict) and "name" in t:
+                        extra_skills.append(t["name"].lower())
+                    elif isinstance(t, str):
+                        extra_skills.append(t.lower())
+                
+                final_skill = list(dict.fromkeys(article.get("skill", []) + extra_skills))
+                
+                return {
+                    **article,
+                    "title": post_data.get("title", article.get("title", "")),
+                    "raw_text": raw_text,
+                    "skill": final_skill,
+                }
+            else:
+                print(f"  [Crawler] 카카오 API 에러: HTTP {resp.status_code}")
+                return {**article, "raw_text": ""}
+        except Exception as e:
+            print(f"  [Crawler] 카카오 API 예외: {e}")
+            return {**article, "raw_text": ""}
+
+    # [나머지 일반 블로그]: 순수 HTML 파싱
     try:
         resp = await session.get(
             url,
@@ -40,11 +82,11 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
         )
         if resp.status_code != 200:
             print(f"  [Crawler] HTTP {resp.status_code}: {url}")
-            return {**article, "raw_text": "", "updated_at": ""}
+            return {**article, "raw_text": ""}
         html = resp.text
     except Exception as e:
         print(f"  [Crawler] 요청 실패 ({url}): {e}")
-        return {**article, "raw_text": "", "updated_at": ""}
+        return {**article, "raw_text": ""}
 
     soup = BeautifulSoup(html, "lxml")
 
