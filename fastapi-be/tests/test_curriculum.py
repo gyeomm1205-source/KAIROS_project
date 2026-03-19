@@ -24,6 +24,8 @@ from app.models.schemas import (
 )
 from app.services.curriculum_svc import run_curriculum
 
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
 RESULTS_DIR = Path(__file__).parent / "results"
 RESULTS_DIR.mkdir(exist_ok=True)
 
@@ -50,6 +52,19 @@ def _make_simple_request() -> CurriculumRequest:
                 "q3Reason": "팀 프로젝트 시작 전 기본만 익히고 싶음",
             },
         ),
+    )
+
+
+def _make_onboarding_request() -> CurriculumRequest:
+    """온보딩 자동 생성 — isManual=False, GitHub/Velog 분석 결과 사용"""
+    fixture = json.loads((FIXTURES_DIR / "zhy2on_profile.json").read_text(encoding="utf-8"))
+    profile = fixture["profile"]
+    return CurriculumRequest(
+        userId=2,
+        considerPersonalSchedule=False,
+        googleCalendarEvents=[],
+        profileData=profile,
+        manualGeneration=ManualGeneration(isManual=False),
     )
 
 
@@ -87,7 +102,11 @@ async def _run_test(request: CurriculumRequest, label: str):
     print("=" * 60)
     print(f"테스트: {label}")
     print("=" * 60)
-    print(f"  topic            : {request.manual_generation.topic}")
+    mg = request.manual_generation
+    if mg and mg.is_manual:
+        print(f"  topic            : {mg.topic}")
+    else:
+        print(f"  mode             : 온보딩 자동 생성")
     print(f"  considerSchedule : {request.consider_personal_schedule}")
     print()
 
@@ -106,9 +125,11 @@ async def _run_test(request: CurriculumRequest, label: str):
 async def main():
     simple_request = _make_simple_request()
     complex_request = _make_request()
+    onboarding_request = _make_onboarding_request()
 
     await _run_test(simple_request, "간단한 주제 (Git 기초)")
-    response = await _run_test(complex_request, "복잡한 주제 (Spring Security + JWT)")
+    await _run_test(complex_request, "복잡한 주제 (Spring Security + JWT)")
+    response = await _run_test(onboarding_request, "온보딩 자동 생성 (zhy2on)")
 
     result = response.model_dump(by_alias=True)
     out_path = RESULTS_DIR / "curriculum_result.json"

@@ -70,11 +70,8 @@ class _CurriculumOutput(BaseModel):
 # 프롬프트
 # ---------------------------------------------------------------------------
 
-_SYSTEM_PROMPT = """\
-당신은 KAIROS의 AI 학습 멘토입니다.
-사용자의 프로필, 학습 목표, 일정 제약을 바탕으로 날짜가 지정된 실현 가능한 학습 커리큘럼을 설계합니다.
-
-[응답 원칙]
+_COMMON_RULES = """\
+[공통 원칙]
 1. 오늘 날짜({today})부터 시작해 노드를 배치하세요.
 2. 커리큘럼 기간은 아래 기준에 따라 결정하세요. 7일을 절대 초과하지 마세요.
    - 단일 개념 학습 (Git 기초, 특정 라이브러리 입문 등): 2~3일
@@ -82,14 +79,20 @@ _SYSTEM_PROMPT = """\
    - 여러 기술 통합 또는 심화가 필요한 주제: 6~7일
 3. 바쁜 날짜({busy_dates})는 건너뛰고 나머지 날에만 노드를 할당하세요.
 4. 하루 1개 노드 원칙: 같은 scheduled_date를 가진 노드는 없어야 합니다.
-5. 학습 목표({topic})를 달성하는 데 집중하세요.
-6. 노드 순서는 개념 이해 → 실습 → 심화/복습 흐름으로 구성하세요.
-7. expected_minutes는 30~120분 범위에서 실제 학습량에 맞게 설정하세요.
-8. 노드 제목과 내용은 실제 학습 활동만 포함하세요. "Q&A 세션", "전문가 상담", "리뷰 세션" 같이 혼자 할 수 없는 활동은 절대 포함하지 마세요.
-9. 반드시 한국어로 작성하세요.\
+5. 노드 순서는 개념 이해 → 실습 → 심화/복습 흐름으로 구성하세요.
+6. expected_minutes는 30~120분 범위에서 실제 학습량에 맞게 설정하세요.
+7. 노드 제목과 내용은 실제 학습 활동만 포함하세요. "Q&A 세션", "전문가 상담", "리뷰 세션" 같이 혼자 할 수 없는 활동은 절대 포함하지 마세요.
+8. 반드시 한국어로 작성하세요.\
 """
 
-_USER_TEMPLATE = """\
+# 수동 생성 (isManual=True): 유저가 직접 주제를 지정한 경우
+_MANUAL_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토입니다.
+사용자가 직접 지정한 학습 주제와 목표를 바탕으로 날짜가 지정된 커리큘럼을 설계합니다.
+
+""" + _COMMON_RULES
+
+_MANUAL_USER_TEMPLATE = """\
 [사용자 정보]
 - 학습 주제: {topic}
 - 학습 목표 유형: {goal_type}
@@ -106,6 +109,35 @@ _USER_TEMPLATE = """\
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
 위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).\
+"""
+
+# 온보딩 자동 생성 (isManual=False): GitHub/Velog 분석 결과만으로 주제 자동 결정
+_ONBOARDING_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토입니다.
+사용자의 GitHub/Velog 활동 분석 결과를 바탕으로 지금 이 사람에게 가장 적합한 학습 주제를 스스로 결정하고, 날짜가 지정된 커리큘럼을 설계합니다.
+
+[주제 선정 기준 — 반드시 아래 순서로 판단하세요]
+1. 사용 빈도 상위 기술 중 심화 학습 시 임팩트가 큰 것을 우선합니다.
+2. 가능한 포지션(possible_positions)과 연관성이 높은 기술을 선호합니다.
+3. 단순 반복(알고리즘 풀이, README 수정 등)보다 실제 프로젝트 기술에 집중합니다.
+4. 주제는 하나의 구체적인 기술 또는 기술 조합으로 한정하세요. (예: "Spring Security", "React + TypeScript")
+
+""" + _COMMON_RULES
+
+_ONBOARDING_USER_TEMPLATE = """\
+[GitHub/Velog 분석 결과]
+- 한 줄 요약: {headline}
+- 주요 기술 스택 (사용 빈도순 상위 5개): {top_skills}
+- 경험 요약: {experience_summary}
+- 학습 태도: {learning_attitude}
+- 가능한 포지션: {possible_positions}
+- 현재 수준: {user_level}
+
+[일정 정보]
+- 오늘: {today}
+- 바쁜 기간(건너뛸 날짜): {busy_dates}
+
+위 분석 결과를 바탕으로 이 사람에게 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).\
 """
 
 
@@ -142,9 +174,17 @@ async def _generate_with_llm(request: CurriculumRequest) -> _CurriculumOutput:
     llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.4)
     structured_llm = llm.with_structured_output(_CurriculumOutput)
 
+    is_manual = request.manual_generation.is_manual if request.manual_generation else True
+    if is_manual:
+        system_prompt = _MANUAL_SYSTEM_PROMPT
+        user_template = _MANUAL_USER_TEMPLATE
+    else:
+        system_prompt = _ONBOARDING_SYSTEM_PROMPT
+        user_template = _ONBOARDING_USER_TEMPLATE
+
     prompt = ChatPromptTemplate.from_messages([
-        ("system", _SYSTEM_PROMPT),
-        ("human",  _USER_TEMPLATE),
+        ("system", system_prompt),
+        ("human",  user_template),
     ])
     chain = prompt | structured_llm
 
@@ -164,29 +204,33 @@ def _build_context(request: CurriculumRequest) -> dict[str, Any]:
     manual = request.manual_generation
     profile = request.profile_data or {}
 
-    topic        = (manual.topic or "개발 역량 강화") if manual else "개발 역량 강화"
-    goal_type    = (manual.goal_type or "전반적 학습") if manual else "전반적 학습"
-    specific_goal = (manual.specific_goal or "실무 수준 달성") if manual else "실무 수준 달성"
-    survey_text  = _fmt_survey(manual) if manual else "없음"
-
-    user_level   = _extract_level(profile)
-    tech_stacks  = _extract_tech_stacks(profile)
-    positions    = _extract_positions(profile)
-
+    is_manual = manual.is_manual if manual else True
     today      = date.today().isoformat()
     busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
 
-    return {
-        "topic":         topic,
-        "goal_type":     goal_type,
-        "specific_goal": specific_goal,
-        "user_level":    user_level,
-        "tech_stacks":   tech_stacks,
-        "positions":     positions,
-        "survey_text":   survey_text,
-        "today":         today,
-        "busy_dates":    busy_dates,
-    }
+    if is_manual:
+        return {
+            "topic":         (manual.topic or "개발 역량 강화") if manual else "개발 역량 강화",
+            "goal_type":     (manual.goal_type or "전반적 학습") if manual else "전반적 학습",
+            "specific_goal": (manual.specific_goal or "실무 수준 달성") if manual else "실무 수준 달성",
+            "user_level":    _extract_level(profile),
+            "tech_stacks":   _extract_tech_stacks(profile),
+            "positions":     _extract_positions(profile),
+            "survey_text":   _fmt_survey(manual) if manual else "없음",
+            "today":         today,
+            "busy_dates":    busy_dates,
+        }
+    else:
+        return {
+            "headline":           _extract_headline(profile),
+            "top_skills":         _extract_top_skills(profile),
+            "experience_summary": _extract_experience_summary(profile),
+            "learning_attitude":  _extract_learning_attitude(profile),
+            "possible_positions": _extract_possible_positions(profile),
+            "user_level":         _extract_level(profile),
+            "today":              today,
+            "busy_dates":         busy_dates,
+        }
 
 
 def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
@@ -255,6 +299,33 @@ def _assemble_response(output: _CurriculumOutput) -> CurriculumResponse:
 # ---------------------------------------------------------------------------
 # 컨텍스트 추출 헬퍼
 # ---------------------------------------------------------------------------
+
+def _extract_headline(profile: dict[str, Any]) -> str:
+    return profile.get("headline", "분석 결과 없음")
+
+
+def _extract_top_skills(profile: dict[str, Any], n: int = 5) -> str:
+    freq = profile.get("skill_frequency", {})
+    if not freq:
+        return _extract_tech_stacks(profile)
+    top = sorted(freq.items(), key=lambda x: x[1], reverse=True)[:n]
+    return ", ".join(skill for skill, _ in top) or "미지정"
+
+
+def _extract_experience_summary(profile: dict[str, Any]) -> str:
+    return profile.get("experience_summary", "정보 없음")
+
+
+def _extract_learning_attitude(profile: dict[str, Any]) -> str:
+    return profile.get("learning_attitude", "정보 없음")
+
+
+def _extract_possible_positions(profile: dict[str, Any]) -> str:
+    positions = profile.get("possible_positions", [])
+    if isinstance(positions, list):
+        return ", ".join(str(p) for p in positions) or "미지정"
+    return str(positions) or "미지정"
+
 
 def _extract_level(profile: dict[str, Any]) -> str:
     return profile.get("level", profile.get("userLevel", "중급"))
