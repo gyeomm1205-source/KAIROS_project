@@ -183,7 +183,6 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     private void replaceDesiredPositions(User user, List<DevPosition> devPositions) {
         try {
-            userDesiredPositionRepository.deleteByUserUserId(user.getUserId());
             userDesiredPositionRepository.saveAll(devPositions.stream()
                     .map(devPosition -> UserDesiredPosition.builder()
                             .user(user)
@@ -197,7 +196,6 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     private void replaceTechStacks(User user, List<TechStack> techStacks) {
         try {
-            userTechStackRepository.deleteByUserUserId(user.getUserId());
             userTechStackRepository.saveAll(techStacks.stream()
                     .map(techStack -> UserTechStack.builder()
                             .user(user)
@@ -211,7 +209,6 @@ public class OnboardingServiceImpl implements OnboardingService {
 
     private void replaceCurriculumCategories(User user, LinkedHashSet<CurriculumCategory> curriculumCategories) {
         try {
-            userCurriculumCategoryRepository.deleteByUserUserId(user.getUserId());
             userCurriculumCategoryRepository.saveAll(curriculumCategories.stream()
                     .map(category -> UserCurriculumCategory.builder()
                             .user(user)

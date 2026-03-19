@@ -166,9 +166,6 @@ class OnboardingServiceImplTest {
         assertThat(guestUser.getPosition()).isEqualTo(UserPosition.STUDENT);
         assertThat(guestUser.getStatus()).isEqualTo(UserStatus.SURVEYED);
         assertThat(guestUser.getCalendarSyncEnabled()).isTrue();
-        verify(userDesiredPositionRepository).deleteByUserUserId(1L);
-        verify(userTechStackRepository).deleteByUserUserId(1L);
-        verify(userCurriculumCategoryRepository).deleteByUserUserId(1L);
     }
 
     @Test
@@ -219,7 +216,7 @@ class OnboardingServiceImplTest {
     }
 
     @Test
-    void submitSurvey_연관테이블을_전체_교체_방식으로_저장한다() {
+    void submitSurvey_연관테이블에_선택항목을_저장한다() {
         // given
         DevPosition backend = DevPosition.builder().devPositionId(1L).positionName("Backend").build();
         DevPosition ai = DevPosition.builder().devPositionId(3L).positionName("AI").build();
