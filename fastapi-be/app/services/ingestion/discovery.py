@@ -76,6 +76,8 @@ def _parse_woowa_list(html: str, skill: list[str]) -> list[dict]:
     return articles, next_url
 
 
+import json
+
 def _parse_woowa_date(raw: str) -> str:
     """'Aug.19.2025' → '2025-08-19'"""
     try:
@@ -83,9 +85,35 @@ def _parse_woowa_date(raw: str) -> str:
     except Exception:
         return raw
 
+def _parse_kakao_list(html_or_json: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """카카오 기술블로그 API JSON 파싱."""
+    articles = []
+    try:
+        data = json.loads(html_or_json)
+        posts = data.get("postList", [])
+        for post in posts:
+            post_id = post.get("id")
+            title = post.get("title", "")
+            # "2026.03.16" 형식 변경 필요
+            raw_date = post.get("releaseDate", "")
+            date_str = raw_date.replace(".", "-") if raw_date else ""
+            
+            if post_id:
+                articles.append({
+                    "url": f"https://tech.kakao.com/posts/{post_id}",
+                    "title": title,
+                    "skill": skill,
+                    "published_at": date_str,
+                })
+    except Exception as e:
+        print(f"  [Discovery] 카카오 JSON 파싱 에러: {e}")
+        
+    return articles, None
+
 
 PARSERS = {
     "woowa": _parse_woowa_list,
+    "kakao": _parse_kakao_list,
 }
 
 
