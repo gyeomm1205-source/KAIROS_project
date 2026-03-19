@@ -9,21 +9,18 @@ import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackRespon
 import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.CookieValue;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.Duration;
-import java.net.URI;
 
 @RestController
 @RequestMapping("/auth")
@@ -35,38 +32,10 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @Value("${oauth.google.auth_uri}")
-    private String googleAuthUri;
-
-    @Value("${oauth.google.client_id}")
-    private String googleClientId;
-
-    @Value("${oauth.google.redirect_uri}")
-    private String googleRedirectUri;
-
-    @Value("${oauth.google.scope}")
-    private String googleScope;
-
-    @GetMapping("/oauth2/google")
-    public ResponseEntity<Void> redirectToGoogleLogin() {
-        URI redirectUri = UriComponentsBuilder.fromUriString(googleAuthUri)
-                .queryParam("client_id", googleClientId)
-                .queryParam("redirect_uri", googleRedirectUri)
-                .queryParam("response_type", "code")
-                .queryParam("scope", googleScope)
-                .build()
-                .encode()
-                .toUri();
-
-        return ResponseEntity.status(302)
-                .location(redirectUri)
-                .build();
-    }
-
-    @GetMapping("/oauth2/callback/google")
-    public ResponseEntity<GoogleOAuthCallbackResponse> handleGoogleCallback(
+    @GetMapping("/login/google")
+    public ResponseEntity<GoogleOAuthCallbackResponse> loginWithGoogle(
             @RequestParam(required = false) String code) {
-        AuthTokenBundle tokenBundle = authService.handleGoogleCallback(code);
+        AuthTokenBundle tokenBundle = authService.loginWithGoogle(code);
         ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
 
         if (tokenBundle.hasRefreshToken()) {
@@ -76,20 +45,11 @@ public class AuthController {
         return responseBuilder.body(tokenBundle.getResponse());
     }
 
-    @GetMapping("/oauth2/github")
-    public ResponseEntity<Void> redirectToGithubLogin(
-            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader) {
-        URI redirectUri = authService.buildGithubAuthorizationRedirect(authorizationHeader);
-        return ResponseEntity.status(302)
-                .location(redirectUri)
-                .build();
-    }
-
-    @GetMapping("/oauth2/callback/github")
-    public ResponseEntity<GithubOAuthCallbackResponse> handleGithubCallback(
+    @GetMapping("/link-github")
+    public ResponseEntity<GithubOAuthCallbackResponse> linkGithub(
             @RequestParam(required = false) String code,
             @RequestParam(required = false) String state) {
-        GithubAuthTokenBundle tokenBundle = authService.handleGithubCallback(code, state);
+        GithubAuthTokenBundle tokenBundle = authService.linkGithub(code, state);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(tokenBundle.getRefreshToken()).toString())

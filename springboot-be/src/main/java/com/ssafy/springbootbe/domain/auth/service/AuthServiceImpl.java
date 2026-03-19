@@ -22,7 +22,6 @@ import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubAuthorizationCodeMissingException;
-import com.ssafy.springbootbe.domain.auth.exception.GithubRedirectGenerationException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubTokenExchangeFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GithubUserInfoFetchFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.GoogleAuthorizationCodeMissingException;
@@ -48,12 +47,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
-import org.springframework.web.util.UriComponentsBuilder;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
-import java.net.URI;
 import java.util.Date;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -79,6 +79,8 @@ public class AuthServiceImpl implements AuthService {
     private final RedisService redisService;
     private final JWTUtils jwtUtils;
     private final OAuthTokenCryptoService oAuthTokenCryptoService;
+    private final AIRestClient aiRestClient;
+    private final ObjectMapper objectMapper;
 
     @Value("${oauth.google.client_id}")
     private String googleClientId;
@@ -95,17 +97,11 @@ public class AuthServiceImpl implements AuthService {
     @Value("${oauth.google.user-info-url}")
     private String googleUserInfoUrl;
 
-    @Value("${oauth.github.auth_uri}")
-    private String githubAuthUri;
-
     @Value("${oauth.github.client_id}")
     private String githubClientId;
 
     @Value("${oauth.github.redirect_uri}")
     private String githubRedirectUri;
-
-    @Value("${oauth.github.scope}")
-    private String githubScope;
 
     @Value("${oauth.github.client_secret}")
     private String githubClientSecret;
@@ -142,7 +138,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthTokenBundle handleGoogleCallback(String code) {
+    public AuthTokenBundle loginWithGoogle(String code) {
         validateAuthorizationCode(code);
 
         GoogleTokenResponse tokenResponse = exchangeGoogleToken(code);
@@ -195,30 +191,8 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public URI buildGithubAuthorizationRedirect(String authorizationHeader) {
-        Claims claims = validateOnboardingToken(authorizationHeader);
-        String onboardingToken = extractBearerToken(authorizationHeader);
-        String googleSub = extractGoogleSub(claims);
-        validateOnboardingRedisState(googleSub);
-
-        try {
-            return UriComponentsBuilder.fromUriString(githubAuthUri)
-                    .queryParam("client_id", githubClientId)
-                    .queryParam("redirect_uri", githubRedirectUri)
-                    .queryParam("response_type", "code")
-                    .queryParam("scope", githubScope)
-                    .queryParam("state", onboardingToken)
-                    .build()
-                    .encode()
-                    .toUri();
-        } catch (RuntimeException e) {
-            throw new GithubRedirectGenerationException("GitHub 인증 페이지 URL 생성에 실패했습니다.", e);
-        }
-    }
-
-    @Override
     @Transactional
-    public GithubAuthTokenBundle handleGithubCallback(String code, String state) {
+    public GithubAuthTokenBundle linkGithub(String code, String state) {
         validateGithubAuthorizationCode(code);
         Claims claims = validateOnboardingTokenWithState(state);
         String googleSub = extractGoogleSub(claims);
@@ -384,7 +358,7 @@ public class AuthServiceImpl implements AuthService {
                 .build();
 
         try {
-            GithubCollectAsyncResponse response = AIRestClient.buildAiRestClient()
+            GithubCollectAsyncResponse response = aiRestClient.buildAiRestClient()
                     .post()
                     .uri(aiServerUrl + aiCollectAsyncPath)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -729,9 +703,15 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private String buildOnboardingPayload(GoogleUserInfoResponse userInfoResponse) {
-        return "{\"email\":\"" + escapeJson(userInfoResponse.getEmail()) + "\","
-                + "\"profileImageUrl\":\"" + escapeJson(userInfoResponse.getPicture()) + "\","
-                + "\"googleSub\":\"" + escapeJson(userInfoResponse.getSub()) + "\"}";
+        try {
+            return objectMapper.writeValueAsString(Map.of(
+                    "email", normalizeOnboardingValue(userInfoResponse.getEmail()),
+                    "profileImageUrl", normalizeOnboardingValue(userInfoResponse.getPicture()),
+                    "googleSub", normalizeOnboardingValue(userInfoResponse.getSub())
+            ));
+        } catch (JacksonException e) {
+            throw new InvalidOnboardingTokenException("onboarding 데이터 직렬화에 실패했습니다.", e);
+        }
     }
 
     private String buildNickname(OnboardingData onboardingData, GithubUserInfoResponse githubUserInfoResponse) {
@@ -749,41 +729,35 @@ public class AuthServiceImpl implements AuthService {
     }
 
     private OnboardingData parseOnboardingData(String payload) {
-        String email = extractJsonValue(payload, "email");
-        String profileImageUrl = extractJsonValue(payload, "profileImageUrl");
-        String googleSub = extractJsonValue(payload, "googleSub");
+        try {
+            Map<?, ?> onboardingPayload = objectMapper.readValue(payload, Map.class);
+            String email = castToString(onboardingPayload.get("email"));
+            String profileImageUrl = castToString(onboardingPayload.get("profileImageUrl"));
+            String googleSub = castToString(onboardingPayload.get("googleSub"));
 
-        if (email == null && profileImageUrl == null && googleSub == null) {
+            if (email == null && profileImageUrl == null && googleSub == null) {
+                throw new InvalidOnboardingTokenException("onboarding 데이터 파싱에 실패했습니다.");
+            }
+
+            return new OnboardingData(email, profileImageUrl, googleSub);
+        } catch (JacksonException e) {
             throw new InvalidOnboardingTokenException("onboarding 데이터 파싱에 실패했습니다.");
         }
-
-        return new OnboardingData(email, profileImageUrl, googleSub);
     }
 
-    private String extractJsonValue(String payload, String key) {
-        String marker = "\"" + key + "\":\"";
-        int startIndex = payload.indexOf(marker);
-        if (startIndex < 0) {
-            return null;
-        }
-
-        int valueStartIndex = startIndex + marker.length();
-        int valueEndIndex = payload.indexOf("\"", valueStartIndex);
-        if (valueEndIndex < 0) {
-            throw new InvalidOnboardingTokenException("onboarding 데이터 파싱에 실패했습니다.");
-        }
-
-        return payload.substring(valueStartIndex, valueEndIndex)
-                .replace("\\\"", "\"")
-                .replace("\\\\", "\\");
-    }
-
-    private String escapeJson(String value) {
+    private String normalizeOnboardingValue(String value) {
         if (value == null) {
             return "";
         }
 
-        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+        return value;
+    }
+
+    private String castToString(Object value) {
+        if (value == null) {
+            return null;
+        }
+        return String.valueOf(value);
     }
 
     @lombok.Getter

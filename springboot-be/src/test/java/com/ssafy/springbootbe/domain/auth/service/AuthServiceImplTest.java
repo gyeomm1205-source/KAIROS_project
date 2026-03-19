@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.auth.service;
 
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
@@ -39,8 +40,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestClientException;
+import tools.jackson.databind.ObjectMapper;
 
-import java.net.URI;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -73,23 +74,29 @@ class AuthServiceImplTest {
     @Mock
     private OAuthTokenCryptoService oAuthTokenCryptoService;
 
+    @Mock
+    private AIRestClient aiRestClient;
+
+    private ObjectMapper objectMapper;
+
     private AuthServiceImpl authService;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
         authService = spy(new AuthServiceImpl(
                 oAuthAccountRepository,
                 userRepository,
                 redisService,
                 jwtUtils,
-                oAuthTokenCryptoService
+                oAuthTokenCryptoService,
+                aiRestClient,
+                objectMapper
         ));
 
         ReflectionTestUtils.setField(authService, "refreshTokenDurationTime", 168L);
-        ReflectionTestUtils.setField(authService, "githubAuthUri", "https://github.com/login/oauth/authorize");
         ReflectionTestUtils.setField(authService, "githubClientId", "test-github-client-id");
         ReflectionTestUtils.setField(authService, "githubRedirectUri", "http://localhost:5173/github/redirect");
-        ReflectionTestUtils.setField(authService, "githubScope", "read:user repo");
         ReflectionTestUtils.setField(authService, "githubClientSecret", "test-github-client-secret");
         ReflectionTestUtils.setField(authService, "githubTokenUrl", "https://github.com/login/oauth/access_token");
         ReflectionTestUtils.setField(authService, "githubAcceptVnd", "application/vnd.github+json");
@@ -121,7 +128,7 @@ class AuthServiceImplTest {
         given(jwtUtils.createOnboardingToken("google-sub", "new-user@gmail.com")).willReturn("onboarding-token");
 
         // when
-        AuthTokenBundle result = authService.handleGoogleCallback("valid-code");
+        AuthTokenBundle result = authService.loginWithGoogle("valid-code");
 
         // then
         assertThat(result.getResponse().getIsNewUser()).isTrue();
@@ -169,7 +176,7 @@ class AuthServiceImplTest {
         given(jwtUtils.createRefreshToken(user)).willReturn("service-refresh-token");
 
         // when
-        AuthTokenBundle result = authService.handleGoogleCallback("valid-code");
+        AuthTokenBundle result = authService.loginWithGoogle("valid-code");
 
         // then
         assertThat(result.getResponse().getIsNewUser()).isFalse();
@@ -210,7 +217,7 @@ class AuthServiceImplTest {
         given(userRepository.findByEmail("dup@gmail.com")).willReturn(Optional.of(existingUser));
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGoogleCallback("dup-code"))
+        assertThatThrownBy(() -> authService.loginWithGoogle("dup-code"))
                 .isInstanceOf(DuplicateOAuthEmailException.class);
     }
 
@@ -221,7 +228,7 @@ class AuthServiceImplTest {
                 .when(authService).exchangeGoogleToken("bad-code");
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGoogleCallback("bad-code"))
+        assertThatThrownBy(() -> authService.loginWithGoogle("bad-code"))
                 .isInstanceOf(GoogleTokenExchangeFailedException.class);
     }
 
@@ -236,7 +243,7 @@ class AuthServiceImplTest {
                 .when(authService).fetchGoogleUserInfo("google-access-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGoogleCallback("bad-userinfo"))
+        assertThatThrownBy(() -> authService.loginWithGoogle("bad-userinfo"))
                 .isInstanceOf(GoogleUserInfoFetchFailedException.class);
     }
 
@@ -262,7 +269,7 @@ class AuthServiceImplTest {
                 .save(org.mockito.ArgumentMatchers.eq("onboarding:google-sub"), anyString(), org.mockito.ArgumentMatchers.eq(1800L), org.mockito.ArgumentMatchers.eq(TimeUnit.SECONDS));
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGoogleCallback("valid-code"))
+        assertThatThrownBy(() -> authService.loginWithGoogle("valid-code"))
                 .isInstanceOf(AuthRedisSaveFailedException.class);
     }
 
@@ -300,100 +307,8 @@ class AuthServiceImplTest {
                 .save(org.mockito.ArgumentMatchers.eq("refreshToken:1"), anyString(), org.mockito.ArgumentMatchers.eq(7L), org.mockito.ArgumentMatchers.eq(TimeUnit.DAYS));
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGoogleCallback("valid-code"))
+        assertThatThrownBy(() -> authService.loginWithGoogle("valid-code"))
                 .isInstanceOf(AuthRedisSaveFailedException.class);
-    }
-
-    @Test
-    void 깃허브_연동_시작_리다이렉트_URL_생성_성공() {
-        // given
-        Claims claims = org.mockito.Mockito.mock(Claims.class);
-        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
-        given(claims.getSubject()).willReturn("onboarding");
-        given(claims.get("purpose", String.class)).willReturn("onboarding");
-        given(claims.get("googleSub", String.class)).willReturn("google-sub");
-        given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
-
-        // when
-        URI result = authService.buildGithubAuthorizationRedirect("Bearer onboarding-token");
-
-        // then
-        assertThat(result.toString()).startsWith("https://github.com/login/oauth/authorize");
-        assertThat(result.toString()).contains("client_id=test-github-client-id");
-        assertThat(result.toString()).contains("redirect_uri=http://localhost:5173/github/redirect");
-        assertThat(result.toString()).contains("response_type=code");
-        assertThat(result.toString()).contains("scope=read:user%20repo");
-        assertThat(result.toString()).contains("state=onboarding-token");
-        verify(redisService).hasKey("onboarding:google-sub");
-    }
-
-    @Test
-    void 깃허브_연동_시작_Authorization_헤더_누락_실패() {
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect(null))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("Authorization 헤더가 없습니다.");
-    }
-
-    @Test
-    void 깃허브_연동_시작_Bearer_형식_오류_실패() {
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Token onboarding-token"))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("Bearer 형식");
-    }
-
-    @Test
-    void 깃허브_연동_시작_만료된_onboarding_token_실패() {
-        // given
-        given(jwtUtils.getClaims("expired-token"))
-                .willThrow(new ExpiredJwtException(null, null, "expired"));
-
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer expired-token"))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("유효하지 않은 onboarding token");
-    }
-
-    @Test
-    void 깃허브_연동_시작_purpose_불일치_실패() {
-        // given
-        Claims claims = org.mockito.Mockito.mock(Claims.class);
-        given(jwtUtils.getClaims("wrong-purpose-token")).willReturn(claims);
-        given(claims.getSubject()).willReturn("onboarding");
-        given(claims.get("purpose", String.class)).willReturn("access");
-
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer wrong-purpose-token"))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("purpose");
-    }
-
-    @Test
-    void 깃허브_연동_시작_Redis_onboarding_정보가_없으면_실패() {
-        // given
-        Claims claims = org.mockito.Mockito.mock(Claims.class);
-        given(jwtUtils.getClaims("onboarding-token")).willReturn(claims);
-        given(claims.getSubject()).willReturn("onboarding");
-        given(claims.get("purpose", String.class)).willReturn("onboarding");
-        given(claims.get("googleSub", String.class)).willReturn("google-sub");
-        given(redisService.hasKey("onboarding:google-sub")).willReturn(false);
-
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer onboarding-token"))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("Redis에 onboarding 정보가 없습니다.");
-    }
-
-    @Test
-    void 깃허브_연동_시작_서명_오류_onboarding_token_실패() {
-        // given
-        given(jwtUtils.getClaims("invalid-token")).willThrow(new JwtException("invalid signature"));
-
-        // when & then
-        assertThatThrownBy(() -> authService.buildGithubAuthorizationRedirect("Bearer invalid-token"))
-                .isInstanceOf(InvalidOnboardingTokenException.class)
-                .hasMessageContaining("유효하지 않은 onboarding token");
     }
 
     @Test
@@ -433,7 +348,7 @@ class AuthServiceImplTest {
         given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
 
         // when
-        GithubAuthTokenBundle result = authService.handleGithubCallback("valid-code", "onboarding-token");
+        GithubAuthTokenBundle result = authService.linkGithub("valid-code", "onboarding-token");
 
         // then
         assertThat(result.getResponse().getAccessToken()).isEqualTo("service-access-token");
@@ -463,7 +378,7 @@ class AuthServiceImplTest {
     @Test
     void 깃허브_콜백_state_누락_실패() {
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", null))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", null))
                 .isInstanceOf(InvalidOnboardingTokenException.class)
                 .hasMessageContaining("Authorization 헤더가 없습니다.");
     }
@@ -471,7 +386,7 @@ class AuthServiceImplTest {
     @Test
     void 깃허브_콜백_인가코드_누락_실패() {
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback(null, "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(null, "onboarding-token"))
                 .isInstanceOf(GithubAuthorizationCodeMissingException.class);
     }
 
@@ -486,7 +401,7 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
                 .isInstanceOf(InvalidOnboardingTokenException.class)
                 .hasMessageContaining("Redis에 onboarding 정보가 없습니다.");
     }
@@ -506,7 +421,7 @@ class AuthServiceImplTest {
                 .when(authService).exchangeGithubToken("valid-code", "onboarding-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
                 .isInstanceOf(GithubTokenExchangeFailedException.class);
     }
 
@@ -529,7 +444,7 @@ class AuthServiceImplTest {
                 .when(authService).fetchGithubUserInfo("github-access-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
                 .isInstanceOf(GithubUserInfoFetchFailedException.class);
     }
 
@@ -563,7 +478,7 @@ class AuthServiceImplTest {
                 .willReturn(Optional.of(githubAccount));
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
                 .isInstanceOf(DuplicateGithubAccountException.class);
     }
 
@@ -603,7 +518,7 @@ class AuthServiceImplTest {
         given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.handleGithubCallback("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
                 .isInstanceOf(AuthTokenGenerationException.class);
     }
 
@@ -645,7 +560,7 @@ class AuthServiceImplTest {
                 .when(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
 
         // when
-        GithubAuthTokenBundle result = authService.handleGithubCallback("valid-code", "onboarding-token");
+        GithubAuthTokenBundle result = authService.linkGithub("valid-code", "onboarding-token");
 
         // then
         assertThat(result.getResponse().getUserId()).isEqualTo(11L);

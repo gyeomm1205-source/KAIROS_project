@@ -4,17 +4,13 @@ import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 
-import java.net.URI;
-
 public interface AuthService {
 
-    AuthTokenBundle handleGoogleCallback(String code);
+    AuthTokenBundle loginWithGoogle(String code);
 
     AuthReissueTokenBundle reissueAccessToken(String refreshToken);
 
     void logout(String authorizationHeader);
 
-    URI buildGithubAuthorizationRedirect(String authorizationHeader);
-
-    GithubAuthTokenBundle handleGithubCallback(String code, String state);
+    GithubAuthTokenBundle linkGithub(String code, String state);
 }

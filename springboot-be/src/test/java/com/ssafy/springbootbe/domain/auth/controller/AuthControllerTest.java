@@ -32,25 +32,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.net.URI;
 import jakarta.servlet.http.Cookie;
 
-@WebMvcTest(
-        value = AuthController.class,
-        properties = {
-                "oauth.google.auth_uri=https://accounts.google.com/o/oauth2/auth",
-                "oauth.google.client_id=test-google-client-id",
-                "oauth.google.redirect_uri=http://localhost:5173/google/redirect",
-                "oauth.google.scope=openid email profile",
-                "oauth.github.auth_uri=https://github.com/login/oauth/authorize",
-                "oauth.github.client_id=test-github-client-id",
-                "oauth.github.redirect_uri=http://localhost:5173/github/redirect",
-                "oauth.github.scope=read:user repo"
-        }
-)
+@WebMvcTest(AuthController.class)
 class AuthControllerTest {
 
     @Autowired
@@ -60,18 +46,6 @@ class AuthControllerTest {
     private AuthService authService;
 
     @Test
-    void 구글_로그인_시작_리다이렉트_성공() throws Exception {
-        // when & then
-        mockMvc.perform(get("/auth/oauth2/google"))
-                .andExpect(status().isFound())
-                .andExpect(redirectedUrlPattern("https://accounts.google.com/**"))
-                .andExpect(header().string("Location", Matchers.containsString("client_id=test-google-client-id")))
-                .andExpect(header().string("Location", Matchers.containsString("redirect_uri=http://localhost:5173/google/redirect")))
-                .andExpect(header().string("Location", Matchers.containsString("response_type=code")))
-                .andExpect(header().string("Location", Matchers.containsString("scope=openid%20email%20profile")));
-    }
-
-    @Test
     void 구글_콜백_신규_유저_성공() throws Exception {
         // given
         GoogleOAuthCallbackResponse response = GoogleOAuthCallbackResponse.forNewUser(
@@ -79,11 +53,11 @@ class AuthControllerTest {
                 "new-user@gmail.com",
                 "https://image.example/profile.png"
         );
-        given(authService.handleGoogleCallback("valid-code"))
+        given(authService.loginWithGoogle("valid-code"))
                 .willReturn(AuthTokenBundle.newUser(response));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/google")
+        mockMvc.perform(get("/auth/login/google")
                         .param("code", "valid-code"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.is_new_user").value(true))
@@ -97,11 +71,11 @@ class AuthControllerTest {
     void 구글_콜백_기존_유저_성공() throws Exception {
         // given
         GoogleOAuthCallbackResponse response = GoogleOAuthCallbackResponse.forExistingUser("access-token");
-        given(authService.handleGoogleCallback("valid-code"))
+        given(authService.loginWithGoogle("valid-code"))
                 .willReturn(AuthTokenBundle.existingUser(response, "refresh-token"));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/google")
+        mockMvc.perform(get("/auth/login/google")
                         .param("code", "valid-code"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.is_new_user").value(false))
@@ -117,11 +91,11 @@ class AuthControllerTest {
     @Test
     void 구글_콜백_동일_이메일_중복_실패() throws Exception {
         // given
-        given(authService.handleGoogleCallback("dup-code"))
+        given(authService.loginWithGoogle("dup-code"))
                 .willThrow(new DuplicateOAuthEmailException("dup@gmail.com"));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/google")
+        mockMvc.perform(get("/auth/login/google")
                         .param("code", "dup-code"))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.error").value("DUPLICATE_USER"));
@@ -130,11 +104,11 @@ class AuthControllerTest {
     @Test
     void 구글_콜백_인가코드_오류_실패() throws Exception {
         // given
-        given(authService.handleGoogleCallback("bad-code"))
+        given(authService.loginWithGoogle("bad-code"))
                 .willThrow(new GoogleTokenExchangeFailedException("Google token 교환에 실패했습니다."));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/google")
+        mockMvc.perform(get("/auth/login/google")
                         .param("code", "bad-code"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
@@ -143,72 +117,28 @@ class AuthControllerTest {
     @Test
     void 구글_콜백_사용자정보_조회_실패() throws Exception {
         // given
-        given(authService.handleGoogleCallback("bad-userinfo"))
+        given(authService.loginWithGoogle("bad-userinfo"))
                 .willThrow(new GoogleUserInfoFetchFailedException("Google 사용자 정보 조회에 실패했습니다."));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/google")
+        mockMvc.perform(get("/auth/login/google")
                         .param("code", "bad-userinfo"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.error").value("SERVER_ERROR"));
     }
 
     @Test
-    void 깃허브_연동_시작_리다이렉트_성공() throws Exception {
-        // given
-        URI redirectUri = URI.create(
-                "https://github.com/login/oauth/authorize?client_id=test-github-client-id"
-                        + "&redirect_uri=http://localhost:5173/github/redirect"
-                        + "&response_type=code&scope=read:user%20repo&state=onboarding-token"
-        );
-        given(authService.buildGithubAuthorizationRedirect("Bearer onboarding-token"))
-                .willReturn(redirectUri);
-
-        // when & then
-        mockMvc.perform(get("/auth/oauth2/github")
-                        .header("Authorization", "Bearer onboarding-token"))
-                .andExpect(status().isFound())
-                .andExpect(header().string("Location", Matchers.containsString("client_id=test-github-client-id")))
-                .andExpect(header().string("Location", Matchers.containsString("state=onboarding-token")));
-    }
-
-    @Test
-    void 깃허브_연동_시작_Authorization_헤더_누락_실패() throws Exception {
-        // given
-        given(authService.buildGithubAuthorizationRedirect(null))
-                .willThrow(new InvalidOnboardingTokenException("Authorization 헤더가 없습니다."));
-
-        // when & then
-        mockMvc.perform(get("/auth/oauth2/github"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
-    }
-
-    @Test
-    void 깃허브_연동_시작_Bearer_형식_오류_실패() throws Exception {
-        // given
-        given(authService.buildGithubAuthorizationRedirect("Token onboarding-token"))
-                .willThrow(new InvalidOnboardingTokenException("Authorization 헤더는 Bearer 형식이어야 합니다."));
-
-        // when & then
-        mockMvc.perform(get("/auth/oauth2/github")
-                        .header("Authorization", "Token onboarding-token"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
-    }
-
-    @Test
     void 깃허브_콜백_성공() throws Exception {
         // given
         GithubOAuthCallbackResponse response = GithubOAuthCallbackResponse.of("service-access-token", 11L);
-        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+        given(authService.linkGithub("valid-code", "onboarding-token"))
                 .willReturn(GithubAuthTokenBundle.builder()
                         .response(response)
                         .refreshToken("service-refresh-token")
                         .build());
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("code", "valid-code")
                         .param("state", "onboarding-token"))
                 .andExpect(status().isOk())
@@ -222,11 +152,11 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_state_누락_실패() throws Exception {
         // given
-        given(authService.handleGithubCallback("valid-code", null))
+        given(authService.linkGithub("valid-code", null))
                 .willThrow(new InvalidOnboardingTokenException("Authorization 헤더가 없습니다."));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("code", "valid-code"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
@@ -235,11 +165,11 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_code_누락_실패() throws Exception {
         // given
-        given(authService.handleGithubCallback(null, "onboarding-token"))
+        given(authService.linkGithub(null, "onboarding-token"))
                 .willThrow(new GithubAuthorizationCodeMissingException());
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("state", "onboarding-token"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
@@ -248,11 +178,11 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_토큰_교환_실패() throws Exception {
         // given
-        given(authService.handleGithubCallback("bad-code", "onboarding-token"))
+        given(authService.linkGithub("bad-code", "onboarding-token"))
                 .willThrow(new GithubTokenExchangeFailedException("GitHub token 교환에 실패했습니다."));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("code", "bad-code")
                         .param("state", "onboarding-token"))
                 .andExpect(status().isUnauthorized())
@@ -262,11 +192,11 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_사용자정보_조회_실패() throws Exception {
         // given
-        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+        given(authService.linkGithub("valid-code", "onboarding-token"))
                 .willThrow(new GithubUserInfoFetchFailedException("GitHub 사용자 정보 조회에 실패했습니다."));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("code", "valid-code")
                         .param("state", "onboarding-token"))
                 .andExpect(status().isInternalServerError())
@@ -276,11 +206,11 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_중복_계정_실패() throws Exception {
         // given
-        given(authService.handleGithubCallback("valid-code", "onboarding-token"))
+        given(authService.linkGithub("valid-code", "onboarding-token"))
                 .willThrow(new DuplicateGithubAccountException("github-login"));
 
         // when & then
-        mockMvc.perform(get("/auth/oauth2/callback/github")
+        mockMvc.perform(get("/auth/link-github")
                         .param("code", "valid-code")
                         .param("state", "onboarding-token"))
                 .andExpect(status().isConflict())
