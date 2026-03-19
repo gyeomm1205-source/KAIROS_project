@@ -1,14 +1,15 @@
 package com.ssafy.springbootbe.domain.users.controller;
 
-import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
 import com.ssafy.springbootbe.domain.users.service.UsersService;
-import io.jsonwebtoken.Claims;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -19,43 +20,33 @@ import java.util.Map;
 public class UsersController {
 
     private final UsersService usersService;
-    private final JWTUtils jwtUtils;
 
     @GetMapping("/me")
     public ResponseEntity<UserProfileResponse> getMyProfile(
-            @RequestHeader("Authorization") String authorizationHeader) {
-        Long userId = extractUserId(authorizationHeader);
-        return ResponseEntity.ok(usersService.findProfile(userId));
+            @AuthenticationPrincipal LoginUserPrincipal principal) {
+        return ResponseEntity.ok(usersService.findProfile(principal.getUserId()));
     }
 
     @PatchMapping("/me/profile")
     public ResponseEntity<UserProfileUpdateResponse> updateMyProfile(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @AuthenticationPrincipal LoginUserPrincipal principal,
             @RequestBody UserProfileUpdateRequest request) {
-        Long userId = extractUserId(authorizationHeader);
-        return ResponseEntity.ok(usersService.updateProfile(userId, request));
+        return ResponseEntity.ok(usersService.updateProfile(principal.getUserId(), request));
     }
 
     @PatchMapping("/me/settings/dark-mode")
     public ResponseEntity<Map<String, Boolean>> updateDarkMode(
-            @RequestHeader("Authorization") String authorizationHeader,
+            @AuthenticationPrincipal LoginUserPrincipal principal,
             @RequestBody DarkModeUpdateRequest request) {
-        Long userId = extractUserId(authorizationHeader);
-        return ResponseEntity.ok(usersService.updateDarkMode(userId, request));
+        return ResponseEntity.ok(usersService.updateDarkMode(principal.getUserId(), request));
     }
 
     @DeleteMapping("/me")
     public ResponseEntity<Void> deleteUser(
-            @RequestHeader("Authorization") String authorizationHeader) {
-        String token = authorizationHeader.replace("Bearer ", "");
-        Long userId = extractUserId(authorizationHeader);
-        usersService.deleteUser(userId, token);
+            @AuthenticationPrincipal LoginUserPrincipal principal,
+            HttpServletRequest request) {
+        String token = request.getHeader("Authorization").substring(7);
+        usersService.deleteUser(principal.getUserId(), token);
         return ResponseEntity.noContent().build();
-    }
-
-    private Long extractUserId(String authorizationHeader) {
-        String token = authorizationHeader.replace("Bearer ", "");
-        Claims claims = jwtUtils.getClaims(token);
-        return ((Number) claims.get("userId")).longValue();
     }
 }
