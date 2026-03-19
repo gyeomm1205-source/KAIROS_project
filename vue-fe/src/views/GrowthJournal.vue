@@ -14,7 +14,7 @@
 
         <!-- Summary Cards -->
         <div class="grid-4 col-gap mb-lg">
-          <div class="brutal-panel stat-card" v-for="s in summaryStats" :key="s.label">
+          <div class="base-panel stat-card" v-for="s in summaryStats" :key="s.label">
             <div class="flex-align gap-sm mb-sm text-xs text-muted font-bold">
               <div class="icon-box-small"><i :class="s.icon" /></div>
               <span>{{ s.label }}</span>
@@ -28,7 +28,7 @@
           <!-- Left: Skill Radar & Top Skills -->
           <div class="flex-col gap-lg">
             <!-- Spider Chart -->
-            <div class="brutal-panel p-md shadow-normal text-center h-full flex-col">
+            <div class="base-panel p-md shadow-normal text-center h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-md">
                 <i class="fas fa-bullseye text-muted" /> 기술별 성장 그래프
               </h3>
@@ -96,7 +96,7 @@
             </div>
 
             <!-- Top Skills Table -->
-            <div class="brutal-panel p-md shadow-normal">
+            <div class="base-panel p-md shadow-normal">
               <h3 class="panel-title-sm mb-md">기술별 활동 현황</h3>
               <div class="flex-col gap-sm">
                 <div v-for="(s, i) in topSkills" :key="s.name" class="flex-align gap-md">
@@ -113,7 +113,7 @@
 
           <!-- Right: Monthly Activity -->
           <div class="flex-col gap-lg h-full">
-            <div class="brutal-panel p-md shadow-normal h-full flex-col">
+            <div class="base-panel p-md shadow-normal h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-lg">
                 <i class="fas fa-chart-bar text-muted" /> 월별 학습량 변화
               </h3>
@@ -144,7 +144,7 @@
         </div>
 
         <!-- Bottom Summary -->
-        <div class="brutal-panel summary-box">
+        <div class="base-panel summary-box">
           <div class="flex-start gap-md">
             <i class="fas fa-arrow-trend-up text-muted mt-xs text-lg shrink-0" />
             <div>
@@ -228,7 +228,7 @@ const getPolygonPoints = (ratio) => {
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 2px solid var(--text-primary); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
+.page-header { display: flex; align-items: center; padding: 20px 32px; height: 64px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
 .header-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
@@ -287,11 +287,11 @@ const getPolygonPoints = (ratio) => {
 .shrink-0 { flex-shrink: 0; }
 
 /* Panels & Shadows */
-.brutal-panel { background: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0; transition: transform 0.1s, box-shadow 0.1s; }
-.stat-card { padding: 20px; box-shadow: 4px 4px 0 #6b7280; }
-.stat-card:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; }
-.shadow-normal { box-shadow: 6px 6px 0 #6b7280; }
-.shadow-normal:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 #6b7280; }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
+.stat-card { padding: 24px; box-shadow: none; }
+.stat-card:hover { transform: translateY(-2px); background: var(--bg-hover); }
+.shadow-normal { box-shadow: none; }
+.shadow-normal:hover { background: var(--bg-hover); }
 
 .panel-title-sm { font-size: 15px; font-weight: 900; color: var(--text-primary); margin: 0; }
 
@@ -304,15 +304,15 @@ const getPolygonPoints = (ratio) => {
 .stat-sub { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
 /* Bars & Tracks */
-.track-bg { height: 24px; background: var(--bg-surface); border: 2px solid var(--border); width: 100%; border-radius: 0; overflow: hidden; }
-.track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s; }
+.track-bg { height: 12px; background: var(--bg-elevated); border: 1px solid var(--border); width: 100%; border-radius: 0; overflow: hidden; }
+.track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s; opacity: 0.8; }
 
-.bar-chart-track { height: 24px; border: 2px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
+.bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
 .bar-segment { height: 100%; transition: width 0.3s; }
 .color-1 { background: var(--text-primary); } 
-.color-2 { background: #6b7280; } 
-.color-3 { background: #9ca3af; } 
-.color-4 { background: #e5e7eb; }
+.color-2 { background: var(--text-secondary); opacity: 0.7; } 
+.color-3 { background: var(--text-muted); opacity: 0.5; } 
+.color-4 { background: var(--text-faint); opacity: 0.3; }
 
 .legend-box { width: 12px; height: 12px; border-radius: 2px; }
 .legend-line { width: 16px; height: 2px; }
@@ -324,6 +324,7 @@ const getPolygonPoints = (ratio) => {
 .radar-svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
 /* Bottom Summary */
-.summary-box { background: var(--bg-surface); padding: 24px; border-color: var(--border); outline: 2px dashed var(--border); box-shadow: none; outline-offset: -10px; }
+.summary-box { background: var(--bg-elevated); padding: 32px; border: 1px dashed var(--border); box-shadow: none; position: relative; }
+.summary-box::before { content: ''; position: absolute; inset: 0; border: 1px solid var(--border); pointer-events: none; }
 
 </style>

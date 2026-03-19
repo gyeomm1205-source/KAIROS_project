@@ -2,7 +2,7 @@
   <div class="loading-root">
 
     <div class="global-stepper-wrap">
-      <div class="brutal-stepper">
+      <div class="page-stepper">
         <div class="step done">1. 계정 연동</div>
         <div class="step done">2. 사전 설문</div>
         <div class="step active">3. 데이터 분석</div>
@@ -12,7 +12,9 @@
 
     <div class="loading-card">
       <div class="loading-header">
-        <i class="fas fa-cog fa-spin loading-icon" />
+        <div class="loading-icon-wrap">
+          <i class="fas fa-cog fa-spin" />
+        </div>
         <h2>ANALYZING DATA...</h2>
         <p>사용자의 활동 데이터와 기술 스택을 종합 분석 중입니다.</p>
       </div>
@@ -27,7 +29,7 @@
             </div>
             <span class="step-label" :class="{ active: i <= currentStep }">{{ step.label }}</span>
           </div>
-          <div class="brutal-progress">
+          <div class="progress-track">
             <div 
               class="progress-fill" 
               :style="{ width: i < currentStep ? '100%' : (i === currentStep ? progressWidth + '%' : '0%') }"
@@ -87,34 +89,77 @@ function statusClass(i) {
 </script>
 
 <style scoped>
-/* 여백 비율 통일 */
-.loading-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-base); padding: 72px 24px 24px; font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative; }
-.loading-card { width: 100%; max-width: 520px; background: var(--bg-surface); border: 2px solid var(--text-primary); border-radius: 0; padding: 40px; box-shadow: 12px 12px 0 #6b7280; }
+.loading-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-base); padding: 72px 24px 24px;
+  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative;
+}
+.loading-card {
+  width: 100%; max-width: 560px;
+  background: var(--bg-surface); border: 1px solid var(--border); padding: 56px 48px;
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
+/* ── Stepper ── */
 .global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
-.brutal-stepper { display: flex; gap: 8px; width: 100%; }
-.brutal-stepper .step { flex: 1; text-align: center; padding: 12px 4px; border: 2px solid var(--border); background: var(--bg-surface); color: var(--text-muted); font-size: 13px; font-weight: 900; font-family: 'Escoredream', sans-serif; transition: all 0.2s; white-space: nowrap; }
-.brutal-stepper .step.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
-.brutal-stepper .step.done { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
-@media (max-width: 640px) { .brutal-stepper .step { font-size: 11px; padding: 8px 2px; } }
+.page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
+.page-stepper .step {
+  flex: 1; text-align: center; padding: 10px 4px;
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); white-space: nowrap;
+  border-right: 1px solid var(--border);
+}
+.page-stepper .step:last-child { border-right: none; }
+.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+@media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
-.loading-header { text-align: center; border-bottom: 2px dashed var(--text-primary); padding-bottom: 24px; margin-bottom: 32px; }
-.loading-icon { font-size: 40px; color: var(--text-primary); margin-bottom: 16px; }
-.loading-header h2 { font-size: 24px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); margin-bottom: 8px; }
-.loading-header p { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+/* ── Loading header ── */
+.loading-header {
+  text-align: center; border-bottom: 1px solid var(--border);
+  padding-bottom: 40px; margin-bottom: 48px;
+}
+.loading-icon-wrap {
+  width: 72px; height: 72px; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px; color: var(--text-primary); margin: 0 auto 28px;
+  animation: rotate 2s linear infinite;
+}
+@keyframes rotate { from { border-color: var(--text-primary); } 50% { border-color: var(--border); } to { border-color: var(--text-primary); } }
+.loading-icon-wrap i { animation: none; }
 
-.steps-container { display: flex; flex-direction: column; gap: 24px; }
+.loading-header h2 {
+  font-size: 22px; font-weight: 900; letter-spacing: 0.12em;
+  color: var(--text-primary); margin-bottom: 10px;
+}
+.loading-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
+
+/* ── Steps ── */
+.steps-container { display: flex; flex-direction: column; gap: 32px; }
 .step-item { display: flex; flex-direction: column; gap: 12px; }
 
-.step-status { display: flex; align-items: center; gap: 12px; }
-.status-box { width: 32px; height: 32px; border: 2px solid var(--text-primary); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; }
+.step-status { display: flex; align-items: center; gap: 16px; }
+.status-box {
+  width: 32px; height: 32px; border: 1px solid var(--text-primary);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 900; flex-shrink: 0;
+  transition: all 0.3s;
+}
 .status-box.done { background: var(--text-primary); color: var(--bg-base); }
-.status-box.active { background: transparent; color: var(--text-primary); }
+.status-box.active { background: transparent; color: var(--text-primary); border-color: var(--text-primary); }
 .status-box.pending { border-color: var(--border); color: var(--text-faint); }
 
-.step-label { font-size: 14px; font-weight: 800; color: var(--text-faint); transition: color 0.2s; }
+.step-label { font-size: 14px; font-weight: 700; color: var(--text-faint); transition: color 0.3s; }
 .step-label.active { color: var(--text-primary); }
 
-.brutal-progress { width: 100%; height: 12px; border: 2px solid var(--text-primary); background: var(--bg-base); padding: 2px; }
+/* ── Progress bar ── */
+.progress-track {
+  width: 100%; height: 2px;
+  background: var(--border); overflow: hidden;
+  margin-left: 48px; /* 32px box + 16px gap */
+  width: calc(100% - 48px);
+}
 .progress-fill { height: 100%; background: var(--text-primary); transition: width 0.15s ease-out; }
 </style>

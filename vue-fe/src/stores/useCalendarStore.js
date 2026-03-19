@@ -1,16 +1,23 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
+import { useThemeStore } from '@/stores/useThemeStore'
 
 export const useCalendarStore = defineStore('calendar', () => {
   // ----------------------------------------------------------------
   // 1. 요청하신 신규 트랙 및 색상 팔레트 적용
   // ----------------------------------------------------------------
   const tracks = ref([
-    { id: 'main',      name: 'FRONTEND', color: '#2B6CB0', index: 0, isEnded: false }, // 스틸 블루
-    { id: 'algo',      name: 'ALGORITHM',color: '#C53030', index: 1, isEnded: false }, // 브릭 레드
-    { id: 'portfolio', name: 'PROJECT',  color: '#2F855A', index: 2, isEnded: false }, // 포레스트 그린
-    { id: 'cs',        name: 'CS STUDY', color: '#B7791F', index: 3, isEnded: false }, // 오커 옐로우
+    { id: 'main',      name: 'FRONTEND', color: '#334155', index: 0, isEnded: false }, // Slate 700
+    { id: 'algo',      name: 'ALGORITHM',color: '#991B1B', index: 1, isEnded: false }, // Red 800
+    { id: 'portfolio', name: 'PROJECT',  color: '#065F46', index: 2, isEnded: false }, // Teal 800
+    { id: 'cs',        name: 'CS STUDY', color: '#854D0E', index: 3, isEnded: false }, // Amber 800
+    { id: 'prompt',    name: 'PROMPT',   color: '#701A75', index: 4, isEnded: false }, // Fuchsia 900
+    { id: 'blog',      name: 'BLOG',     color: '#1E3A8A', index: 5, isEnded: false }, // Blue 900
   ])
+
+  // --- CONNECTIVITY SETTINGS ---
+  const showConnections = ref(true)
+  const lowIntensityLines = ref(true)
 
   // 트랙 ID 변경에 맞춰 Mock 데이터의 track 속성도 수정 완료
   const schedules = ref([
@@ -59,20 +66,14 @@ export const useCalendarStore = defineStore('calendar', () => {
   // 3. 기존 Computed 유지 (형광펜 색상 적용 완료)
   // ----------------------------------------------------------------
   const allTracks = computed(() => {
-    const list = [...tracks.value]
-    // 요청하신 형광색 2종: 코랄 핑크, 소프트 민트 적용
-    if (!list.some(t => t.id === 'prompt')) list.push({ id: 'prompt', name: '프롬프트', color: '#FB7185', index: 98, isHighlight: true, isEnded: false }) // 코랄 핑크
-    if (!list.some(t => t.id === 'blog')) list.push({ id: 'blog', name: '블로그 어시스턴트', color: '#4ADE80', index: 99, isHighlight: true, isEnded: false }) // 소프트 민트
-    return list.sort((a, b) => a.index - b.index)
+    return [...tracks.value].sort((a, b) => a.index - b.index)
   })
 
-  const HIGHLIGHT_TRACKS = [
-    { id: 'prompt', name: '프롬프트', color: '#FB7185' },
-    { id: 'blog', name: '블로그 어시스턴트', color: '#4ADE80' }
-  ]
+  const HIGHLIGHT_TRACKS = []
 
-  const activeTracks = computed(() => tracks.value.filter(t => !t.isEnded))
-  const endedTracks  = computed(() => tracks.value.filter(t => t.isEnded))
+  // Computed로 allTracks를 구독하여 색상 동기화
+  const activeTracks = computed(() => allTracks.value.filter(t => !t.isEnded && !t.isHighlight))
+  const endedTracks  = computed(() => allTracks.value.filter(t => t.isEnded && !t.isHighlight))
 
   const holidays = ref({})
   const fetchedYears = ref(new Set())
@@ -92,8 +93,7 @@ export const useCalendarStore = defineStore('calendar', () => {
           [`${year}-06-06`]: '현충일', [`${year}-08-15`]: '광복절', [`${year}-10-03`]: '개천절',
           [`${year}-10-09`]: '한글날', [`${year}-12-25`]: '기독탄신일'
         });
-        fetchedYears.value.add(year);
-        return;
+        fetchedYears.value.add(year); return;
       }
       const url = `https://apis.data.go.kr/B090041/openapi/service/SpcdeInfoService/getRestDeInfo?solYear=${year}&ServiceKey=${API_KEY}&_type=json&numOfRows=100`
       const response = await fetch(url)
@@ -109,12 +109,12 @@ export const useCalendarStore = defineStore('calendar', () => {
         })
       }
       fetchedYears.value.add(year)
-    } catch (error) {
-      console.error(`${year}년 공휴일 데이터를 불러오는데 실패했습니다:`, error)
-    }
+    } catch (error) { console.error(`${year}년 공휴일 데이터를 불러오는데 실패했습니다:`, error) }
   }
 
   const getSchedulesForDay = (dateStr) => schedules.value.filter(s => s.day === dateStr)
+  
+  // allTracks에서 조회하여 다크모드 색상까지 완벽히 가져옴
   const getTrackById = (id) => allTracks.value.find(t => t.id === id)
 
   const getAvailableIndex = () => {
@@ -128,7 +128,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     const t = tracks.value.find(x => x.id === id)
     if (t) {
       if (t.isEnded) {
-        if (activeTracks.value.length >= 4) { alert('현재 진행 중인 트랙이 4개입니다. 다른 트랙을 종료한 후 다시 활성화해주세요.'); return }
+        if (activeTracks.value.length >= 6) { alert('현재 진행 중인 트랙이 6개입니다. 다른 트랙을 종료한 후 다시 활성화해주세요.'); return }
         t.index = getAvailableIndex(); t.isEnded = false
       } else {
         t.isEnded = true
@@ -137,7 +137,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   const addTrack = (newTrack) => {
-    if (activeTracks.value.length >= 4) { alert('진행 중인 트랙은 최대 4개까지만 생성할 수 있습니다.'); return }
+    if (activeTracks.value.length >= 6) { alert('진행 중인 트랙은 최대 6개까지만 생성할 수 있습니다.'); return }
     tracks.value.push({ ...newTrack, isEnded: false, index: getAvailableIndex() })
   }
 
@@ -228,6 +228,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     toggleTrackEnded, addTrack, updateTrackObj,
     createSchedule, updateSchedule, deleteSchedule, updateConnectionsForSchedule,
     // [신규 반환값]
+    showConnections, lowIntensityLines,
     analysisResult, alternativeCurriculum, isLoadingAI,
     loadAnalysisResult, loadAlternativeCurriculum, addAiGeneratedSchedule
   }

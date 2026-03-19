@@ -2,7 +2,7 @@
   <div class="setup-root">
     
     <div class="global-stepper-wrap">
-      <div class="brutal-stepper">
+      <div class="page-stepper">
         <div class="step done">1. 계정 연동</div>
         <div class="step active">2. 사전 설문</div>
         <div class="step">3. 데이터 분석</div>
@@ -29,7 +29,7 @@
         <div class="scope-grid">
           <button
             v-for="opt in scopeOptions" :key="opt.value"
-            class="brutal-box"
+            class="scope-box"
             :class="{ active: selectedScopes.includes(opt.value) }"
             @click="toggleScope(opt.value)"
           >
@@ -52,14 +52,14 @@
         </p>
         <div class="flex-row">
           <button 
-            class="brutal-btn flex-1"
+            class="choice-btn flex-1"
             :class="{ active: scheduleInclusion === 'yes' }"
             @click="scheduleInclusion = 'yes'"
           >
             예
           </button>
           <button 
-            class="brutal-btn flex-1"
+            class="choice-btn flex-1"
             :class="{ active: scheduleInclusion === 'no' }"
             @click="scheduleInclusion = 'no'"
           >
@@ -72,7 +72,7 @@
         <label class="section-title">현재 직업 <span class="required-mark">*</span></label>
         <p class="section-desc">하나를 선택해주세요.</p>
         <div class="job-list">
-          <label v-for="j in jobOptions" :key="j" class="brutal-radio-label">
+          <label v-for="j in jobOptions" :key="j" class="radio-label">
             <input type="radio" name="job" :value="j" v-model="job" class="hidden-radio" />
             <div class="radio-custom">
               <div class="radio-dot" v-if="job === j"></div>
@@ -89,7 +89,7 @@
           <input
             v-model="techInput"
             type="text"
-            class="brutal-input"
+            class="text-input"
             placeholder="기술 스택 입력 후 Enter"
             @keydown.enter.prevent="addTech(techInput)"
           />
@@ -97,7 +97,7 @@
         </div>
         
         <div class="pill-group active-pills">
-          <span v-for="t in techs" :key="t" class="brutal-pill active">
+          <span v-for="t in techs" :key="t" class="tag active">
             {{ t }}
             <button @click="removeTech(t)"><i class="fas fa-times" /></button>
           </span>
@@ -106,7 +106,7 @@
         <div class="pill-group">
           <button 
             v-for="t in availableSuggestedTechs" :key="t" 
-            class="brutal-pill dashed"
+            class="tag dashed"
             @click="addTech(t)"
           >
             + {{ t }}
@@ -120,7 +120,7 @@
         <div class="pill-group">
           <button
             v-for="p in positionOptions" :key="p"
-            class="brutal-pill"
+            class="tag"
             :class="{ active: positions.includes(p) }"
             @click="togglePosition(p)"
           >
@@ -198,75 +198,147 @@ const submitSurvey = () => {
 </script>
 
 <style scoped>
-/* 비율 보정: top padding 감소 및 max-height 정확한 calc 계산 */
-.setup-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-base); padding: 72px 24px 24px; font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative; }
-.setup-card { width: 100%; max-width: 540px; max-height: calc(100vh - 100px); background: var(--bg-surface); border: 2px solid var(--text-primary); border-radius: 0; padding: 40px; box-shadow: 12px 12px 0 #6b7280; animation: fadeUp 0.3s ease both; overflow-y: auto; }
-@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+.setup-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-base); padding: 72px 24px 24px;
+  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative;
+}
+.setup-card {
+  width: 100%; max-width: 540px; max-height: calc(100vh - 100px);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-/* 비율 보정: 스텝퍼 상단 여백 최소화 */
+/* ── Stepper ── */
 .global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
-.brutal-stepper { display: flex; gap: 8px; width: 100%; }
-.brutal-stepper .step { flex: 1; text-align: center; padding: 12px 4px; border: 2px solid var(--border); background: var(--bg-surface); color: var(--text-muted); font-size: 13px; font-weight: 900; font-family: 'Escoredream', sans-serif; transition: all 0.2s; white-space: nowrap; }
-.brutal-stepper .step.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
-.brutal-stepper .step.done { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
-@media (max-width: 640px) { .brutal-stepper .step { font-size: 11px; padding: 8px 2px; } }
+.page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
+.page-stepper .step {
+  flex: 1; text-align: center; padding: 10px 4px;
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); white-space: nowrap;
+  border-right: 1px solid var(--border);
+}
+.page-stepper .step:last-child { border-right: none; }
+.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+@media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
+/* ── Back button ── */
 .header-top { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; }
-.btn-back { background: transparent; border: none; font-weight: 900; font-size: 13px; color: var(--text-muted); cursor: pointer; transition: color 0.1s; letter-spacing: 0.05em; padding: 0; }
-.btn-back:hover { color: var(--text-primary); }
+.btn-back {
+  background: transparent; border: 1px solid var(--border);
+  font-weight: 800; font-size: 11px; color: var(--text-muted);
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.1em;
+  padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 
-.setup-header { border-bottom: 2px solid var(--text-primary); padding-bottom: 12px; margin-bottom: 24px; text-align: center; }
-.setup-header h2 { font-size: 22px; font-weight: 900; color: var(--text-primary); margin-bottom: 8px; }
-.setup-header p { font-size: 13px; font-weight: 700; color: var(--text-muted); }
+/* ── Header ── */
+.setup-header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.setup-header h2 { font-size: 20px; font-weight: 900; color: var(--text-primary); margin-bottom: 6px; }
+.setup-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 
+/* ── Form sections ── */
 .form-section { margin-bottom: 28px; }
-.section-title { display: block; font-size: 15px; font-weight: 900; color: var(--text-primary); margin-bottom: 4px; }
-.section-desc { font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5; }
-.required-mark { color: #dc2626; font-weight: 900; margin-left: 2px; }
+.section-title { display: block; font-size: 14px; font-weight: 900; color: var(--text-primary); margin-bottom: 4px; letter-spacing: 0.03em; }
+.section-desc { font-size: 12px; font-weight: 600; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5; }
+.required-mark { color: var(--text-muted); font-weight: 900; margin-left: 2px; }
 
-.scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.brutal-box { text-align: left; padding: 16px; border: 2px solid var(--border); background: var(--bg-base); cursor: pointer; transition: all 0.1s; display: flex; flex-direction: column; gap: 8px; }
-.brutal-box:hover { border-color: var(--text-primary); }
-.brutal-box.active { border-color: var(--text-primary); background: var(--text-primary); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+/* ── Scope boxes ── */
+.scope-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.scope-box {
+  text-align: left; padding: 16px; border: 1px solid var(--border);
+  background: transparent; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex; flex-direction: column; gap: 8px;
+}
+.scope-box:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.scope-box.active { border-color: var(--text-primary); background: var(--text-primary); }
 .box-header { display: flex; align-items: center; gap: 10px; }
-.checkbox-square { width: 16px; height: 16px; border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 10px; background: var(--bg-base); color: var(--text-primary); }
-.brutal-box.active .checkbox-square { border-color: var(--bg-base); }
-.box-title { font-size: 14px; font-weight: 900; color: var(--text-primary); }
-.brutal-box.active .box-title { color: var(--bg-base); }
-.box-desc { font-size: 11px; font-weight: 700; color: var(--text-muted); padding-left: 26px; }
-.brutal-box.active .box-desc { color: var(--bg-base); opacity: 0.8; }
+.checkbox-square {
+  width: 16px; height: 16px; border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; background: transparent; color: var(--text-primary); flex-shrink: 0;
+}
+.scope-box.active .checkbox-square { border-color: var(--bg-base); background: transparent; color: var(--bg-base); }
+.box-title { font-size: 13px; font-weight: 900; color: var(--text-primary); }
+.scope-box.active .box-title { color: var(--bg-base); }
+.box-desc { font-size: 11px; font-weight: 600; color: var(--text-muted); padding-left: 26px; }
+.scope-box.active .box-desc { color: var(--bg-base); opacity: 0.7; }
 
-.flex-row { display: flex; gap: 12px; }
-.brutal-btn { padding: 14px; border: 2px solid var(--border); background: var(--bg-base); color: var(--text-primary); font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.1s; }
-.brutal-btn:hover { border-color: var(--text-primary); }
-.brutal-btn.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+/* ── Choice buttons ── */
+.flex-row { display: flex; gap: 10px; }
+.choice-btn {
+  padding: 14px; border: 1px solid var(--border); background: transparent;
+  color: var(--text-primary); font-size: 14px; font-weight: 800;
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+.choice-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.choice-btn.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); }
 
+/* ── Radio ── */
 .job-list { display: flex; flex-direction: column; gap: 10px; }
-.brutal-radio-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 800; color: var(--text-primary); }
+.radio-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .hidden-radio { display: none; }
-.radio-custom { width: 18px; height: 18px; border: 2px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.radio-custom {
+  width: 16px; height: 16px; border: 1px solid var(--text-primary);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
 .radio-dot { width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; }
 
-.input-row { display: flex; gap: 8px; margin-bottom: 20px; }
-.brutal-input { flex: 1; padding: 12px 16px; border: 2px solid var(--border); background: var(--bg-base); color: var(--text-primary); font-size: 14px; font-weight: 700; outline: none; transition: all 0.1s; font-family: 'Escoredream', sans-serif; }
-.brutal-input:focus { border-color: var(--text-primary); box-shadow: 4px 4px 0 var(--border); transform: translate(-2px, -2px); }
-.btn-add { width: 46px; border: 2px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); cursor: pointer; transition: all 0.1s; font-size: 16px; }
-.btn-add:hover { background: transparent; color: var(--text-primary); box-shadow: 4px 4px 0 var(--text-primary); transform: translate(-2px, -2px); }
+/* ── Input row ── */
+.input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+.text-input {
+  flex: 1; padding: 12px 16px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-primary);
+  font-size: 14px; font-weight: 700; outline: none;
+  transition: border-color 0.2s; font-family: inherit;
+}
+.text-input:focus { border-color: var(--text-primary); }
+.btn-add {
+  width: 44px; border: 1px solid var(--text-primary);
+  background: var(--text-primary); color: var(--bg-base);
+  cursor: pointer; transition: all 0.2s; font-size: 14px;
+}
+.btn-add:hover { background: transparent; color: var(--text-primary); }
 
+/* ── Tags / Pills ── */
 .pill-group { display: flex; flex-wrap: wrap; gap: 8px; }
-.active-pills { margin-bottom: 16px; }
+.active-pills { margin-bottom: 12px; }
+.tag {
+  padding: 6px 14px; border: 1px solid var(--border);
+  background: transparent; font-size: 12px; font-weight: 800;
+  color: var(--text-muted); cursor: pointer; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 8px; font-family: inherit;
+}
+.tag:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.tag.dashed { border-style: dashed; }
+.tag.active {
+  border-style: solid; border-color: var(--text-primary);
+  background: var(--text-primary); color: var(--bg-base);
+}
+.tag.active button {
+  background: transparent; border: none; color: var(--bg-base);
+  cursor: pointer; padding: 0; font-size: 11px; opacity: 0.7; transition: opacity 0.15s;
+}
+.tag.active button:hover { opacity: 1; }
 
-.brutal-pill { padding: 6px 14px; border: 2px solid var(--border); background: var(--bg-base); font-size: 12px; font-weight: 800; color: var(--text-muted); cursor: pointer; transition: all 0.1s; display: inline-flex; align-items: center; gap: 8px; }
-.brutal-pill:hover { border-color: var(--text-primary); color: var(--text-primary); }
-.brutal-pill.dashed { border-style: dashed; }
-.brutal-pill.active { border-style: solid; border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); }
-.brutal-pill.active button { background: transparent; border: none; color: var(--bg-base); cursor: pointer; padding: 0; font-size: 12px; transition: transform 0.1s; opacity: 0.8; }
-.brutal-pill.active button:hover { transform: scale(1.2); opacity: 1; }
-
-.btn-primary { width: 100%; padding: 18px; border: 2px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 16px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.1s; font-family: 'Space Grotesk', 'Escoredream', sans-serif; }
-.btn-primary:disabled { background: var(--bg-surface); border-color: var(--border); color: var(--text-faint); cursor: not-allowed; box-shadow: none; }
-.btn-primary:not(:disabled):hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; background: transparent; color: var(--text-primary); }
+/* ── Primary button ── */
+.btn-primary {
+  width: 100%; padding: 16px; border: 1px solid var(--text-primary);
+  background: var(--text-primary); color: var(--bg-base);
+  font-weight: 900; font-size: 14px; letter-spacing: 0.1em;
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+}
+.btn-primary:disabled {
+  background: transparent; border-color: var(--border);
+  color: var(--text-faint); cursor: not-allowed;
+}
+.btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
 </style>

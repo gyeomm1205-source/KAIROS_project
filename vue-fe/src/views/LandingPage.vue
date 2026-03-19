@@ -1,209 +1,310 @@
 <template>
-  <div class="landing-root custom-scroll" ref="scrollContainer" @scroll.passive="handleScroll">
+  <div class="landing-root" ref="scrollContainer" @mousemove="updateCursor">
+    <!-- Custom Cursor (Desktop Only) -->
+    <div class="custom-cursor" :class="{ 'is-hovering': isHovering }" :style="{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }"></div>
 
-    <header class="landing-header">
-      <div class="landing-logo">
-        <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+    <!-- HEADER -->
+    <header class="landing-header" :class="{'is-sticky': isStickyMode}">
+      <div class="landing-logo" @click="scrollToTop">
+        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
           <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
           <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
         </svg>
-        <span class="landing-logo-text">KAIROS</span>
+        <span>KAIROS</span>
       </div>
+
+      <nav class="header-nav" :class="{'nav-visible': isStickyMode}">
+        <a class="nav-anchor" :class="{ active: activeSection === 'features' }" @click.prevent="scrollToSection('features')">FEATURES</a>
+        <a class="nav-anchor" :class="{ active: activeSection === 'workflow' }" @click.prevent="scrollToSection('workflow')">WORKFLOW</a>
+        <a class="nav-anchor" :class="{ active: activeSection === 'integration' }" @click.prevent="scrollToSection('integration')">INTEGRATION</a>
+        <a class="nav-anchor" :class="{ active: activeSection === 'cta' }" @click.prevent="scrollToSection('cta')">JOIN NOW</a>
+      </nav>
+
       <div class="landing-header-actions">
-        <button class="btn-theme" @click="themeStore.toggle()">
-          <i :class="themeStore.isDark ? 'fas fa-sun' : 'fas fa-moon'" />
+        <button class="btn-outline" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/login')">
+          LOGIN
         </button>
-        <button class="btn-login" @click="$router.push('/login')">LOGIN</button>
-        <button class="btn-signup" @click="$router.push('/signup')">START NOW</button>
+        <button class="btn-solid" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
+          GET STARTED <span class="btn-arrow">→</span>
+        </button>
       </div>
     </header>
 
+    <!-- MAIN -->
     <main class="landing-main">
+
+      <!-- HERO SECTION -->
       <section class="hero-section">
-        <div class="anim-target reveal-up">
-          <div class="hero-badge">
-            <i class="fas fa-bolt" /> THE ULTIMATE AI DEV PLATFORM
+        <div class="hero-video-wrapper">
+          <video
+            ref="heroVideo"
+            class="hero-video"
+            src="/grok-video-3c4d3961-6f79-41fb-90f1-890309aacb86.mp4"
+            muted loop playsinline autoplay
+            @timeupdate="checkVideoTime"
+          ></video>
+          <div class="hero-video-overlay"></div>
+        </div>
+
+        <div class="hero-content">
+          <div class="hero-badge reveal-elem">
+            <span class="badge-dot"></span>
+            AI-POWERED DEVELOPER PLATFORM
+          </div>
+          <div class="hero-typography">
+            <div class="reveal-wrap"><h1 class="reveal-elem">SEIZE YOUR</h1></div>
+            <div class="reveal-wrap"><h1 class="reveal-elem delay-1 hero-accent">DEVELOPMENT</h1></div>
+            <div class="reveal-wrap"><h1 class="reveal-elem delay-2">TIME</h1></div>
+          </div>
+          <p class="hero-desc reveal-elem delay-3">
+            GitHub 활동 자동 연동, AI 맞춤 커리큘럼, 노드 기반 학습 캘린더.<br>
+            개발자 성장을 위한 가장 스마트한 방법.
+          </p>
+          <div class="hero-cta reveal-elem delay-4">
+            <button class="btn-cta-primary" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
+              <span>무료로 시작하기</span>
+              <span class="btn-cta-arrow">→</span>
+            </button>
+            <button class="btn-cta-ghost" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click.prevent="scrollToSection('features')">
+              더 알아보기
+            </button>
           </div>
         </div>
 
-        <h1 class="hero-title anim-target reveal-up delay-1">
-          SEIZE YOUR<br>
-          <span class="hero-title-solid">DEVELOPMENT TIME.</span>
-        </h1>
-        <p class="hero-desc anim-target reveal-up delay-2">
-          AI 기반 맞춤형 학습 경로, GitHub 활동 연동, 그리고 강력한 일정 관리.<br>
-          성장에만 집중할 수 있도록 설계된 개발자를 위한 통합 작업 공간입니다.
-        </p>
-
-        <div class="hero-cta anim-target reveal-up delay-3">
-          <button class="btn-google" @click="$router.push('/signup')">
-            <div class="google-icon">G</div>
-            CONTINUE WITH GOOGLE
-          </button>
-          <a href="#" class="btn-intro" @click.prevent="scrollToSection('features')">EXPLORE PLATFORM <i class="fas fa-arrow-down" /></a>
+        <div class="scroll-indicator" :class="{ 'is-visible': isScrollIndicatorVisible }">
+          <span class="scroll-text">SCROLL</span>
+          <div class="scroll-line"></div>
         </div>
       </section>
 
-      <div class="marquee-container border-y">
-        <div class="marquee-content">
-          <span>AI CURATION • GITHUB SYNC • NODE CALENDAR • CAREER TRACKING •</span>
-          <span>AI CURATION • GITHUB SYNC • NODE CALENDAR • CAREER TRACKING •</span>
-          <span>AI CURATION • GITHUB SYNC • NODE CALENDAR • CAREER TRACKING •</span>
+      <!-- MARQUEE -->
+      <div class="marquee-wrapper">
+        <div class="marquee-track">
+          <div class="marquee-content">
+            <span>AI CURATION</span>
+            <span class="marquee-dot">✦</span>
+            <span>GITHUB SYNC</span>
+            <span class="marquee-dot">✦</span>
+            <span>NODE CALENDAR</span>
+            <span class="marquee-dot">✦</span>
+            <span>CAREER TRACKING</span>
+            <span class="marquee-dot">✦</span>
+            <span>VELOG SYNC</span>
+            <span class="marquee-dot">✦</span>
+            <span>AI CURATION</span>
+            <span class="marquee-dot">✦</span>
+            <span>GITHUB SYNC</span>
+            <span class="marquee-dot">✦</span>
+            <span>NODE CALENDAR</span>
+            <span class="marquee-dot">✦</span>
+            <span>CAREER TRACKING</span>
+            <span class="marquee-dot">✦</span>
+            <span>VELOG SYNC</span>
+            <span class="marquee-dot">✦</span>
+          </div>
         </div>
       </div>
 
-      <nav class="feature-strip-nav" ref="navBar">
-        <a href="#" class="nav-anchor" :class="{ active: activeSection === 'features' }" @click.prevent="scrollToSection('features')"><i class="fas fa-star" /> FEATURES</a>
-        <a href="#" class="nav-anchor" :class="{ active: activeSection === 'workflow' }" @click.prevent="scrollToSection('workflow')"><i class="fas fa-project-diagram" /> WORKFLOW</a>
-        <a href="#" class="nav-anchor" :class="{ active: activeSection === 'integration' }" @click.prevent="scrollToSection('integration')"><i class="fas fa-code-branch" /> INTEGRATION</a>
-        <a href="#" class="nav-anchor" :class="{ active: activeSection === 'cta' }" @click.prevent="scrollToSection('cta')"><i class="fas fa-rocket" /> JOIN NOW</a>
-      </nav>
+      <!-- SECTION NAV (original position) -->
+      <div class="nav-placeholder" ref="navPlaceholder">
+        <nav class="section-nav" :class="{'is-hidden': isStickyMode}">
+          <a class="nav-anchor" :class="{ active: activeSection === 'features' }" @click.prevent="scrollToSection('features')">FEATURES</a>
+          <a class="nav-anchor" :class="{ active: activeSection === 'workflow' }" @click.prevent="scrollToSection('workflow')">WORKFLOW</a>
+          <a class="nav-anchor" :class="{ active: activeSection === 'integration' }" @click.prevent="scrollToSection('integration')">INTEGRATION</a>
+          <a class="nav-anchor" :class="{ active: activeSection === 'cta' }" @click.prevent="scrollToSection('cta')">JOIN NOW</a>
+        </nav>
+      </div>
 
-      <section id="features" class="content-section pt-gap">
-        <div class="section-header anim-target reveal-up">
-          <h2 class="section-title">CORE CAPABILITIES</h2>
-          <p class="section-sub">카이로스만이 제공하는 압도적인 개발자 성장 도구</p>
-        </div>
+      <!-- FEATURES SECTION -->
+      <section class="content-section" id="features">
+        <div class="section-label reveal-elem">CORE CAPABILITIES</div>
+        <div class="reveal-wrap"><h2 class="section-title reveal-elem">카이로스만의<br><em>기하학적 성장 도구</em></h2></div>
 
-        <div class="bento-grid">
-          <div class="bento-card bento-large anim-target reveal-up">
-            <div class="bento-icon"><i class="fas fa-code-branch" /></div>
-            <div class="bento-content">
-              <h3>GITHUB & VELOG SYNC</h3>
-              <p>커밋 기록과 블로그 포스팅이 자동으로 학습 캘린더에 연동됩니다. 분산된 개발 기록을 하나의 타임라인으로 통합하여 관리하세요.</p>
+        <div class="features-grid">
+          <div class="feature-card reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="fc-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
             </div>
-            <div class="bento-deco-box"></div>
+            <div class="fc-number">01</div>
+            <h3>GITHUB & VELOG SYNC</h3>
+            <p>커밋 기록과 블로그 포스팅이 자동으로 학습 캘린더에 연동됩니다. 분산된 개발 기록을 하나의 흐름으로 통합하세요.</p>
+            <div class="fc-arrow">→</div>
           </div>
-
-          <div class="bento-card anim-target reveal-up delay-1">
-            <div class="bento-icon"><i class="fas fa-robot" /></div>
-            <div class="bento-content">
-              <h3>AI CURATION</h3>
-              <p>당신의 현재 레벨과 목표 트랙을 분석하여 최적의 학습 자료와 다음 단계를 AI가 직접 추천합니다.</p>
+          <div class="feature-card reveal-elem parallax-delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="fc-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 16v-4M12 8h.01"/></svg>
             </div>
+            <div class="fc-number">02</div>
+            <h3>AI CURATION</h3>
+            <p>현재 레벨과 목표 트랙을 분석하여 최적의 학습 자료와 다음 단계를 AI가 미니멀하고 직관적으로 추천합니다.</p>
+            <div class="fc-arrow">→</div>
           </div>
-
-          <div class="bento-card anim-target reveal-up delay-2">
-            <div class="bento-icon"><i class="fas fa-project-diagram" /></div>
-            <div class="bento-content">
-              <h3>NODE GRAPH CALENDAR</h3>
-              <p>단순한 달력이 아닙니다. 학습 간의 인과관계를 그래프 형태로 연결하여 시각적인 커리큘럼 맵을 생성합니다.</p>
+          <div class="feature-card reveal-elem parallax-delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="fc-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
+            <div class="fc-number">03</div>
+            <h3>NODE CALENDAR</h3>
+            <p>단순한 달력을 넘어섰습니다. 학습 간의 인과관계를 그래프 형태로 연결하여 완벽한 커리큘럼 맵을 구축합니다.</p>
+            <div class="fc-arrow">→</div>
           </div>
         </div>
       </section>
 
-      <section id="workflow" class="content-section bg-inverted pt-gap">
-        <div class="section-header anim-target reveal-up">
-          <h2 class="section-title">HOW IT WORKS</h2>
-          <p class="section-sub">단 3단계로 끝나는 완벽한 성장 루프</p>
-        </div>
+      <!-- WORKFLOW SECTION -->
+      <section class="content-section workflow-section" id="workflow">
+        <div class="section-label reveal-elem">HOW IT WORKS</div>
+        <div class="reveal-wrap"><h2 class="section-title reveal-elem">단 3단계로 끝나는<br><em>완벽한 성장 루프</em></h2></div>
 
-        <div class="workflow-steps">
-          <div class="step-box anim-target reveal-up">
-            <div class="step-num">01</div>
-            <h3>SET YOUR TRACK</h3>
-            <p>목표하는 기술 스택(예: React, Spring)을 설정하고 커리큘럼을 등록합니다.</p>
+        <div class="workflow-list">
+          <div class="workflow-item reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="wf-left">
+              <div class="wf-index">01</div>
+            </div>
+            <div class="wf-content">
+              <h3>SET YOUR TRACK</h3>
+              <p>목표하는 기술 스택을 선언하고 커리큘럼을 등록합니다.</p>
+            </div>
+            <div class="wf-arrow">→</div>
           </div>
-          <div class="step-box anim-target reveal-up delay-1">
-            <div class="step-num">02</div>
-            <h3>AUTO TRACKING</h3>
-            <p>GitHub에 푸시하거나 블로그에 글을 쓰면 AI가 내용을 분석해 자동으로 일정을 완료 처리합니다.</p>
+          <div class="workflow-item reveal-elem delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="wf-left">
+              <div class="wf-index">02</div>
+            </div>
+            <div class="wf-content">
+              <h3>AUTO TRACKING</h3>
+              <p>GitHub 푸시와 기술 블로그 글을 AI가 스캔하여 일정을 자동 완료 처리합니다.</p>
+            </div>
+            <div class="wf-arrow">→</div>
           </div>
-          <div class="step-box anim-target reveal-up delay-2">
-            <div class="step-num">03</div>
-            <h3>GET INSIGHTS</h3>
-            <p>매주 제공되는 분석 리포트와 AI 어시스턴트의 조언을 통해 학습의 빈틈을 메웁니다.</p>
+          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="wf-left">
+              <div class="wf-index">03</div>
+            </div>
+            <div class="wf-content">
+              <h3>GET INSIGHTS</h3>
+              <p>깊이 있는 분석 리포트와 AI 멘토링을 통해 성장의 빈틈을 완전히 메웁니다.</p>
+            </div>
+            <div class="wf-arrow">→</div>
           </div>
         </div>
       </section>
 
-      <section id="integration" class="content-section pt-gap">
-        <div class="anim-target draw-line"></div>
-        <div class="stat-grid">
-          <div class="stat-item anim-target reveal-up">
-            <div class="stat-value">100%</div>
-            <div class="stat-label">데이터 동기화율</div>
-          </div>
-          <div class="stat-item anim-target reveal-up delay-1">
-            <div class="stat-value">ZERO</div>
-            <div class="stat-label">수동 입력 시간</div>
-          </div>
-          <div class="stat-item anim-target reveal-up delay-2">
-            <div class="stat-value">24/7</div>
-            <div class="stat-label">AI 멘토링 대기</div>
-          </div>
+      <!-- INTEGRATION STATS -->
+      <section class="section-stats" id="integration">
+        <div class="stat-bl reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+          <div class="stat-val">100<span class="stat-unit">%</span></div>
+          <div class="stat-lbl">DATA SYNC</div>
+          <div class="stat-desc">GitHub, Velog 자동 연동</div>
         </div>
-        <div class="anim-target draw-line"></div>
+        <div class="stat-divider"></div>
+        <div class="stat-bl reveal-elem delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+          <div class="stat-val">ZERO</div>
+          <div class="stat-lbl">MANUAL INPUT</div>
+          <div class="stat-desc">손으로 입력할 필요 없음</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-bl reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+          <div class="stat-val">24<span class="stat-unit">/7</span></div>
+          <div class="stat-lbl">AI MENTORING</div>
+          <div class="stat-desc">언제나 곁에 있는 AI 코치</div>
+        </div>
       </section>
 
-      <section id="cta" class="bottom-cta pt-gap">
-        <h2 class="cta-title anim-target reveal-up">READY TO COMMIT?</h2>
-        <p class="cta-desc anim-target reveal-up delay-1">더 이상 도구를 관리하는 데 시간을 낭비하지 마세요.<br>본질인 '개발'과 '학습'에 집중할 시간입니다.</p>
-        <div class="anim-target reveal-up delay-2">
-          <button class="btn-giant" @click="$router.push('/signup')">
-            START YOUR JOURNEY <i class="fas fa-arrow-right" />
-          </button>
+      <!-- CTA SECTION -->
+      <section class="section-cta" id="cta">
+        <div class="cta-inner">
+          <div class="reveal-wrap"><h2 class="cta-title reveal-elem">READY TO<br>COMMIT?</h2></div>
+          <p class="cta-desc reveal-elem delay-1">본질인 '개발'과 '학습'에 집중할 시간입니다.</p>
+          <div class="cta-actions reveal-elem delay-2">
+            <button class="btn-cta-giant" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
+              <span class="btn-giant-text">START YOUR JOURNEY</span>
+              <span class="btn-giant-icon">→</span>
+            </button>
+          </div>
         </div>
       </section>
     </main>
 
+    <!-- FOOTER -->
     <footer class="landing-footer">
-      <div class="footer-inner">
-        <div>
-          <div class="footer-logo">
-            <svg width="20" height="20" viewBox="0 0 28 28" fill="none">
-              <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
-              <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
-            </svg>
-            <span>KAIROS</span>
-          </div>
-          <p class="footer-tagline">개발자 성장을 위한 AI 멘토링 플랫폼</p>
+      <div class="footer-top">
+        <div class="footer-brand" @click="scrollToTop">
+          <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+            <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
+            <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
+          </svg>
+          KAIROS
         </div>
-        <div v-for="col in footerCols" :key="col.title">
-          <h4>{{ col.title }}</h4>
-          <ul>
-            <li v-for="it in col.items" :key="it">{{ it }}</li>
-          </ul>
+        <div class="footer-links">
+          <span class="footer-link" @click="scrollToSection('features')">FEATURES</span>
+          <span class="footer-link" @click="scrollToSection('workflow')">WORKFLOW</span>
+          <span class="footer-link" @click="scrollToSection('integration')">INTEGRATION</span>
+          <span class="footer-link" @click="scrollToSection('cta')">JOIN NOW</span>
         </div>
       </div>
-      <div class="footer-copy">© 2026 KAIROS. ALL RIGHTS RESERVED.</div>
+      <div class="footer-bottom">
+        <span>© 2026 KAIROS. ALL RIGHTS RESERVED.</span>
+        <span>DESIGNED FOR DEVELOPERS</span>
+      </div>
     </footer>
-
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useThemeStore } from '@/stores/useThemeStore'
-const themeStore = useThemeStore()
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
 
-const footerCols = [
-  { title: 'PRODUCT', items: ['Features', 'Integrations', 'Pricing', 'Changelog'] },
-  { title: 'SUPPORT', items: ['Documentation', 'API Reference', 'Contact Us'] },
-  { title: 'LEGAL',   items: ['Terms of Service', 'Privacy Policy'] }
-]
+/* ============================
+   1. CUSTOM CURSOR & MAGNETIC
+============================ */
+const cursor = reactive({ x: -100, y: -100 })
+const isHovering = ref(false)
 
+const updateCursor = (e) => {
+  cursor.x = e.clientX
+  cursor.y = e.clientY
+}
+
+const handleMagneticMove = (e) => {
+  const el = e.currentTarget
+  const rect = el.getBoundingClientRect()
+  const x = (e.clientX - rect.left - rect.width / 2) * 0.3
+  const y = (e.clientY - rect.top - rect.height / 2) * 0.3
+  el.style.transform = `translate(${x}px, ${y}px)`
+}
+
+const handleMagneticLeave = (e) => {
+  const el = e.currentTarget
+  el.style.transform = `translate(0px, 0px)`
+  isHovering.value = false
+}
+
+/* ============================
+   2. SCROLL REVEAL & SPY
+============================ */
+let observer = null
 const scrollContainer = ref(null)
 const activeSection = ref('')
-let observer = null
+const isStickyMode = ref(false)
+const navPlaceholder = ref(null)
 
-// 스크롤 시 섹션 감지 (Scrollspy 로직 개선)
 const handleScroll = () => {
   if (!scrollContainer.value) return
-  const sections = ['features', 'workflow', 'integration', 'cta']
   const containerTop = scrollContainer.value.getBoundingClientRect().top
-  
-  // 헤더(64) + 네비바(56) + 오차 허용치(30) = 150px
-  // 이 기준선을 통과한 가장 "마지막" 섹션이 active 되도록 덮어씌움
-  const triggerPoint = 150 
+
+  if (navPlaceholder.value) {
+    const rect = navPlaceholder.value.getBoundingClientRect()
+    isStickyMode.value = rect.top - containerTop <= 80
+  }
+
+  const sections = ['features', 'workflow', 'integration', 'cta']
+  const triggerPoint = 200
   let current = ''
 
   for (const id of sections) {
     const el = document.getElementById(id)
     if (el) {
       const rect = el.getBoundingClientRect()
-      // 섹션의 머리(top)가 네비바 바로 아래(triggerPoint)로 올라오면 선택
       if (rect.top - containerTop <= triggerPoint) {
         current = id
       }
@@ -212,214 +313,609 @@ const handleScroll = () => {
   activeSection.value = current
 }
 
-// 클릭 시 스크롤 이동
 const scrollToSection = (id) => {
   const el = document.getElementById(id)
   if (el && scrollContainer.value) {
-    // 헤더(64) + 네비바(56) 높이만큼 정확하게 빼서 스크롤 보정
-    const offset = 120 
     scrollContainer.value.scrollTo({
-      top: el.offsetTop - offset,
+      top: el.offsetTop,
       behavior: 'smooth'
     })
   }
 }
 
+const scrollToTop = () => {
+  if (scrollContainer.value) scrollContainer.value.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
+/* ============================
+   3. VIDEO TIME UPDATE
+============================ */
+const heroVideo = ref(null)
+const isScrollIndicatorVisible = ref(false)
+
+const checkVideoTime = () => {
+  if (heroVideo.value && heroVideo.value.currentTime >= 4.5 && !isScrollIndicatorVisible.value) {
+    isScrollIndicatorVisible.value = true
+  }
+}
+
+/* ============================
+   4. MOUNTED / UNMOUNTED
+============================ */
 onMounted(() => {
+  // Reveal observer
   observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        entry.target.classList.add('is-visible')
+        entry.target.classList.add('is-revealed')
       }
     })
-  }, { 
-    threshold: 0.1, 
-    rootMargin: "0px 0px -50px 0px"
-  })
+  }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' })
 
-  document.querySelectorAll('.anim-target').forEach((el) => {
-    observer.observe(el)
-  })
+  document.querySelectorAll('.reveal-elem').forEach(el => observer.observe(el))
+
+  if (scrollContainer.value) {
+    scrollContainer.value.addEventListener('scroll', handleScroll, { passive: true })
+  }
+
+  // show scroll indicator on fallback
+  setTimeout(() => { isScrollIndicatorVisible.value = true }, 5000)
 })
 
 onUnmounted(() => {
   if (observer) observer.disconnect()
+  if (scrollContainer.value) {
+    scrollContainer.value.removeEventListener('scroll', handleScroll)
+  }
 })
 </script>
 
 <style scoped>
-/* 기본 레이아웃 & 스크롤 */
+/* ──────────────────────────────
+  BASE & ROOT
+────────────────────────────── */
 .landing-root {
-  position: relative; /* 중요: el.offsetTop 계산을 위한 기준점 설정 (오차 방지) */
+  background: #000;
+  color: #fff;
   height: 100vh;
-  overflow-y: auto; 
   overflow-x: hidden;
-  background: var(--bg-base); color: var(--text-primary);
-  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif;
-  display: flex; flex-direction: column;
+  overflow-y: auto;
+  font-family: 'Escoredream', 'Helvetica Neue', Arial, sans-serif;
+  position: relative;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: auto;
+}
+.landing-root::-webkit-scrollbar { display: none; }
+.landing-root { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ──────────────────────────────
+  CUSTOM CURSOR
+────────────────────────────── */
+.custom-cursor { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .landing-root * { cursor: none !important; }
+  .custom-cursor {
+    display: block; position: fixed; top: 0; left: 0;
+    width: 14px; height: 14px; border-radius: 50%; background: #fff;
+    mix-blend-mode: difference; z-index: 99999; pointer-events: none;
+    transform: translate3d(0,0,0);
+    transition: width 0.35s cubic-bezier(0.16,1,0.3,1), height 0.35s cubic-bezier(0.16,1,0.3,1);
+    margin-top: -7px; margin-left: -7px;
+    will-change: transform;
+  }
+  .custom-cursor.is-hovering {
+    width: 56px; height: 56px; margin-top: -28px; margin-left: -28px;
+  }
 }
 
-.custom-scroll::-webkit-scrollbar { display: none; }
-.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ── 스크롤 애니메이션 클래스 ── */
-.anim-target { will-change: transform, opacity; }
-.reveal-up {
-  opacity: 0; transform: translateY(40px);
-  transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.reveal-up.is-visible { opacity: 1; transform: translateY(0); }
-.draw-line { width: 0%; height: 2px; background: var(--text-primary); transition: width 1.2s cubic-bezier(0.16, 1, 0.3, 1); }
-.draw-line.is-visible { width: 100%; }
-.delay-1 { transition-delay: 0.15s; }
-.delay-2 { transition-delay: 0.3s; }
-.delay-3 { transition-delay: 0.45s; }
-
-/* ── 마키(Marquee) 효과 ── */
-.marquee-container { overflow: hidden; white-space: nowrap; width: 100%; background: var(--bg-surface); padding: 16px 0; }
-.border-y { border-top: 2px solid var(--text-primary); border-bottom: 2px solid var(--text-primary); }
-.marquee-content {
-  display: inline-block; font-size: 14px; font-weight: 900; letter-spacing: 0.2em;
-  color: var(--text-primary); animation: marquee 20s linear infinite;
-}
-.marquee-content span { padding-right: 40px; }
-@keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-33.3333%); } }
-
-/* ── 헤더 ── */
+/* ──────────────────────────────
+  HEADER
+────────────────────────────── */
 .landing-header {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 0 40px; height: 64px;
-  border-bottom: 2px solid var(--text-primary); background: var(--bg-base);
-  position: sticky; top: 0; z-index: 100; flex-shrink: 0;
+  position: fixed; top: 0; left: 0; width: 100%; height: 72px;
+  padding: 0 40px; display: flex; justify-content: space-between; align-items: center;
+  z-index: 500;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  transition: background 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s;
 }
-.landing-logo { display: flex; align-items: center; gap: 10px; color: var(--text-primary); }
-.landing-logo-text { font-weight: 900; font-size: 20px; letter-spacing: 0.15em; }
+.landing-header.is-sticky {
+  background: rgba(0,0,0,0.88);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.landing-logo {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 18px; font-weight: 900; letter-spacing: 0.16em; color: #fff;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.landing-logo:hover { opacity: 0.7; }
+
+/* Header Nav (sticky) */
+.header-nav {
+  display: flex; align-items: center; gap: 28px;
+  opacity: 0; pointer-events: none; transform: translateY(8px);
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.header-nav.nav-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+@media (max-width: 900px) { .header-nav { display: none; } }
+
+.nav-anchor {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.18em;
+  color: rgba(255,255,255,0.45); text-decoration: none;
+  padding: 6px 0; position: relative; cursor: pointer;
+  transition: color 0.2s;
+}
+.nav-anchor::after {
+  content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 1px;
+  background: #fff; transition: width 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.nav-anchor:hover { color: #fff; }
+.nav-anchor:hover::after { width: 100%; }
+.nav-anchor.active { color: #fff; }
+.nav-anchor.active::after { width: 100%; }
+
+/* Header Actions */
 .landing-header-actions { display: flex; gap: 12px; align-items: center; }
 
-/* 회색 그림자 적용 (#6b7280) */
-.btn-theme {
-  width: 36px; height: 36px; border-radius: 0; background: transparent; border: 2px solid var(--text-primary);
-  color: var(--text-primary); cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.1s;
+.btn-outline {
+  padding: 10px 22px; background: transparent; color: rgba(255,255,255,0.8);
+  border: 1px solid rgba(255,255,255,0.25); border-radius: 40px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
+  font-family: inherit; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer;
 }
-.btn-theme:hover { background: var(--text-primary); color: var(--bg-base); transform: translate(-2px, -2px); box-shadow: 2px 2px 0 #6b7280; }
-
-.btn-login {
-  padding: 8px 20px; font-size: 13px; border: 2px solid var(--text-primary); border-radius: 0; cursor: pointer; background: transparent;
-  color: var(--text-primary); font-weight: 800; letter-spacing: 0.05em; transition: 0.1s;
+.btn-outline:hover {
+  color: #fff; border-color: rgba(255,255,255,0.7);
+  background: rgba(255,255,255,0.06);
+  transform: translateY(-1px);
 }
-.btn-login:hover { background: var(--bg-hover); transform: translate(-2px, -2px); box-shadow: 2px 2px 0 #6b7280; }
 
-.btn-signup {
-  padding: 8px 20px; font-size: 13px; border: 2px solid var(--text-primary); border-radius: 0; cursor: pointer; font-weight: 900; letter-spacing: 0.05em;
-  background: var(--text-primary); color: var(--bg-base); transition: 0.1s;
+.btn-solid {
+  padding: 10px 22px; background: #fff; color: #000;
+  border: 1px solid #fff; border-radius: 40px;
+  font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
+  font-family: inherit; display: flex; align-items: center; gap: 6px;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer;
 }
-.btn-signup:hover { background: transparent; color: var(--text-primary); transform: translate(-2px, -2px); box-shadow: 2px 2px 0 #6b7280; }
+.btn-solid:hover {
+  background: transparent; color: #fff;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(255,255,255,0.15);
+}
+.btn-arrow {
+  display: inline-block;
+  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-solid:hover .btn-arrow { transform: translateX(4px); }
 
-/* ── 히어로 ── */
+/* ──────────────────────────────
+  HERO SECTION
+────────────────────────────── */
 .hero-section {
-  display: flex; flex-direction: column; align-items: center; text-align: center; padding: 140px 24px 120px;
+  position: relative; height: 100vh; display: flex; align-items: center; justify-content: center;
+  overflow: hidden; background: #000;
 }
+.hero-video-wrapper {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 380px; height: 680px; overflow: hidden; z-index: 1;
+  border-radius: 2px; border: 1px solid rgba(255,255,255,0.08);
+}
+.hero-video { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
+.hero-video-overlay {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%);
+}
+@media (max-width: 768px) {
+  .hero-video-wrapper { width: 100vw; height: 100vh; border-radius: 0; border: none; }
+}
+
+.hero-content {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 100%; text-align: center; z-index: 2; pointer-events: none;
+  padding: 0 24px;
+}
+
 .hero-badge {
-  display: inline-flex; align-items: center; gap: 8px; padding: 6px 16px; border: 2px solid var(--text-primary);
-  color: var(--text-primary); font-size: 12px; font-weight: 900; letter-spacing: 0.1em; margin-bottom: 40px; box-shadow: 4px 4px 0 #6b7280;
+  display: inline-flex; align-items: center; gap: 8px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.55); margin-bottom: 32px;
+  border: 1px solid rgba(255,255,255,0.15); border-radius: 40px;
+  padding: 8px 16px;
 }
-.hero-title { font-size: clamp(52px, 8vw, 96px); font-weight: 900; line-height: 1.05; color: var(--text-primary); margin-bottom: 32px; letter-spacing: -0.02em; text-transform: uppercase; }
-.hero-desc { color: var(--text-muted); font-size: 18px; line-height: 1.6; font-weight: 600; max-width: 600px; margin-bottom: 56px; word-break: keep-all; }
-
-.hero-cta { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
-.btn-google { display: flex; align-items: center; gap: 12px; padding: 18px 32px; border: 2px solid var(--text-primary); cursor: pointer; background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 15px; letter-spacing: 0.05em; transition: 0.1s; box-shadow: 6px 6px 0 #6b7280; }
-.btn-google:hover { background: transparent; color: var(--text-primary); transform: translate(-2px, -2px); box-shadow: 8px 8px 0 #6b7280; }
-.google-icon { width: 24px; height: 24px; border: 2px solid var(--bg-base); display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; transition: border-color 0.1s; }
-.btn-google:hover .google-icon { border-color: var(--text-primary); }
-
-.btn-intro { display: flex; align-items: center; gap: 10px; text-decoration: none; padding: 18px 32px; border: 2px solid var(--text-primary); cursor: pointer; background: transparent; color: var(--text-primary); font-size: 15px; font-weight: 900; transition: 0.1s; letter-spacing: 0.05em; box-shadow: 4px 4px 0 #6b7280; }
-.btn-intro:hover { background: var(--bg-hover); transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; }
-
-/* ── STICKY 네비게이션 ── */
-.feature-strip-nav {
-  position: sticky; top: 64px; z-index: 90; 
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 16px;
-  background: var(--bg-surface);
-  border-bottom: 2px solid var(--text-primary);
-  padding: 12px 24px; width: 100%; height: 56px;
+.badge-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: #fff;
+  animation: pulse-dot 2s ease-in-out infinite;
 }
-.nav-anchor {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 13px; font-weight: 900; letter-spacing: 0.1em;
-  color: var(--text-primary); text-decoration: none;
-  padding: 6px 16px; border: 2px solid transparent; transition: all 0.2s;
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
 }
-.nav-anchor:hover { border-color: var(--border); }
-.nav-anchor.active {
-  background: var(--text-primary);
-  color: var(--bg-base);
-  border-color: var(--text-primary);
+
+.hero-typography {
+  display: flex; flex-direction: column; gap: 4px; margin-bottom: 28px;
+  mix-blend-mode: difference;
+}
+.hero-typography h1 {
+  font-size: clamp(48px, 7vw, 96px); line-height: 0.95; margin: 0;
+  font-weight: 900; color: #fff; letter-spacing: -0.03em; text-transform: uppercase;
+}
+.hero-accent {
+  -webkit-text-stroke: 1px rgba(255,255,255,0.4);
+  color: transparent !important;
+}
+@media (max-width: 768px) {
+  .hero-typography h1 { font-size: 13vw; }
+}
+
+.hero-desc {
+  font-size: 16px; color: rgba(255,255,255,0.6); line-height: 1.75;
+  font-weight: 400; max-width: 540px; margin: 0 auto 36px;
+  mix-blend-mode: normal; pointer-events: auto;
+}
+
+.hero-cta {
+  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  pointer-events: auto;
+}
+
+.btn-cta-primary {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 32px; background: #fff; color: #000;
+  border: none; border-radius: 50px; font-size: 14px; font-weight: 800;
+  letter-spacing: 0.04em; font-family: inherit; cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 0 0 0 rgba(255,255,255,0);
+}
+.btn-cta-primary:hover {
+  background: transparent; color: #fff;
+  box-shadow: 0 0 0 1px #fff, 0 16px 40px rgba(255,255,255,0.15);
   transform: translateY(-2px);
-  box-shadow: 4px 4px 0 #6b7280;
+}
+.btn-cta-arrow {
+  display: inline-block;
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-cta-primary:hover .btn-cta-arrow { transform: translateX(6px); }
+
+.btn-cta-ghost {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 16px 32px; background: transparent; color: rgba(255,255,255,0.7);
+  border: 1px solid rgba(255,255,255,0.2); border-radius: 50px; font-size: 14px;
+  font-weight: 600; letter-spacing: 0.04em; font-family: inherit; cursor: pointer;
+  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-cta-ghost:hover {
+  color: #fff; border-color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.06); transform: translateY(-2px);
 }
 
-/* ── 공통 섹션 스타일 ── */
-.pt-gap { padding-top: 100px; padding-bottom: 120px; }
-.content-section { display: flex; flex-direction: column; align-items: center; max-width: 1200px; margin: 0 auto; width: 100%; padding-left: 40px; padding-right: 40px; }
-.bottom-cta { text-align: center; background: var(--bg-base); border-top: 2px solid var(--text-primary); display: flex; flex-direction: column; align-items: center; }
+/* Scroll Indicator */
+.scroll-indicator {
+  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+  z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  opacity: 0; transition: opacity 1.5s cubic-bezier(0.16,1,0.3,1);
+}
+.scroll-indicator.is-visible { opacity: 1; }
+.scroll-text { font-size: 9px; font-weight: 800; letter-spacing: 0.25em; color: rgba(255,255,255,0.4); }
+.scroll-line { width: 1px; height: 48px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
+.scroll-line::after {
+  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff;
+  animation: scrollDown 2s infinite cubic-bezier(0.16,1,0.3,1);
+}
+@keyframes scrollDown {
+  0% { transform: scaleY(0) translateY(0); transform-origin: top; }
+  50% { transform: scaleY(1) translateY(0); transform-origin: top; }
+  51% { transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
 
-.bg-inverted { max-width: 100%; background: var(--text-primary); color: var(--bg-base); }
-.bg-inverted .section-title, .bg-inverted .section-sub { color: var(--bg-base); }
+/* ──────────────────────────────
+  MARQUEE
+────────────────────────────── */
+.marquee-wrapper {
+  overflow: hidden; white-space: nowrap;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding: 18px 0; background: rgba(255,255,255,0.02);
+}
+.marquee-track { display: flex; width: max-content; animation: marquee-scroll 30s linear infinite; }
+.marquee-content {
+  display: inline-flex; align-items: center; gap: 32px;
+  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; color: rgba(255,255,255,0.4);
+  padding-right: 32px;
+}
+.marquee-content span { white-space: nowrap; }
+.marquee-dot { color: rgba(255,255,255,0.2); font-size: 10px; }
+@keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
-.section-header { text-align: center; margin-bottom: 64px; }
-.section-title { font-size: 40px; font-weight: 900; letter-spacing: 0.05em; margin-bottom: 16px; }
-.section-sub { font-size: 16px; font-weight: 700; color: var(--text-muted); }
+/* ──────────────────────────────
+  SECTION NAV (original position)
+────────────────────────────── */
+.nav-placeholder {
+  width: 100%; display: flex; align-items: center; justify-content: center;
+  padding: 28px 0; border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.section-nav {
+  display: flex; align-items: center; gap: 36px;
+  transition: opacity 0.3s ease;
+}
+.section-nav.is-hidden { opacity: 0; pointer-events: none; }
+@media (max-width: 768px) { .nav-placeholder { padding: 20px 0; } }
 
-/* ── 4. FEATURES ── */
-.bento-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; width: 100%; }
-.bento-card { border: 2px solid var(--text-primary); background: var(--bg-surface); padding: 40px; display: flex; flex-direction: column; gap: 24px; box-shadow: 6px 6px 0 #6b7280; transition: 0.15s; }
-.bento-card:hover { transform: translate(-4px, -4px); box-shadow: 10px 10px 0 #6b7280; background: var(--bg-base); }
-.bento-large { grid-column: span 2; flex-direction: row; align-items: center; gap: 48px; position: relative; overflow: hidden; }
+/* ──────────────────────────────
+  REVEAL ANIMATIONS
+────────────────────────────── */
+.reveal-wrap { overflow: hidden; display: block; }
+.reveal-elem {
+  opacity: 0; transform: translateY(60px);
+  transition: transform 1s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease;
+  will-change: transform, opacity;
+}
+.reveal-elem.is-revealed { opacity: 1; transform: translateY(0); }
+.delay-1 { transition-delay: 0.12s; }
+.delay-2 { transition-delay: 0.24s; }
+.delay-3 { transition-delay: 0.36s; }
+.delay-4 { transition-delay: 0.48s; }
+.parallax-delay-1 { transition-delay: 0.1s; }
+.parallax-delay-2 { transition-delay: 0.2s; }
 
-.bento-icon { font-size: 40px; color: var(--text-primary); }
-.bento-content h3 { font-size: 24px; font-weight: 900; margin-bottom: 16px; letter-spacing: 0.05em; }
-.bento-content p { font-size: 15px; line-height: 1.6; color: var(--text-secondary); font-weight: 600; }
-.bento-deco-box { position: absolute; right: -40px; bottom: -40px; width: 160px; height: 160px; border: 4px solid var(--text-primary); opacity: 0.1; transform: rotate(15deg); }
+/* ──────────────────────────────
+  SECTION LAYOUT BASICS
+────────────────────────────── */
+.content-section { padding: 90px 40px; max-width: 1360px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
+@media (max-width: 768px) { .content-section { padding: 80px 24px; min-height: 100vh; } }
 
-/* ── 5. WORKFLOW ── */
-.workflow-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 32px; width: 100%; max-width: 1200px; padding: 0 40px; }
-.step-box { border: 2px solid var(--bg-base); padding: 40px; background: transparent; display: flex; flex-direction: column; gap: 20px; }
-.step-num { font-size: 48px; font-weight: 900; font-family: monospace; color: var(--bg-base); border-bottom: 4px solid var(--bg-base); padding-bottom: 12px; width: max-content; }
-.step-box h3 { font-size: 22px; font-weight: 900; letter-spacing: 0.05em; color: var(--bg-base); }
-.step-box p { font-size: 15px; line-height: 1.6; color: var(--bg-base); opacity: 0.8; font-weight: 600; }
+.section-label {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
+  color: rgba(255,255,255,0.35); margin-bottom: 24px; text-transform: uppercase;
+}
+.section-title {
+  font-size: clamp(36px, 4.5vw, 60px); font-weight: 900;
+  letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 72px;
+}
+.section-title em { font-style: normal; -webkit-text-stroke: 1px rgba(255,255,255,0.5); color: transparent; }
 
-/* ── 6. INTEGRATION ── */
-.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; text-align: center; }
-.stat-item { border-right: 2px solid var(--text-primary); padding: 60px 40px; }
-.stat-item:last-child { border-right: none; }
-.stat-value { font-size: 72px; font-weight: 900; font-family: monospace; letter-spacing: -0.05em; margin-bottom: 12px; color: var(--text-primary); }
-.stat-label { font-size: 16px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.1em; text-transform: uppercase; }
+/* ──────────────────────────────
+  FEATURES GRID
+────────────────────────────── */
+.features-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border: 1px solid rgba(255,255,255,0.12); gap: 0;
+}
+.feature-card {
+  background: #000; padding: 56px 40px;
+  display: flex; flex-direction: column; gap: 20px;
+  border-right: 1px solid rgba(255,255,255,0.12);
+  position: relative; overflow: hidden;
+  transition: background 0.4s cubic-bezier(0.16,1,0.3,1);
+  cursor: default;
+}
+.feature-card:last-child { border-right: none; }
 
-/* ── 7. CTA ── */
-.cta-title { font-size: 56px; font-weight: 900; letter-spacing: 0.05em; margin-bottom: 24px; color: var(--text-primary); }
-.cta-desc { font-size: 18px; font-weight: 600; color: var(--text-muted); margin-bottom: 48px; line-height: 1.6; }
-.btn-giant { display: flex; align-items: center; gap: 16px; padding: 24px 48px; background: var(--text-primary); color: var(--bg-base); border: 4px solid var(--text-primary); font-size: 20px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; box-shadow: 12px 12px 0 #6b7280; transition: 0.1s; }
-.btn-giant:hover { background: transparent; color: var(--text-primary); transform: translate(-4px, -4px); box-shadow: 16px 16px 0 #6b7280; }
+/* Hover top-line sweep effect */
+.feature-card::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
+  transform: translateX(-100%);
+  transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
+}
+.feature-card:hover::before { transform: translateX(100%); }
+.feature-card:hover { background: rgba(255,255,255,0.03); }
 
-/* ── 8. 푸터 ── */
-.landing-footer { background: var(--bg-surface); color: var(--text-primary); border-top: 2px solid var(--text-primary); padding: 64px 40px 32px; flex-shrink: 0; }
-.footer-inner { max-width: 1200px; margin: 0 auto 64px; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; }
-.footer-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; font-weight: 900; letter-spacing: 0.15em; font-size: 18px; }
-.footer-tagline { font-size: 13px; font-weight: 600; color: var(--text-muted); }
-.footer-inner h4 { font-weight: 900; margin-bottom: 20px; font-size: 14px; letter-spacing: 0.1em; }
-.footer-inner ul { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-.footer-inner li { font-size: 13px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: 0.1s; }
-.footer-inner li:hover { color: var(--text-primary); text-decoration: underline; }
-.footer-copy { max-width: 1200px; margin: 0 auto; padding-top: 24px; border-top: 2px solid var(--border); text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 0.05em; color: var(--text-muted); }
+.fc-icon {
+  width: 40px; height: 40px; color: rgba(255,255,255,0.4);
+  transition: color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.feature-card:hover .fc-icon { color: rgba(255,255,255,0.85); transform: translateY(-2px); }
 
-/* 반응형 */
+.fc-number {
+  font-size: 12px; font-family: monospace; color: rgba(255,255,255,0.2);
+  letter-spacing: 0.1em;
+}
+.feature-card h3 {
+  font-size: 20px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.3; margin: 0;
+}
+.feature-card p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; margin: 0; }
+
+.fc-arrow {
+  font-size: 18px; color: rgba(255,255,255,0.2); margin-top: auto;
+  transition: color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.feature-card:hover .fc-arrow { color: rgba(255,255,255,0.7); transform: translateX(6px); }
+
 @media (max-width: 900px) {
-  .bento-grid { grid-template-columns: 1fr; }
-  .bento-large { grid-column: span 1; flex-direction: column; align-items: flex-start; }
-  .bento-deco-box { display: none; }
-  .stat-grid { grid-template-columns: 1fr; border-top: 2px solid var(--text-primary); border-bottom: 2px solid var(--text-primary); }
-  .stat-item { border-right: none; border-bottom: 2px solid var(--text-primary); }
-  .stat-item:last-child { border-bottom: none; }
-  .footer-inner { grid-template-columns: 1fr; }
+  .features-grid { grid-template-columns: 1fr; }
+  .feature-card { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
+  .feature-card:last-child { border-bottom: none; }
+}
+
+/* ──────────────────────────────
+  WORKFLOW SECTION
+────────────────────────────── */
+.workflow-section { background: transparent; }
+.workflow-list {
+  display: flex; flex-direction: column;
+  border-top: 1px solid rgba(255,255,255,0.1);
+}
+.workflow-item {
+  display: flex; gap: 48px; padding: 56px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1); align-items: center;
+  cursor: default;
+  transition: padding-left 0.5s cubic-bezier(0.16,1,0.3,1);
+  position: relative; overflow: hidden;
+}
+/* Subtle left-fill on hover */
+.workflow-item::before {
+  content: ''; position: absolute; left: 0; top: 0;
+  width: 3px; height: 0; background: #fff;
+  transition: height 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+.workflow-item:hover::before { height: 100%; }
+.workflow-item:hover { padding-left: 20px; }
+
+.wf-left { flex-shrink: 0; }
+.wf-index {
+  font-size: 56px; font-weight: 900; letter-spacing: -0.04em;
+  color: rgba(255,255,255,0.08); line-height: 1;
+  transition: color 0.4s;
+}
+.workflow-item:hover .wf-index { color: rgba(255,255,255,0.18); }
+
+.wf-content { flex: 1; }
+.wf-content h3 {
+  font-size: 28px; font-weight: 900; margin: 0 0 12px; letter-spacing: -0.01em;
+  transition: letter-spacing 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.workflow-item:hover .wf-content h3 { letter-spacing: 0.02em; }
+.wf-content p { font-size: 16px; color: rgba(255,255,255,0.5); line-height: 1.65; margin: 0; max-width: 560px; }
+
+.wf-arrow {
+  font-size: 24px; color: rgba(255,255,255,0.15); flex-shrink: 0;
+  transition: color 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.workflow-item:hover .wf-arrow { color: rgba(255,255,255,0.6); transform: translateX(8px); }
+
+@media (max-width: 768px) {
+  .workflow-item { flex-direction: column; gap: 16px; padding: 40px 0; align-items: flex-start; }
+  .wf-index { font-size: 36px; }
+  .wf-content h3 { font-size: 22px; }
+  .wf-arrow { display: none; }
+}
+
+/* ──────────────────────────────
+  STATS SECTION
+────────────────────────────── */
+.section-stats {
+  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
+  padding: 80px 80px; align-items: center;
+  min-height: 100vh;
+  border-top: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  background: #000;
+}
+.stat-divider { width: 1px; height: 80px; background: rgba(255,255,255,0.1); }
+
+.stat-bl {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  padding: 20px 40px; cursor: default;
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.stat-bl:hover { transform: translateY(-8px); }
+
+.stat-val {
+  font-size: clamp(40px, 6vw, 72px); line-height: 1; font-weight: 900; letter-spacing: -0.04em;
+  transition: opacity 0.3s;
+}
+.stat-bl:hover .stat-val { opacity: 0.75; }
+.stat-unit { font-size: 0.5em; font-weight: 400; opacity: 0.5; vertical-align: super; }
+
+.stat-lbl {
+  font-size: 11px; font-weight: 800; letter-spacing: 0.2em;
+  color: rgba(255,255,255,0.35); margin-top: 16px; text-transform: uppercase;
+}
+.stat-desc {
+  font-size: 13px; color: rgba(255,255,255,0.25); margin-top: 8px;
+  transition: color 0.3s;
+}
+.stat-bl:hover .stat-desc { color: rgba(255,255,255,0.45); }
+
+@media (max-width: 768px) {
+  .section-stats {
+    grid-template-columns: 1fr; gap: 48px; padding: 80px 24px;
+  }
+  .stat-divider { width: 80px; height: 1px; }
+}
+
+/* ──────────────────────────────
+  CTA SECTION
+────────────────────────────── */
+.section-cta {
+  padding: 90px 40px; text-align: center;
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden;
+}
+/* animated radial background */
+.section-cta::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 60% 60% at 50% 100%, rgba(255,255,255,0.04) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cta-inner { position: relative; z-index: 1; }
+.cta-title {
+  font-size: clamp(48px, 8vw, 96px); font-weight: 900; letter-spacing: -0.03em;
+  margin: 0 0 28px; line-height: 1;
+}
+.cta-desc {
+  font-size: 18px; color: rgba(255,255,255,0.5); margin-bottom: 56px; line-height: 1.6;
+}
+.cta-actions { display: flex; justify-content: center; }
+
+.btn-cta-giant {
+  display: inline-flex; align-items: center; gap: 16px;
+  padding: 22px 52px; background: #fff; color: #000;
+  border: none; border-radius: 80px; font-size: 15px; font-weight: 800;
+  letter-spacing: 0.06em; font-family: inherit; cursor: pointer;
+  transition: all 0.5s cubic-bezier(0.16,1,0.3,1);
+  box-shadow: 0 0 0 0 rgba(255,255,255,0.3);
+}
+.btn-cta-giant:hover {
+  background: transparent; color: #fff;
+  box-shadow: 0 0 0 1px #fff, 0 24px 60px rgba(255,255,255,0.1);
+  transform: translateY(-4px) scale(1.02);
+}
+.btn-giant-text { transition: letter-spacing 0.4s cubic-bezier(0.16,1,0.3,1); }
+.btn-cta-giant:hover .btn-giant-text { letter-spacing: 0.1em; }
+.btn-giant-icon {
+  display: inline-block; font-size: 20px;
+  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.btn-cta-giant:hover .btn-giant-icon { transform: translateX(10px); }
+
+/* ──────────────────────────────
+  FOOTER
+────────────────────────────── */
+.landing-footer {
+  border-top: 1px solid rgba(255,255,255,0.1);
+  padding: 56px 40px 36px; background: #000;
+}
+.footer-top {
+  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 80px;
+}
+.footer-brand {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 16px; font-weight: 900; letter-spacing: 0.18em;
+  cursor: pointer; opacity: 0.8; transition: opacity 0.3s;
+}
+.footer-brand:hover { opacity: 1; }
+
+.footer-links { display: flex; gap: 36px; align-items: center; }
+.footer-link {
+  font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+  color: rgba(255,255,255,0.35); cursor: pointer;
+  transition: color 0.3s; position: relative;
+}
+.footer-link::after {
+  content: ''; position: absolute; bottom: -3px; left: 0;
+  width: 0; height: 1px; background: rgba(255,255,255,0.6);
+  transition: width 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+.footer-link:hover { color: rgba(255,255,255,0.8); }
+.footer-link:hover::after { width: 100%; }
+
+.footer-bottom {
+  display: flex; justify-content: space-between;
+  border-top: 1px solid rgba(255,255,255,0.08); padding-top: 28px;
+  font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 600; letter-spacing: 0.06em;
+}
+
+@media (max-width: 768px) {
+  .footer-top { flex-direction: column; gap: 32px; margin-bottom: 48px; }
+  .footer-links { flex-wrap: wrap; gap: 20px; }
+  .footer-bottom { flex-direction: column; gap: 12px; }
 }
 </style>

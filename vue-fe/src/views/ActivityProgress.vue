@@ -40,7 +40,7 @@
           </div>
 
           <!-- Quiz Content -->
-          <div v-if="!completed" class="brutal-panel p-lg">
+        <div v-if="!completed" class="base-panel p-lg">
             <div class="brutal-tag inline-tag mb-md text-xs">문제 {{ currentQ + 1 }}</div>
             <h3 class="quiz-q">{{ question.question }}</h3>
 
@@ -69,7 +69,7 @@
           </div>
 
           <!-- Completion -->
-          <div v-else class="brutal-panel p-lg text-center">
+          <div v-else class="base-panel p-lg text-center">
             <div class="score-circle mx-auto mb-md flex-center">
               {{ correctCount }}/{{ totalQ }}
             </div>
@@ -87,7 +87,7 @@
 
     <!-- Warning Modal -->
     <div v-if="showWarning" class="modal-overlay" @click.self="showWarning = false">
-      <div class="brutal-modal max-w-sm">
+      <div class="base-modal max-w-sm">
         <div class="modal-header border-none pb-0">
           <h3><i class="fas fa-exclamation-triangle text-muted" /> 진행 중인 타이머 종료</h3>
           <button class="btn-close" @click="showWarning = false"><i class="fas fa-times"/></button>
@@ -104,7 +104,7 @@
 
     <!-- Calendar Upload Modal -->
     <div v-if="showUpload" class="modal-overlay">
-      <div class="brutal-modal max-w-sm text-center">
+      <div class="base-modal max-w-sm text-center">
         <div class="p-lg">
           <div class="icon-box-muted mx-auto mb-md"><i class="fas fa-cloud-upload-alt" /></div>
           <h3 class="font-bold text-lg mb-sm">캘린더에 연동 완료!</h3>
@@ -171,8 +171,8 @@ const goToCalendar = () => {
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 2px solid var(--text-primary); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
-.header-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.page-header { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
+.header-title { font-size: 16px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
 .max-w-xl { max-width: 900px; }
@@ -180,7 +180,7 @@ const goToCalendar = () => {
 .mx-auto { margin-left: auto; margin-right: auto; }
 
 /* Typography */
-.form-title { font-size: 20px; font-weight: 900; color: var(--text-primary); }
+.form-title { font-size: 20px; font-weight: 800; color: var(--text-primary); margin: 0; letter-spacing: 0.05em; }
 .form-sub { font-size: 14px; color: var(--text-muted); font-weight: 600; }
 
 /* Utils */
@@ -215,45 +215,45 @@ const goToCalendar = () => {
 .border-none { border: none !important; }
 
 /* Custom elements */
-.btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; transition: color 0.1s; }
-.btn-back:hover { color: var(--text-primary); }
-.btn-close { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px; transition: color 0.1s; }
-.btn-close:hover { color: var(--text-primary); transform: scale(1.1); }
+.btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.btn-back:hover { color: var(--text-primary); transform: translateX(-4px); }
+.btn-close { background: transparent; border: none; font-size: 20px; color: var(--text-muted); cursor: pointer; padding: 4px; transition: color 0.3s; }
+.btn-close:hover { color: var(--text-primary); }
 
-.track-bg { height: 8px; background: var(--bg-surface); border: 1px solid var(--border); width: 100%; }
-.track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s; }
+.track-bg { height: 4px; background: transparent; border: 1px solid var(--border); width: 100%; border-radius: 4px; overflow: hidden; }
+.track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-.brutal-panel { background: var(--bg-base); border: 2px solid var(--text-primary); box-shadow: 6px 6px 0 #6b7280; display: flex; flex-direction: column; border-radius: 0; }
-.brutal-tag { padding: 4px 8px; border: 1px solid var(--border); background: var(--bg-surface); font-size: 11px; font-weight: 800; color: var(--text-muted); }
+.base-panel { background: transparent; border: 1px solid var(--border); display: flex; flex-direction: column; border-radius: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);}
+.base-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.brutal-tag { padding: 4px 10px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-primary); border-radius: 40px;}
 .inline-tag { display: inline-block; }
 
-.quiz-q { font-size: 16px; font-weight: 800; line-height: 1.5; margin: 0 0 24px 0; }
+.quiz-q { font-size: 16px; font-weight: 800; line-height: 1.6; margin: 0 0 24px 0; letter-spacing: 0.05em;}
 .options-list { display: flex; flex-direction: column; gap: 12px; }
-.option-btn { background: var(--bg-base); border: 2px solid var(--border); padding: 16px; cursor: pointer; text-align: left; display: flex; align-items: flex-start; gap: 12px; transition: all 0.1s; border-radius: 0; font-family: inherit; }
-.option-btn:hover { border-color: var(--text-primary); background: var(--bg-surface); }
-.option-btn.selected { border-color: var(--text-primary); background: var(--bg-surface); }
-.radio-circle { width: 20px; height: 20px; border: 2px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+.option-btn { background: var(--bg-surface); border: 1px solid var(--border); padding: 24px; cursor: pointer; text-align: left; display: flex; align-items: flex-start; gap: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; font-family: inherit; }
+.option-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); transform: translateX(4px); }
+.option-btn.selected { border-color: var(--text-primary); background: var(--bg-surface); box-shadow: inset 4px 0 0 var(--text-primary); }
 .option-btn.selected .radio-circle { border-color: var(--text-primary); }
-.radio-inner { width: 10px; height: 10px; background: var(--text-primary); border-radius: 50%; }
+.radio-inner { width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; }
 .option-btn span { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.5; }
 
-.btn-primary-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: var(--text-primary); color: var(--bg-base); border: 2px solid var(--text-primary); padding: 14px; font-size: 14px; font-weight: 900; box-shadow: 4px 4px 0 #6b7280; font-family: inherit; cursor: pointer; transition: all 0.1s; }
-.btn-primary-block:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; background: transparent; color: var(--text-primary); }
-.btn-primary-block:disabled { background: var(--bg-hover); border-color: var(--border); color: var(--text-muted); cursor: not-allowed; box-shadow: none; transform: none; }
+.btn-primary-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 16px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 40px; letter-spacing: 0.1em; }
+.btn-primary-block:hover:not(:disabled) { background: var(--text-primary); color: var(--bg-base); }
+.btn-primary-block:disabled { background: transparent; border-color: var(--border); color: var(--text-faint); cursor: not-allowed; }
 
-.btn-primary { background: var(--text-primary); color: var(--bg-base); border: 2px solid var(--text-primary); padding: 12px 20px; font-size: 14px; font-weight: 900; box-shadow: 4px 4px 0 #6b7280; font-family: inherit; cursor: pointer; transition: all 0.1s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-primary:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; background: transparent; color: var(--text-primary); }
-.btn-outline { background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); padding: 12px 20px; font-size: 14px; font-weight: 800; box-shadow: 4px 4px 0 #6b7280; font-family: inherit; cursor: pointer; transition: all 0.1s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-.btn-outline:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 #6b7280; background: var(--bg-surface); }
+.btn-primary { background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 14px 24px; font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 40px; letter-spacing: 0.05em; }
+.btn-primary:hover { background: var(--text-primary); color: var(--bg-base); }
+.btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border); padding: 14px 24px; font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; gap: 8px; border-radius: 40px; letter-spacing: 0.05em; }
+.btn-outline:hover { background: var(--bg-hover); border-color: var(--text-primary); }
 
-.score-circle { width: 72px; height: 72px; background: var(--bg-surface); border: 4px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 900; }
-.icon-box-muted { width: 64px; height: 64px; background: var(--bg-surface); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text-muted); border-radius: 50%; }
+.score-circle { width: 80px; height: 80px; background: transparent; border: 2px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: var(--text-primary); }
+.icon-box-muted { width: 64px; height: 64px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 28px; color: var(--text-muted); border-radius: 50%; }
 
 /* Modals */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(2px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.brutal-modal { width: 100%; display: flex; flex-direction: column; background: var(--bg-base); border: 2px solid var(--text-primary); box-shadow: 8px 8px 0 #6b7280; animation: popUp 0.15s ease-out; }
-.max-w-sm { max-width: 400px; }
-@keyframes popUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 20px 24px; border-bottom: 2px solid var(--border); }
-.modal-header h3 { font-size: 16px; font-weight: 900; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--text-primary); }
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.base-modal { width: 100%; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border); animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; border-radius: 0; }
+.max-w-sm { max-width: 440px; }
+@keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid var(--border); }
+.modal-header h3 { font-size: 16px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--text-primary); letter-spacing: 0.05em; }
 </style>

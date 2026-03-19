@@ -22,8 +22,30 @@
       <div class="legend-sep" />
     </div>
 
+    <!-- NEW: Global Toggles for Connections -->
+    <div class="grid-cell" style="grid-column: 2; grid-row: 1;">
+      <button 
+        class="legend-btn toggle-btn" 
+        :class="{ 'is-active': store.showConnections }"
+        @click="store.showConnections = !store.showConnections"
+      >
+        <i class="fas" :class="store.showConnections ? 'fa-link' : 'fa-unlink'" />
+        <span>LINES {{ store.showConnections ? 'ON' : 'OFF' }}</span>
+      </button>
+    </div>
+    <div class="grid-cell" style="grid-column: 3; grid-row: 1;">
+      <button 
+        class="legend-btn toggle-btn" 
+        :class="{ 'is-active': !store.lowIntensityLines }"
+        @click="store.lowIntensityLines = !store.lowIntensityLines"
+      >
+        <i class="fas" :class="store.lowIntensityLines ? 'fa-eye-slash' : 'fa-eye'" />
+        <span>DIM {{ store.lowIntensityLines ? 'ON' : 'OFF' }}</span>
+      </button>
+    </div>
+
     <template v-for="(track, index) in userTracks" :key="track.id">
-      <div class="grid-cell" :style="{ gridColumn: (index % 2) + 2, gridRow: Math.floor(index / 2) + 1 }">
+      <div class="grid-cell" :style="{ gridColumn: (index % 2) + 2, gridRow: Math.floor(index / 2) + 2 }">
         <button
           class="legend-btn"
           :class="{ 'is-off': hiddenSet.has(track.id) }"
@@ -36,12 +58,12 @@
       </div>
     </template>
 
-    <div class="grid-cell col-all" :style="{ gridColumn: 1, gridRow: Math.ceil(userTracks.length / 2) + 1 }" v-if="sysTracks.length > 0">
+    <div class="grid-cell col-all" :style="{ gridColumn: 1, gridRow: Math.ceil(userTracks.length / 2) + 2 }" v-if="sysTracks.length > 0">
       <div class="legend-sep legend-sep--hl" title="시스템 트랙" />
     </div>
 
     <template v-for="(track, index) in sysTracks" :key="track.id">
-      <div class="grid-cell" :style="{ gridColumn: (index % 2) + 2, gridRow: Math.ceil(userTracks.length / 2) + 1 + Math.floor(index / 2) }">
+      <div class="grid-cell" :style="{ gridColumn: (index % 2) + 2, gridRow: Math.ceil(userTracks.length / 2) + 2 + Math.floor(index / 2) }">
         <button
           class="legend-btn is-sys"
           :class="{ 'is-off': hiddenSet.has(track.id) }"
@@ -64,6 +86,7 @@ const globalHiddenSet = ref(new Set())
 
 <script setup>
 import { computed, onMounted } from 'vue'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const props = defineProps({
   hiddenTracks: { type: Object, default: () => new Set() },
@@ -71,6 +94,7 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['update:hiddenTracks', 'hover-track'])
+const store = useCalendarStore()
 
 const hiddenSet = globalHiddenSet
 const displayTracks = computed(() => props.visibleTracks)
@@ -134,6 +158,10 @@ function getHlStyle(track) {
 
 .legend-btn.is-off { opacity: 0.4; border-style: dashed; }
 .legend-btn.is-off .legend-name { text-decoration: line-through; }
+
+.toggle-btn { gap: 6px; border-radius: 40px; border-color: var(--border); color: var(--text-muted); padding: 4px 10px; }
+.toggle-btn.is-active { border-color: var(--text-primary); color: var(--text-primary); border-style: solid; font-weight: 900; }
+.toggle-btn i { font-size: 10px; }
 
 .all-dots { display: flex; align-items: center; }
 .all-dot { width: 8px; height: 8px; border-radius: 0; margin-right: -2px; border: 1px solid var(--bg-base); flex-shrink: 0; }

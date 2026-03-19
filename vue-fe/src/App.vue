@@ -37,75 +37,61 @@ watch(themeClass, (cls) => {
   --month-row-height: 150px;
 }
 
-/* ── 다크 테마 (기본) ── */
+/* ── 다크 테마 (Monochrome Minimalism 기본) ── */
 .theme-dark, body.theme-dark {
   --bg-base:      #000000;
-  --bg-surface:   #0a0a0a;
-  --bg-elevated:  #111111;
-  --bg-hover:     #1a1a1a;
-  --border:       #333333;
-  --border-mid:   #555555;
+  --bg-surface:   #000000;
+  --bg-elevated:  #0a0a0a;
+  --bg-hover:     rgba(255,255,255,0.05);
+  --border:       rgba(255,255,255,0.15);
+  --border-mid:   rgba(255,255,255,0.3);
   --text-primary: #ffffff;
-  --text-secondary:#cccccc;
-  --text-muted:   #888888;
-  --text-faint:   #444444;
+  --text-secondary:rgba(255,255,255,0.8);
+  --text-muted:   rgba(255,255,255,0.5);
+  --text-faint:   rgba(255,255,255,0.3);
   --accent:       #ffffff;
-  --accent-glow:  rgba(255,255,255,0.15);
-  --sat-color:    #aaaaaa;
-  --sun-color:    #aaaaaa;
-  --today-bg:     rgba(255,255,255,0.08);
-  --today-border: rgba(255,255,255,0.4);
-  --node-border:  var(--bg-surface);
-  --scrollbar-thumb: #333333;
+  --accent-glow:  rgba(255,255,255,0.1);
+  --scrollbar-thumb: rgba(255,255,255,0.2);
   --scrollbar-track: #000000;
   
   /* ── 모달 전용 ── */
-  --modal-bg:            #0a0a0a;
-  --modal-border:        #333333;
+  --modal-bg:            #000000;
+  --modal-border:        rgba(255,255,255,0.15);
   --modal-text:          #ffffff;
-  --modal-sub:           #888888;
-  --modal-divider:       #222222;
-  --modal-input-bg:      #000000;
-  --modal-input-focus-bg:#111111;
-  --modal-shadow:
-    0 0 0 1px rgba(255,255,255,0.1) inset,
-    0 32px 72px rgba(0,0,0,0.9);
+  --modal-sub:           rgba(255,255,255,0.5);
+  --modal-divider:       rgba(255,255,255,0.15);
+  --modal-input-bg:      transparent;
+  --modal-input-focus-bg:rgba(255,255,255,0.05);
+  --modal-shadow:        0 0 0 1px rgba(255,255,255,0.15);
   color-scheme: dark;
 }
 
-/* ── 라이트 테마 ── */
+/* ── 라이트 테마 (Monochrome Minimalism 옵션) ── */
 .theme-light, body.theme-light {
   --bg-base:      #ffffff;
-  --bg-surface:   #f5f5f5;
-  --bg-elevated:  #eeeeee;
-  --bg-hover:     #e0e0e0;
-  --border:       #000000;
-  --border-mid:   #666666;
+  --bg-surface:   #ffffff;
+  --bg-elevated:  #f5f5f5;
+  --bg-hover:     rgba(0,0,0,0.05);
+  --border:       rgba(0,0,0,0.15);
+  --border-mid:   rgba(0,0,0,0.3);
   --text-primary: #000000;
-  --text-secondary:#333333;
-  --text-muted:   #666666;
-  --text-faint:   #999999;
+  --text-secondary:rgba(0,0,0,0.8);
+  --text-muted:   rgba(0,0,0,0.5);
+  --text-faint:   rgba(0,0,0,0.3);
   --accent:       #000000;
   --accent-glow:  rgba(0,0,0,0.1);
-  --sat-color:    #555555;
-  --sun-color:    #555555;
-  --today-bg:     rgba(0,0,0,0.04);
-  --today-border: rgba(0,0,0,0.35);
-  --node-border:  #ffffff;
-  --scrollbar-thumb: #cccccc;
-  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: rgba(0,0,0,0.2);
+  --scrollbar-track: #ffffff;
   
   /* ── 모달 전용 ── */
   --modal-bg:            #ffffff;
-  --modal-border:        #000000;
+  --modal-border:        rgba(0,0,0,0.15);
   --modal-text:          #000000;
-  --modal-sub:           #666666;
-  --modal-divider:       #cccccc;
-  --modal-input-bg:      #f9f9f9;
-  --modal-input-focus-bg:#ffffff;
-  --modal-shadow:
-    0 0 0 1px rgba(0,0,0,1) inset,
-    0 16px 40px rgba(0,0,0,0.1);
+  --modal-sub:           rgba(0,0,0,0.5);
+  --modal-divider:       rgba(0,0,0,0.15);
+  --modal-input-bg:      transparent;
+  --modal-input-focus-bg:rgba(0,0,0,0.05);
+  --modal-shadow:        0 0 0 1px rgba(0,0,0,0.15);
   color-scheme: light;
 }
 
@@ -167,6 +153,41 @@ body {
 
 /* 전역 선택 색상 - 흑백 반전 */
 ::selection { background: var(--text-primary); color: var(--bg-base); }
+
+/* ────────────────────────────────────
+   GLOBAL UTILITIES (Monochrome & Locomotive)
+──────────────────────────────────── */
+
+/* 1. Scroll Reveal utilities */
+.reveal-wrap { overflow: hidden; display: block; }
+.reveal-elem {
+  opacity: 0; transform: translateY(110%);
+  transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 1.2s ease;
+  will-change: transform, opacity;
+}
+.reveal-elem.is-revealed { opacity: 1; transform: translateY(0); }
+.delay-1 { transition-delay: 0.15s; }
+.delay-2 { transition-delay: 0.3s; }
+
+/* 2. Magnetic Buttons Base */
+.btn-magnetic {
+  padding: 12px 24px; background: transparent; color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 40px;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.05em;
+  transition: background 0.3s, color 0.3s, border-color 0.3s, transform 0.1s ease-out;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: inherit; white-space: nowrap; cursor: pointer;
+}
+.btn-magnetic:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.btn-magnetic.btn-primary { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.btn-magnetic.btn-primary:hover { background: var(--bg-hover); color: var(--text-primary); }
+
+/* 3. Global Section Defaults */
+.content-section { padding: 120px 40px; max-width: 1400px; margin: 0 auto; }
+.section-title { font-size: clamp(32px, 5vw, 56px); font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; margin: 0 0 16px 0; }
+.section-sub { font-size: 18px; color: var(--text-muted); font-weight: 500; }
+.border-y { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+
 
 /* ────────────────────────────────────
    Teleport 전역 패널: BranchLegend 드롭다운

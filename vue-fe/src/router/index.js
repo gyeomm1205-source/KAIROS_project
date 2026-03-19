@@ -5,7 +5,6 @@ import SignUpPage from '../views/SignUpPage.vue'
 import SetupPage from '../views/SetupPage.vue'
 import DashboardPage from '../views/DashboardPage.vue'
 import CalendarPage from '../views/CalendarPage.vue'
-import StudyCalendarPage from '../views/StudyCalendarPage.vue'
 import AnalysisPage from '../views/AnalysisPage.vue'
 // 와이어프레임에서 추가된 세부 분석/결과 페이지 (새로 생성 필요)
 import AnalysisResultPage from '../views/AnalysisResultPage.vue' 
@@ -20,7 +19,6 @@ import ActivityProgress from '../views/ActivityProgress.vue'
 import QuizPage from '../views/QuizPage.vue'
 import QuizActivityPage from '../views/QuizActivityPage.vue'
 import FeedbackPage from '../views/FeedbackPage.vue'
-import PromptPage from '../views/PromptPage.vue'
 import HistoryPage from '../views/HistoryPage.vue'
 import GrowthJournal from '../views/GrowthJournal.vue'
 import MyPage from '../views/MyPage.vue'
@@ -40,7 +38,6 @@ const routes = [
   // 메인 서비스
   { path: '/dashboard', name: 'Dashboard', component: DashboardPage },
   { path: '/calendar', name: 'Calendar', component: CalendarPage }, // GitHub 캘린더 100% 유지
-  { path: '/study-calendar', name: 'StudyCalendar', component: StudyCalendarPage },
   
   // 분석 및 결과
   { path: '/analyze', name: 'Analysis', component: AnalysisPage },
@@ -63,7 +60,6 @@ const routes = [
   { path: '/feedback', name: 'Feedback', component: FeedbackPage },
   
   // 기록 및 마이페이지
-  { path: '/prompt', name: 'Prompt', component: PromptPage },
   { path: '/history', name: 'History', component: HistoryPage },
   { path: '/history/growth', name: 'GrowthJournal', component: GrowthJournal },
   { path: '/mypage', name: 'MyPage', component: MyPage },

@@ -9,30 +9,9 @@
     </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-group">
-        <button 
-          class="nav-item nav-toggle" 
-          :class="{ 'active': $route.path.startsWith('/calendar') || $route.path.startsWith('/study-calendar') || $route.path.startsWith('/prompt') }"
-          @click="toggleCalendarMenu"
-        >
-          <div class="nav-toggle-left">
-            <i class="fas fa-calendar-alt" /> CALENDAR
-          </div>
-          <i class="fas" :class="isCalendarMenuOpen ? 'fa-chevron-up' : 'fa-chevron-down'" />
-        </button>
-        
-        <div v-show="isCalendarMenuOpen" class="nav-sub-menu">
-          <router-link to="/calendar" class="nav-sub-item" active-class="active">
-            <div class="bullet"></div> CALENDAR
-          </router-link>
-          <router-link to="/study-calendar" class="nav-sub-item" active-class="active">
-            <div class="bullet"></div> STUDY CALENDAR
-          </router-link>
-          <router-link to="/prompt" class="nav-sub-item" active-class="active">
-            <div class="bullet"></div> PROMPT
-          </router-link>
-        </div>
-      </div>
+      <router-link to="/calendar" class="nav-item" active-class="active">
+        <i class="fas fa-calendar-alt" /> CALENDAR
+      </router-link>
       <router-link to="/recommend" class="nav-item" active-class="active">
         <i class="fas fa-compass" /> RECOMMEND
       </router-link>
@@ -76,12 +55,6 @@ const isVelogSyncing = ref(false)
 const showToast = ref(false)
 const toastMsg = ref('')
 
-// 캘린더 드랍다운 토글 상태
-const isCalendarMenuOpen = ref(false)
-const toggleCalendarMenu = () => {
-  isCalendarMenuOpen.value = !isCalendarMenuOpen.value
-}
-
 const handleSync = (type) => {
   if (type === 'github') isGithubSyncing.value = true
   else isVelogSyncing.value = true
@@ -99,41 +72,94 @@ const handleSync = (type) => {
 </script>
 
 <style scoped>
-.app-sidebar { width: 240px; height: 100vh; background: var(--bg-surface); border-right: 2px solid var(--text-primary); display: flex; flex-direction: column; flex-shrink: 0; font-family: 'Space Grotesk', 'Escoredream', sans-serif; position: relative; z-index: 100; }
-.sidebar-header { padding: 24px; display: flex; align-items: center; gap: 12px; color: var(--text-primary); border-bottom: 2px solid var(--text-primary); cursor: pointer; transition: background 0.2s; }
-.sidebar-header:hover { background: var(--bg-base); }
+.app-sidebar { 
+  width: 260px; height: 100vh; 
+  background: var(--bg-base); 
+  border-right: 1px solid var(--border); 
+  display: flex; flex-direction: column; flex-shrink: 0; 
+  font-family: 'Escoredream', sans-serif; 
+  position: relative; z-index: 100; 
+}
+.sidebar-header { 
+  height: 64px; padding: 0 24px; 
+  display: flex; align-items: center; gap: 12px; 
+  color: var(--text-primary); 
+  border-bottom: 1px solid var(--border); 
+  cursor: pointer; transition: background 0.3s; 
+}
+.sidebar-header:hover { background: var(--bg-hover); }
 .logo-text { font-size: 20px; font-weight: 900; letter-spacing: 0.15em; }
 
-.sidebar-nav { flex: 1; padding: 24px 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; }
+.sidebar-nav { 
+  flex: 1; padding: 32px 16px; 
+  display: flex; flex-direction: column; gap: 4px; 
+  overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; 
+}
 .sidebar-nav::-webkit-scrollbar { display: none; }
 
-.nav-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; font-size: 14px; font-weight: 900; color: var(--text-primary); text-decoration: none; border: 2px solid transparent; transition: all 0.1s; letter-spacing: 0.05em; cursor: pointer; background: transparent; width: 100%; text-align: left; font-family: inherit; }
-.nav-item:hover { border-color: var(--text-primary); background: var(--bg-base); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #6b7280; }
-.nav-item.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
+.nav-item { 
+  display: flex; align-items: center; gap: 16px; 
+  padding: 16px; 
+  font-size: 13px; font-weight: 700; color: var(--text-muted); 
+  text-decoration: none; border: 1px solid transparent; 
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); 
+  letter-spacing: 0.1em; cursor: pointer; background: transparent; 
+  width: 100%; text-align: left; font-family: inherit; border-radius: 8px;
+}
+.nav-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+.nav-item.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--border); }
 .nav-item i { font-size: 16px; width: 20px; text-align: center; }
 
 .nav-toggle { justify-content: space-between; }
-.nav-toggle-left { display: flex; align-items: center; gap: 12px; }
+.nav-toggle-left { display: flex; align-items: center; gap: 16px; }
 
-.nav-sub-menu { display: flex; flex-direction: column; gap: 8px; padding-left: 16px; margin-top: 8px; margin-bottom: 8px; border-left: 2px dashed var(--border); margin-left: 24px; animation: slideDown 0.2s ease-out; }
-@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.nav-sub-menu { 
+  display: flex; flex-direction: column; gap: 4px; 
+  padding-left: 16px; margin: 4px 0 12px 24px; 
+  border-left: 1px dashed var(--border-mid); 
+  animation: slideDown 0.2s ease-out; 
+}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-.nav-sub-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-size: 13px; font-weight: 800; color: var(--text-muted); text-decoration: none; border: 2px solid transparent; transition: all 0.1s; letter-spacing: 0.05em; }
-.nav-sub-item .bullet { width: 6px; height: 6px; background: var(--border); transition: all 0.1s; }
-.nav-sub-item:hover { color: var(--text-primary); border-color: var(--text-primary); background: var(--bg-base); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #6b7280; }
+.nav-sub-item { 
+  display: flex; align-items: center; gap: 12px; 
+  padding: 12px; font-size: 12px; font-weight: 700; 
+  color: var(--text-faint); text-decoration: none; 
+  transition: all 0.2s; letter-spacing: 0.05em; border-radius: 6px;
+}
+.nav-sub-item .bullet { width: 4px; height: 4px; border-radius: 50%; background: var(--border-mid); transition: all 0.2s; }
+.nav-sub-item:hover { color: var(--text-primary); background: var(--bg-hover); }
 .nav-sub-item:hover .bullet { background: var(--text-primary); }
-.nav-sub-item.active { color: var(--bg-base); background: var(--text-primary); border-color: var(--text-primary); box-shadow: 4px 4px 0 #6b7280; transform: translate(-2px, -2px); }
-.nav-sub-item.active .bullet { background: var(--bg-base); }
+.nav-sub-item.active { color: var(--text-primary); background: var(--bg-hover); }
+.nav-sub-item.active .bullet { background: var(--text-primary); box-shadow: 0 0 4px var(--text-primary); }
 
 /* 수동 동기화 섹션 */
-.sync-section { padding: 24px 16px; border-top: 2px solid var(--text-primary); background: var(--bg-base); display: flex; flex-direction: column; gap: 12px; }
-.sync-title { font-size: 11px; font-weight: 900; color: var(--text-muted); letter-spacing: 0.1em; margin-bottom: 4px; padding-left: 4px; }
-.btn-sync { display: flex; align-items: center; gap: 10px; padding: 12px; background: transparent; border: 2px solid var(--border); color: var(--text-primary); font-size: 12px; font-weight: 800; cursor: pointer; transition: all 0.1s; font-family: inherit; letter-spacing: 0.05em; }
-.btn-sync:hover:not(:disabled) { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #6b7280; }
-.btn-sync:disabled { opacity: 0.6; cursor: not-allowed; }
+.sync-section { 
+  padding: 24px 16px; 
+  border-top: 1px solid var(--border); 
+  background: var(--bg-base); 
+  display: flex; flex-direction: column; gap: 12px; 
+}
+.sync-title { font-size: 10px; font-weight: 900; color: var(--text-faint); letter-spacing: 0.15em; margin-bottom: 4px; padding-left: 4px; }
+.btn-sync { 
+  display: flex; align-items: center; gap: 12px; 
+  padding: 14px; background: transparent; 
+  border: 1px solid var(--border); border-radius: 40px;
+  color: var(--text-muted); font-size: 12px; font-weight: 700; 
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  font-family: inherit; letter-spacing: 0.1em; 
+}
+.btn-sync:hover:not(:disabled) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.btn-sync:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* 토스트 메시지 */
-.sync-toast { position: fixed; bottom: 24px; left: 264px; background: var(--text-primary); color: var(--bg-base); padding: 16px 24px; font-size: 13px; font-weight: 800; border: 2px solid var(--text-primary); box-shadow: 6px 6px 0 #6b7280; display: flex; align-items: center; gap: 10px; z-index: 1000; }
-.toast-enter-active, .toast-leave-active { transition: all 0.3s ease; }
-.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(20px); }
+.sync-toast { 
+  position: fixed; bottom: 24px; left: 284px; 
+  background: var(--text-primary); color: var(--bg-base); 
+  padding: 16px 24px; font-size: 13px; font-weight: 700; 
+  border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; 
+  z-index: 1000; border-radius: 40px;
+}
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(20px) scale(0.95); }
 </style>

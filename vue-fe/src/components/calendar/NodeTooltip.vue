@@ -1,15 +1,9 @@
 <template>
-  <Transition name="tooltip-fade">
-    <div
-      v-if="visible"
-      ref="tooltipEl"
-      class="schedule-tooltip"
-      :style="posStyle"
-      @click.stop
-    >
-      <div class="tooltip-time-row">
-        <i class="fas fa-clock" />
-        <span>{{ tooltip.time }}</span>
+  <div class="tooltip-wrapper retro-modal" @click.stop>
+    <div class="tooltip-header">
+      <div class="header-track retro-badge" :style="{ color: trackColor, borderColor: trackColor }">
+        <span class="track-dot" :style="{ background: trackColor }"></span>
+        {{ trackName }}
       </div>
       <div class="tooltip-title">{{ tooltip.title }}</div>
       <div v-if="tooltip.tags?.length" class="tooltip-tags">
@@ -24,7 +18,26 @@
         </button>
       </div>
     </div>
-  </Transition>
+
+    <div class="tooltip-body terminal-bg">
+      <div class="detail-row">
+        <i class="fas fa-calendar-day detail-icon" />
+        <span class="detail-text">{{ schedule.day }}</span>
+      </div>
+      <div class="detail-row" v-if="schedule.tooltip?.time">
+        <i class="fas fa-clock detail-icon" />
+        <span class="detail-text">{{ schedule.tooltip.time }}</span>
+      </div>
+      
+      <div class="title-wrap">
+        <h4 class="tooltip-title">{{ schedule.tooltip?.title || schedule.text }}</h4>
+      </div>
+
+      <div class="tags-wrap" v-if="schedule.tooltip?.tags?.length">
+        <span v-for="tag in schedule.tooltip.tags" :key="tag" class="tag-chip retro-badge text-accent-1">#{{ tag }}</span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -85,10 +98,12 @@ watch(() => props.visible, async (val) => {
 
   posStyle.value = { ...vertStyle, ...horizStyle }
 })
+defineEmits(['edit', 'delete', 'close'])
 </script>
 
 <style scoped>
-.schedule-tooltip {
+/* 💡 브루탈리즘 툴팁 팝업 스타일 */
+.retro-modal {
   position: absolute;
   width: 220px;
   background: var(--bg-base);

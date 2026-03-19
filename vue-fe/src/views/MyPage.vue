@@ -9,7 +9,7 @@
 
       <div class="content-inner max-w-xl mx-auto">
         <!-- Profile Summary -->
-        <div class="brutal-panel p-lg mb-md shadow-normal flex-align gap-lg">
+        <div class="base-panel p-lg mb-md shadow-normal flex-align gap-lg">
           <div class="avatar-circle">JK</div>
           <div class="flex-col min-w-0">
             <h2 class="profile-name">김정현</h2>
@@ -50,7 +50,7 @@
         </div>
 
         <!-- Additional Info -->
-        <div class="info-note brutal-panel shadow-none">
+        <div class="info-note base-panel shadow-none">
           <div class="flex-start gap-md">
             <i class="fas fa-shield-alt text-muted mt-xs text-sm shrink-0" />
             <p class="text-sm text-muted font-bold lh-lg m-0">
@@ -66,6 +66,7 @@
 <script setup>
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { useThemeStore } from '@/stores/useThemeStore'
 
 const router = useRouter()
 </script>
@@ -105,8 +106,13 @@ const router = useRouter()
 .lh-lg { line-height: 1.6; }
 
 /* Panels & Shadows */
-.brutal-panel { background: var(--bg-base); border: 2px solid var(--text-primary); border-radius: 0; transition: transform 0.1s, box-shadow 0.1s; background: var(--bg-surface); }
-.shadow-normal { box-shadow: 6px 6px 0 #6b7280; }
+.base-panel { 
+  background: transparent; 
+  border: 1px solid var(--border); 
+  border-radius: 0; 
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; 
+}
+.shadow-normal { box-shadow: none; }
 .shadow-none { box-shadow: none; }
 
 /* Profile Area */
@@ -116,16 +122,31 @@ const router = useRouter()
 .profile-meta { font-size: 12px; font-weight: 800; color: var(--text-muted); }
 
 /* Menu Cards */
-.menu-card { display: flex; align-items: center; gap: 20px; text-align: left; padding: 24px; background: var(--bg-surface); border: 2px solid var(--text-primary); cursor: pointer; transition: all 0.1s; font-family: inherit; margin-bottom: 16px; }
-.menu-card:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 #6b7280; background: var(--bg-base); }
-.menu-icon-box { width: 48px; height: 48px; background: var(--bg-base); border: 2px solid var(--text-primary); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-primary); transition: background 0.1s; }
-.menu-card:hover .menu-icon-box { background: var(--text-primary); color: var(--bg-base); }
+.menu-card { 
+  display: flex; align-items: center; gap: 20px; text-align: left; 
+  padding: 24px; background: transparent; 
+  border: 1px solid var(--border); cursor: pointer; 
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  font-family: inherit; margin-bottom: 16px; 
+}
+.menu-card:hover { 
+  background: var(--bg-hover); border-color: var(--text-primary); 
+}
+.menu-icon-box { 
+  width: 48px; height: 48px; background: transparent; 
+  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; 
+  font-size: 20px; color: var(--text-primary); transition: all 0.3s; 
+}
+.menu-card:hover .menu-icon-box { border-color: var(--text-primary); }
 .menu-text-wrap { flex: 1; min-width: 0; }
 .menu-title { font-size: 16px; font-weight: 900; margin: 0 0 4px 0; color: var(--text-primary); }
 .menu-desc { font-size: 13px; font-weight: 700; margin: 0; color: var(--text-muted); }
-.menu-arrow { font-size: 18px; color: var(--text-muted); transition: color 0.1s; }
-.menu-card:hover .menu-arrow { color: var(--text-primary); }
+.menu-arrow { font-size: 18px; color: var(--text-muted); transition: color 0.3s; }
+.menu-card:hover .menu-arrow { color: var(--text-primary); opacity: 1; transform: translateX(4px); }
 
 /* Additional Info */
-.info-note { background: var(--bg-base); padding: 20px; outline: 2px dashed var(--border); border: none; outline-offset: -8px; }
+.info-note { 
+  background: transparent; padding: 20px; 
+  border: 1px dashed var(--border); 
+}
 </style>

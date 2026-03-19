@@ -14,7 +14,7 @@
 
         <div class="flex-col gap-lg pb-xl">
           <!-- Linked Accounts -->
-          <div v-for="acc in accounts" :key="acc.name" class="brutal-panel p-0 shadow-normal overflow-hidden">
+          <div v-for="acc in accounts" :key="acc.name" class="base-panel p-0 shadow-normal overflow-hidden">
             <!-- Header -->
             <div class="panel-header flex-between p-md pb-sm border-b">
               <div class="flex-align gap-md">
@@ -59,7 +59,7 @@
           </div>
 
           <!-- Google Calendar notice -->
-          <div class="brutal-panel p-md shadow-normal account-notice">
+          <div class="base-panel p-md shadow-normal account-notice">
             <div class="flex-start gap-md">
               <div class="icon-box warning shrink-0">
                 <i class="fas fa-exclamation-triangle" />
@@ -80,7 +80,7 @@
           </div>
 
           <!-- Info note -->
-          <div class="info-note brutal-panel shadow-none">
+          <div class="info-note base-panel shadow-none">
             <div class="flex-start gap-md">
               <i class="fas fa-info-circle text-muted mt-xs text-sm shrink-0" />
               <p class="text-sm text-muted font-bold lh-lg m-0">
@@ -137,7 +137,7 @@ const accounts = [
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 2px solid var(--text-primary); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
+.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
 .header-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
@@ -182,15 +182,15 @@ const accounts = [
 .font-bold { font-weight: 800; }
 
 /* Panels & Shadows */
-.brutal-panel { background: var(--bg-surface); border: 2px solid var(--text-primary); border-radius: 0; transition: transform 0.1s, box-shadow 0.1s; }
-.shadow-normal { box-shadow: 6px 6px 0 #6b7280; }
+.base-panel { background: transparent; border: 1px solid var(--border); border-radius: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
+.shadow-normal { box-shadow: none; }
 .shadow-none { box-shadow: none; }
 
-.btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; margin-bottom: 24px; transition: color 0.1s; font-family: inherit; }
-.btn-back:hover { color: var(--text-primary); }
+.btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; margin-bottom: 24px; transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-back:hover { color: var(--text-primary); transform: translateX(-4px); }
 
 /* Icons */
-.icon-box { width: 48px; height: 48px; background: var(--bg-base); border: 2px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-primary); border-radius: 8px; }
+.icon-box { width: 48px; height: 48px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-primary); border-radius: 0; }
 .icon-box.warning { border-color: var(--text-muted); color: var(--text-muted); }
 .spin-hover { transition: transform 0.3s; cursor: pointer; }
 .spin-hover:hover { transform: rotate(180deg); color: var(--text-primary); }
@@ -200,18 +200,18 @@ const accounts = [
 .acc-id { font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 4px; }
 .acc-desc { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 
-.status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 10px; font-weight: 900; border-radius: 20px; }
-.status-badge.connected { background: var(--bg-base); border: 1px solid var(--text-primary); color: var(--text-primary); }
-.status-badge.readonly { background: var(--bg-base); border: 1px solid var(--text-muted); color: var(--text-muted); }
+.status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 10px; font-weight: 900; border-radius: 40px; }
+.status-badge.connected { background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); }
+.status-badge.readonly { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); }
 
-.sync-info-box { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: var(--bg-base); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; font-weight: 700; color: var(--text-muted); }
+.sync-info-box { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: transparent; border: 1px solid var(--border); border-radius: 0; font-size: 12px; font-weight: 700; color: var(--text-muted); }
 .sync-info-box strong { color: var(--text-primary); font-weight: 900; }
 
-.stat-card { background: var(--bg-base); border: 1px solid var(--border); padding: 12px; border-radius: 8px; }
+.stat-card { background: transparent; border: 1px solid var(--border); padding: 12px; border-radius: 0; }
 .stat-label { font-size: 11px; font-weight: 800; color: var(--text-muted); }
 .stat-value { font-size: 16px; font-weight: 900; color: var(--text-primary); margin: 4px 0; }
 .stat-sub { font-size: 10px; font-weight: 700; color: var(--text-muted); }
 
 /* Additional Info */
-.info-note { background: var(--bg-base); padding: 20px; border: 2px dashed var(--border); }
+.info-note { background: transparent; padding: 20px; border: 1px dashed var(--border); }
 </style>

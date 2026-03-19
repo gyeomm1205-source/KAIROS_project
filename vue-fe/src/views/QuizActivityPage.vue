@@ -62,36 +62,40 @@ const answer = ref(null)
 </script>
 
 <style scoped>
-.page-root { min-height: 100vh; background: #fafafa; font-family: 'Escoredream', sans-serif; }
-.top-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: #fff; border-bottom: 1px solid #eaeaea; }
-.btn-back, .btn-more { background: none; border: none; font-size: 14px; font-weight: 600; cursor: pointer; color: #333; font-family: inherit; }
+.page-root { min-height: 100vh; background: var(--bg-base); font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; display: flex; flex-direction: column; }
+.top-nav { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: transparent; border-bottom: 1px solid var(--border); }
+.btn-back, .btn-more { background: transparent; border: none; font-size: 14px; font-weight: 700; cursor: pointer; color: var(--text-muted); font-family: inherit; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .btn-back { display: flex; align-items: center; gap: 8px; }
+.btn-back:hover, .btn-more:hover { color: var(--text-primary); }
+.btn-back:hover { transform: translateX(-4px); }
 
-.content { max-width: 800px; margin: 0 auto; padding: 40px 20px; }
-.quiz-title { font-size: 18px; font-weight: 700; color: #111; margin-bottom: 24px; }
+.content { flex: 1; max-width: 800px; margin: 0 auto; padding: 48px 24px; width: 100%; }
+.quiz-title { font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 32px; letter-spacing: 0.05em; }
 
-.progress-box { background: #fff; border: 1px solid #eaeaea; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; }
-.progress-text { display: flex; justify-content: space-between; font-size: 12px; font-weight: 600; color: #666; margin-bottom: 10px; }
-.progress-bar-bg { width: 100%; height: 6px; background: #eee; border-radius: 3px; overflow: hidden; }
-.progress-bar-fill { height: 100%; background: #111; border-radius: 3px; }
+.progress-box { background: transparent; border: 1px solid var(--border); border-radius: 0; padding: 24px; margin-bottom: 24px; }
+.progress-text { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; }
+.progress-bar-bg { width: 100%; height: 4px; background: transparent; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--text-primary); transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
-.question-box { background: #fff; border: 1px solid #eaeaea; border-radius: 12px; padding: 32px; margin-bottom: 32px; }
-.question-text { font-size: 16px; font-weight: 700; color: #222; margin-bottom: 24px; }
+.question-box { background: transparent; border: 1px solid var(--border); border-radius: 0; padding: 32px; margin-bottom: 32px; }
+.question-text { font-size: 18px; font-weight: 800; color: var(--text-primary); margin-bottom: 24px; line-height: 1.6; letter-spacing: 0.05em; }
 
-.options { display: flex; flex-direction: column; gap: 12px; }
-.option-label { display: flex; align-items: center; gap: 12px; border: 1px solid #eaeaea; padding: 16px 20px; border-radius: 8px; cursor: pointer; transition: all 0.2s; }
-.option-label:hover { background: #fafafa; }
-.option-label.selected { border-color: #111; background: #fafafa; }
-.radio-circle { width: 16px; height: 16px; border: 1px solid #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.option-label.selected .radio-circle { border-color: #111; }
-.dot { width: 8px; height: 8px; background: #111; border-radius: 50%; }
-.option-label span { font-size: 14px; color: #333; }
+.options { display: flex; flex-direction: column; gap: 16px; }
+.option-label { display: flex; align-items: center; gap: 16px; border: 1px solid var(--border); padding: 20px; border-radius: 0; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); background: transparent; }
+.option-label:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.option-label.selected { border-color: var(--text-primary); background: transparent; }
+.radio-circle { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.option-label.selected .radio-circle { border-color: var(--text-primary); }
+.dot { width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; }
+.option-label span { font-size: 14px; font-weight: 600; color: var(--text-primary); line-height: 1.5; }
 
 .bottom-actions { display: flex; justify-content: space-between; align-items: center; }
 .right-btns { display: flex; gap: 12px; }
-button { padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; font-family: inherit; transition: opacity 0.2s; }
-.btn-outline { background: #fff; border: 1px solid #ddd; color: #333; }
-.btn-dark { background: #111; border: none; color: #fff; }
-.btn-submit { color: #666; }
-button:hover { opacity: 0.8; }
+button { padding: 14px 24px; border-radius: 40px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: inherit; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); letter-spacing: 0.05em; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-primary); }
+.btn-outline:hover { background: var(--bg-hover); border-color: var(--text-primary); }
+.btn-dark { background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); }
+.btn-dark:hover { background: var(--text-primary); color: var(--bg-base); }
+.btn-submit { color: var(--text-muted); }
+.btn-submit:hover { color: var(--text-primary); }
 </style>
