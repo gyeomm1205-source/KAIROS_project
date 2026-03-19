@@ -1,5 +1,6 @@
 package com.ssafy.springbootbe.common.jwt;
 
+import com.ssafy.springbootbe.domain.auth.exception.AuthTokenGenerationException;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtParser;
@@ -22,6 +23,8 @@ public class JWTUtils {
     @Value("${service.refresh-token-duration}")
     private Long refreshTokenDurationTime;
 
+    private static final long ONBOARDING_TOKEN_DURATION_MINUTES = 30L;
+
     private SecretKey secretKey;
     public JWTUtils(@Value("${spring.jwt.secret}") String secret) {
         secretKey = new SecretKeySpec(
@@ -35,10 +38,31 @@ public class JWTUtils {
         return jws.getPayload();
     }
     public String createAccessToken(User user) {
-        return createToken("accessToken", user, accessTokenDurationTime);
+        try {
+            return createToken("accessToken", user, accessTokenDurationTime);
+        } catch (RuntimeException e) {
+            throw new AuthTokenGenerationException("access token 발급에 실패했습니다.", e);
+        }
     }
     public String createRefreshToken(User user) {
-        return createToken("refreshToken", user, refreshTokenDurationTime);
+        try {
+            return createToken("refreshToken", user, refreshTokenDurationTime);
+        } catch (RuntimeException e) {
+            throw new AuthTokenGenerationException("refresh token 발급에 실패했습니다.", e);
+        }
+    }
+    public String createOnboardingToken(String googleSub, String email) {
+        Date expiration = new Date(System.currentTimeMillis() + 1000 * 60 * ONBOARDING_TOKEN_DURATION_MINUTES);
+        return Jwts.builder()
+                .subject("onboarding")
+                .expiration(expiration)
+                .claims(Map.of(
+                        "googleSub", googleSub,
+                        "email", email,
+                        "purpose", "onboarding"
+                ))
+                .signWith(secretKey)
+                .compact();
     }
     private String createToken(String subject, User user, long duration) {
         Date expiration = new Date(System.currentTimeMillis() + 1000*60*60*duration); // 시간(hour) 단위

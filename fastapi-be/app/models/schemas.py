@@ -1,10 +1,9 @@
 """
 Pydantic schemas for Spring Boot ↔ FastAPI internal API contracts.
 
-Design principles (from AI Tech Spec v3):
-- FastAPI receives a fully assembled AIContext from Spring Boot.
+v2 — API 명세서 v1.1 기준 (camelCase, /api/v1/ai prefix)
+- FastAPI receives a fully assembled context from Spring Boot.
 - FastAPI never queries MySQL directly.
-- All responses include model_meta, references, and assumptions/warnings.
 """
 
 from __future__ import annotations
@@ -13,7 +12,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 # ---------------------------------------------------------------------------
@@ -38,93 +38,79 @@ class RelativeRank(str, Enum):
     low = "low"
 
 
-class QuizType(str, Enum):
-    pre_assessment = "pre_assessment"   # 사전 평가
-    review = "review"                   # 복습
-    interview = "interview"             # 면접 대비
-
-
 class QuestionType(str, Enum):
-    short_answer = "short_answer"
-    multiple_choice = "multiple_choice"
-    coding = "coding"
-
-
-class RecommendationRequestType(str, Enum):
-    reference = "reference"     # 레퍼런스 추천
-    activity = "activity"       # 활동 추천 (퀴즈/커리큘럼 유도)
+    short_answer = "SHORT_ANSWER"
+    multiple_choice = "MULTIPLE_CHOICE"
+    coding = "CODING"
 
 
 class FreshnessGrade(str, Enum):
-    stable = "stable"           # 최신, 신뢰 가능
-    warning = "warning"         # 오래됐을 수 있음, 확인 필요
-    outdated = "outdated"       # 내용이 구식일 가능성 높음
+    stable = "stable"
+    warning = "warning"
+    outdated = "outdated"
 
 
 class NodeType(str, Enum):
-    study = "study"             # 이론/레퍼런스 학습
-    action = "action"           # 실습/코드 작성
-    review = "review"           # 복습/점검
+    study = "study"
+    action = "action"
+    review = "review"
+
+
+class UserLevel(str, Enum):
+    junior = "JUNIOR"
+    mid = "MID"
+    senior = "SENIOR"
+
+
+class ReferenceType(str, Enum):
+    official_docs = "OFFICIAL_DOCS"
+    tech_blog = "TECH_BLOG"
+    wiki = "WIKI"
+    video = "VIDEO"
 
 
 # ---------------------------------------------------------------------------
-# Shared sub-models
+# camelCase base (API 명세서 통신용)
+# ---------------------------------------------------------------------------
+
+class _CamelModel(BaseModel):
+    model_config = ConfigDict(
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Shared sub-models (내부용 — 기존 유지)
 # ---------------------------------------------------------------------------
 
 class ModelMeta(BaseModel):
-    """LLM 호출 메타데이터 — Spring Boot가 저장하는 추적 정보."""
-    model: str = Field(..., examples=["gpt-4o-mini", "gpt-4o"])
-    prompt_version: str = Field(..., examples=["extract_v2", "recommend_v3"])
-    policy_version: str = Field(default="policy_v1")
+    """LLM 호출 메타데이터."""
+    model: str
+    prompt_version: str
+    policy_version: str = "policy_v1"
 
 
 class ReferenceItem(BaseModel):
-    """Qdrant에서 검색된 레퍼런스 문서 단위."""
-    doc_id: str = Field(..., examples=["ref_jwt_001"])
+    """Qdrant 검색 레퍼런스 문서 단위."""
+    doc_id: str
     title: str
-    url: str = Field(..., examples=["https://example.com/jwt-bcp"])
+    url: str
     freshness: FreshnessGrade = FreshnessGrade.stable
-    skill_tags: list[str] = Field(default_factory=list, examples=[["JWT", "Spring Security"]])
-    source_type: str = Field(default="unknown", examples=["official_doc", "tech_blog", "curated"])
-
-
-# ---------------------------------------------------------------------------
-# AIContext — input from Spring Boot
-# ---------------------------------------------------------------------------
-
-class SurveyContext(BaseModel):
-    """온보딩 설문 결과."""
-    job_role: str = Field(..., examples=["취준생", "현직 개발자"])
-    target_positions: list[str] = Field(..., examples=[["backend", "ai"]])
-    tech_stacks: list[str] = Field(..., examples=[["Spring", "FastAPI", "Vue"]])
-    persona: str = Field(default="default")
-
-
-class UserContext(BaseModel):
-    """Spring Boot가 조합해서 넘기는 사용자 기본 정보."""
-    user_id: int
-    job_role: str = Field(..., examples=["취준생"])
-    target_positions: list[str] = Field(default_factory=list, examples=[["backend", "ai"]])
-    survey_context: SurveyContext | None = None
+    skill_tags: list[str] = Field(default_factory=list)
+    source_type: str = Field(default="unknown")
 
 
 class LearningState(BaseModel):
-    """
-    학습 상태 — Spring Boot가 스코어링 알고리즘으로 계산한 결과.
-    FastAPI는 이 값을 받아서 추천 우선순위 판단에만 사용한다.
-    """
-    skill: str = Field(..., examples=["Spring Security"])
-    raw_score: float = Field(..., ge=0.0, description="누적 가중 점수")
-    relative_rank: RelativeRank = Field(
-        ..., description="사용자 내 상대 순위 (3안: 개인 내 비교)"
-    )
-    percentile: int = Field(
-        ..., ge=0, le=100, description="동일 기술 전체 사용자 백분위 (2안: 시장 비교)"
-    )
+    """학습 상태 — 내부 분석용."""
+    skill: str
+    raw_score: float = Field(..., ge=0.0)
+    relative_rank: RelativeRank
+    percentile: int = Field(..., ge=0, le=100)
 
 
 class RecentActivity(BaseModel):
-    """Spring Boot가 요약해서 넘기는 최근 활동 정보."""
+    """최근 활동 — 내부 분석용."""
     source: Source
     category: Category
     tech_stacks: list[str]
@@ -132,30 +118,17 @@ class RecentActivity(BaseModel):
     activity_date: datetime | None = None
 
 
-class CalendarConstraint(BaseModel):
-    """일정 제약 — 커리큘럼 스케줄링에 사용."""
-    date: str = Field(..., examples=["2026-03-10"], description="YYYY-MM-DD")
-    busy_slots: list[str] = Field(
-        default_factory=list, examples=[["19:00-21:00"]]
-    )
-
-
 class SourceItem(BaseModel):
-    """
-    /internal/analyze/activities 요청 단위.
-    Spring Boot가 GitHub/Velog/Calendar에서 가져온 원시 텍스트 1건.
-    """
+    """활동 원시 데이터 1건."""
     source: Source
-    source_item_id: str = Field(
-        ..., examples=["velog:post:12345", "github:repo:team/kairos:README.md"]
-    )
+    source_item_id: str
     title: str
     text: str
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
-# Request bodies — sent BY Spring Boot TO FastAPI
+# 활동 분석 (내부 API — 기존 유지)
 # ---------------------------------------------------------------------------
 
 class AnalyzeActivitiesRequest(BaseModel):
@@ -163,81 +136,10 @@ class AnalyzeActivitiesRequest(BaseModel):
     request_id: str
     trace_id: str
     policy_version: str = "policy_v1"
-    user: UserContext
     source_items: list[SourceItem] = Field(..., min_length=1)
 
 
-class RecommendationRequest(BaseModel):
-    """POST /internal/recommendations"""
-    request_id: str
-    trace_id: str
-    policy_version: str = "policy_v1"
-    user: UserContext
-    learning_states: list[LearningState]
-    recent_activities: list[RecentActivity]
-    history_exclusions: list[str] = Field(
-        default_factory=list,
-        description="이미 추천된 doc_id 또는 태그 — 중복 방지용",
-    )
-    calendar_constraints: list[CalendarConstraint] = Field(default_factory=list)
-    request_type: RecommendationRequestType = RecommendationRequestType.reference
-
-
-class RecommendationHint(BaseModel):
-    """
-    optional context passed by spring boot when a quiz is triggered
-    directly from a recommendation result.
-
-    spring boot picks one RecommendationItem and forwards its title + reason
-    so the quiz generator can tailor questions to the specific material.
-    """
-    title: str = Field(..., description="추천된 레퍼런스 제목")
-    reason: str = Field(..., description="해당 자료를 추천한 이유 (llm이 생성한 문장)")
-    doc_id: str | None = Field(default=None, description="연결된 qdrant doc_id")
-
-
-class QuizRequest(BaseModel):
-    """POST /internal/quizzes
-
-    필수 필드 누락 시 400 COMMON-002 반환:
-      request_id, trace_id, user(user_id+job_role), target_skill, current_level
-    Enum 허용값: current_level/difficulty = "low"|"mid"|"high", quiz_type = "pre_assessment"|"review"|"interview"
-    """
-    request_id: str
-    trace_id: str
-    policy_version: str = "policy_v1"
-    user: UserContext
-    target_skill: str = Field(..., examples=["JWT"])
-    current_level: RelativeRank
-    recent_references: list[ReferenceItem] = Field(default_factory=list)
-    quiz_type: QuizType = QuizType.review
-    difficulty: RelativeRank = RelativeRank.mid
-    time_limit_minutes: int = Field(default=20, ge=5, le=120)
-    recommendation_hint: RecommendationHint | None = Field(
-        default=None,
-        description="추천 화면에서 퀴즈를 생성할 때 spring boot가 전달하는 추천 아이템 컨텍스트",
-    )
-
-
-class CurriculumRequest(BaseModel):
-    """POST /internal/curriculums"""
-    request_id: str
-    trace_id: str
-    policy_version: str = "policy_v1"
-    user: UserContext
-    goals: list[str] = Field(..., min_length=1, examples=[["JWT 심화", "테스트 코드"]])
-    learning_states: list[LearningState]
-    calendar_constraints: list[CalendarConstraint]
-    accepted_references: list[ReferenceItem] = Field(default_factory=list)
-    duration_days: int = Field(default=5, ge=1, le=30)
-
-
-# ---------------------------------------------------------------------------
-# Response schemas — returned BY FastAPI TO Spring Boot
-# ---------------------------------------------------------------------------
-
 class ActivityResult(BaseModel):
-    """활동 정규화 결과 1건 — user_activity 테이블 저장용."""
     source: Source
     source_item_id: str
     category: Category
@@ -248,108 +150,143 @@ class ActivityResult(BaseModel):
 
 
 class AnalysisSummary(BaseModel):
-    """전체 분석 요약 — analysis_results 저장용."""
     observed_strengths: list[str]
     observed_gaps: list[str]
     recommended_positions: list[str]
 
 
 class AnalyzeActivitiesResponse(BaseModel):
-    """POST /internal/analyze/activities 응답."""
     activities: list[ActivityResult]
     analysis_summary: AnalysisSummary
     warnings: list[str] = Field(default_factory=list)
     model_meta: ModelMeta
 
 
-class RecommendationItem(BaseModel):
-    """추천 항목 1건."""
-    type: RecommendationRequestType
+# ---------------------------------------------------------------------------
+# 커리큘럼 생성 — POST /api/v1/ai/curriculum/generate
+# ---------------------------------------------------------------------------
+
+class GoogleCalendarEvent(_CamelModel):
+    """Google Calendar 이벤트."""
     title: str
-    reason: str = Field(..., description="이 항목을 추천하는 구체적 근거")
-    difficulty: RelativeRank
-    estimated_time: str = Field(..., examples=["25분"])
-    doc_id: str | None = None
+    start_date: str = Field(..., description="YYYY-MM-DD")
+    end_date: str = Field(..., description="YYYY-MM-DD")
 
 
-class RecommendationResponse(BaseModel):
-    """POST /internal/recommendations 응답."""
-    items: list[RecommendationItem]
-    reason: str = Field(..., description="이번 추천 전체를 관통하는 전략적 이유")
-    assumptions: list[str] = Field(
-        default_factory=list,
-        description="추천 생성 시 가정한 조건 (일정, 학습 강도 등)",
-    )
-    references: list[ReferenceItem]
-    outdated_warning: str | None = Field(
-        default=None, description="검색 결과 중 오래된 문서가 있을 경우 경고 메시지"
-    )
-    model_meta: ModelMeta
+class ManualGeneration(_CamelModel):
+    """수동 커리큘럼 생성 파라미터."""
+    is_manual: bool
+    topic: str | None = None
+    goal_type: str | None = None
+    specific_goal: str | None = None
+    survey_answers: dict[str, str] | None = None
 
 
-class QuizQuestion(BaseModel):
-    """퀴즈 문항 1건."""
-    id: int
-    type: QuestionType
-    question: str
-    expected_points: list[str] = Field(
-        default_factory=list, description="채점 기준이 되는 핵심 포인트"
-    )
-    options: list[str] | None = Field(
-        default=None, description="객관식인 경우에만 사용"
-    )
-    correct: int | None = Field(
-        default=None, description="객관식 정답 보기의 0-based 인덱스. 객관식이 아닌 경우 null."
-    )
+class CurriculumRequest(_CamelModel):
+    """POST /api/v1/ai/curriculum/generate 요청."""
+    user_id: int
+    consider_personal_schedule: bool = False
+    google_calendar_events: list[GoogleCalendarEvent] = Field(default_factory=list)
+    profile_data: dict[str, Any] | None = None
+    manual_generation: ManualGeneration | None = None
 
 
-class QuizRubric(BaseModel):
-    """채점 기준."""
-    full_score_criteria: list[str]
-    partial_score_criteria: list[str] = Field(default_factory=list)
+class CurriculumRecommendationReason(_CamelModel):
+    """커리큘럼 추천 이유 (4개 필드)."""
+    summary_line: str
+    user_context: str
+    ai_interpretation: str
+    curriculum_rationale: str
 
 
-class QuizResponse(BaseModel):
-    """POST /internal/quizzes 응답."""
-    quiz_type: QuizType
-    questions: list[QuizQuestion]
-    rubric: QuizRubric
-    references: list[ReferenceItem] = Field(default_factory=list)
-    model_meta: ModelMeta
-
-
-class CurriculumNode(BaseModel):
-    """커리큘럼 단계 1건."""
-    day: int = Field(..., ge=1)
+class CurriculumNode(_CamelModel):
+    """커리큘럼 학습 노드 1건."""
     title: str
-    type: NodeType
-    estimated_time: str = Field(..., examples=["40분"])
     description: str | None = None
-    reference_doc_ids: list[str] = Field(default_factory=list)
+    scheduled_date: str = Field(..., description="YYYY-MM-DD")
+    expected_minutes: int
 
 
-class CurriculumResponse(BaseModel):
-    """POST /internal/curriculums 응답."""
-    duration_days: int
-    why: str = Field(..., description="이 커리큘럼이 현재 사용자에게 적합한 이유")
-    assumptions: list[str] = Field(default_factory=list)
+class CurriculumResponse(_CamelModel):
+    """POST /api/v1/ai/curriculum/generate 응답."""
+    recommendation_reason: CurriculumRecommendationReason
     nodes: list[CurriculumNode]
-    references: list[ReferenceItem] = Field(default_factory=list)
-    model_meta: ModelMeta
 
 
 # ---------------------------------------------------------------------------
-# Fallback / error envelope
+# 퀴즈 생성 — POST /api/v1/ai/quizzes/generate-async
+# ---------------------------------------------------------------------------
+
+class QuizRequest(_CamelModel):
+    """POST /api/v1/ai/quizzes/generate-async 요청."""
+    curriculum_id: int
+    target_tech_stacks: list[str] = Field(..., min_length=1)
+    user_level: UserLevel
+
+
+class QuizQuestion(_CamelModel):
+    """퀴즈 문항 1건."""
+    question_number: int
+    question: str
+    quiz_type: str  # "MULTIPLE_CHOICE" | "SHORT_ANSWER" | "CODING"
+    options: list[str] | None = None
+    correct_answer: str | None = None  # Spring Boot가 Redis에 저장, 클라이언트 비노출
+
+
+class QuizResponse(_CamelModel):
+    """POST /api/v1/ai/quizzes/generate-async 응답."""
+    curriculum_id: int
+    total_questions: int
+    questions: list[QuizQuestion]
+
+
+# ---------------------------------------------------------------------------
+# 추천 생성 — POST /api/v1/ai/recommendations/generate
+# ---------------------------------------------------------------------------
+
+class RecommendationRequest(_CamelModel):
+    """POST /api/v1/ai/recommendations/generate 요청."""
+    user_id: int
+    current_level: UserLevel
+    recent_curricula_ids: list[int] = Field(default_factory=list)
+    favorite_tech_stacks: list[str] = Field(default_factory=list)
+
+
+class RecommendationReason(_CamelModel):
+    """추천 이유."""
+    summary: str
+    detail: str
+
+
+class RecommendationNextNode(_CamelModel):
+    """추천 학습 경로 노드."""
+    title: str
+
+
+class RecommendationReference(_CamelModel):
+    """추천 레퍼런스 1건."""
+    title: str
+    recommendation_reason: str
+    reference_type: str  # "OFFICIAL_DOCS" | "TECH_BLOG" | "WIKI" | "VIDEO"
+    published_at: str | None = None
+    url: str
+
+
+class RecommendationResponse(_CamelModel):
+    """POST /api/v1/ai/recommendations/generate 응답."""
+    user_id: int
+    recommendation_reason: RecommendationReason
+    next_nodes: list[RecommendationNextNode]
+    references: list[RecommendationReference]
+
+
+# ---------------------------------------------------------------------------
+# 폴백 / 에러 봉투
 # ---------------------------------------------------------------------------
 
 class MinimalFallbackResponse(BaseModel):
-    """
-    LLM 구조화 실패 시 FastAPI가 반환하는 최소 보장 응답.
-    Spring Boot는 이 필드를 항상 파싱할 수 있어야 한다.
-    """
+    """LLM 구조화 실패 시 최소 보장 응답."""
     error: str
     fallback: bool = True
-    references: list[ReferenceItem] = Field(default_factory=list)
-    assumptions: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     model_meta: ModelMeta | None = None
