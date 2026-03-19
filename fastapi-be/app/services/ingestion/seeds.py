@@ -36,6 +36,12 @@ SEEDS_KAKAO: list[dict] = [
     for i in range(1, 11)
 ]
 
+# ─── 토스 테크 블로그 ──────────────────────────────────────────────
+# 토스는 RSS 피드를 통해 전체 게시글 목록을 제공합니다.
+SEEDS_TOSS: list[dict] = [
+    {"tag_url": "https://toss.tech/rss.xml", "skill": ["Toss"]},
+]
+
 # ─── 네이버 D2 ──────────────────────────────────────────────────────
 # 네이버 D2도 구조 확인 후 추가 예정
 SEEDS_NAVER: list[dict] = []
@@ -44,6 +50,7 @@ SEEDS_NAVER: list[dict] = []
 ALL_SEEDS: dict[str, list[dict]] = {
     "woowa": SEEDS_WOOWA,
     "kakao": SEEDS_KAKAO,
+    "toss": SEEDS_TOSS,
     "naver": SEEDS_NAVER,
 }
 
@@ -55,6 +62,10 @@ BLOG_META: dict[str, dict] = {
     },
     "kakao": {
         "source_type": "tech_blog_kakao",
+        "language": "ko",
+    },
+    "toss": {
+        "source_type": "tech_blog_toss",
         "language": "ko",
     },
     "naver": {

@@ -111,9 +111,48 @@ def _parse_kakao_list(html_or_json: str, skill: list[str]) -> tuple[list[dict], 
     return articles, None
 
 
+def _parse_toss_list(xml_data: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """토스 기술 블로그 RSS 피드 파싱."""
+    # lxml-xml 파서 강제 사용
+    soup = BeautifulSoup(xml_data, "xml")
+    articles = []
+    
+    # RSS의 <item> 태그 단위로 파싱
+    for item in soup.find_all("item"):
+        link_tag = item.find("link")
+        if not link_tag:
+            continue
+            
+        url = link_tag.get_text(strip=True)
+        if not url.startswith("http"):
+            continue
+            
+        # 영문 번역본(-eng) 제거
+        if url.endswith("-eng"):
+            continue
+            
+        # RSS 내부의 실제 타이틀
+        title_tag = item.find("title")
+        title = title_tag.get_text(strip=True) if title_tag else ""
+        
+        # 발행일
+        date_tag = item.find("pubdate")
+        date_str = date_tag.get_text(strip=True) if date_tag else ""
+        
+        articles.append({
+            "url": url,
+            "title": title,
+            "skill": skill,
+            "published_at": date_str,
+        })
+        
+    return articles, None
+
+
 PARSERS = {
     "woowa": _parse_woowa_list,
     "kakao": _parse_kakao_list,
+    "toss": _parse_toss_list,
 }
 
 
