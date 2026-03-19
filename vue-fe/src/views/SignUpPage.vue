@@ -73,7 +73,7 @@
       <button 
         class="btn-primary" 
         :disabled="!canProceed"
-        @click="$router.push('/setup')"
+        @click="$router.push('/onboarding/survey')"
       >
         NEXT STEP
       </button>

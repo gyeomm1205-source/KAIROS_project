@@ -7,14 +7,21 @@
         :date-text="headerDateText"
         :current-view="currentView"
         :current-date="parseDate(focusedDay)"
-        :visible-tracks="tracksInCurrentView" 
         @navigate="navigate"
         @change-view="setView"
-        @open-track-modal="isTrackModalOpen = true"
         @jump-to-date="jumpToDate"
-        @update:hiddenTracks="onHiddenTracksChange"
-        @hover-track="onTrackHover" 
       />
+
+      <!-- Flow Legend Chips (프로토타입 동일) -->
+      <div class="flow-chips">
+        <div v-for="track in flowChipTracks" :key="track.id" class="flow-chip">
+          <div class="flow-chip-bar" :style="{ background: track.color }" />
+          <div>
+            <div class="flow-chip-name">{{ track.name }}</div>
+            <div class="flow-chip-sub">{{ getTrackScheduleCount(track.id) }}개 활동</div>
+          </div>
+        </div>
+      </div>
 
       <div v-if="currentView === 'month'" class="calendar-area">
         <div ref="calendarWrapper" class="calendar-wrapper">
@@ -53,7 +60,6 @@
               class="line-svg" 
               :width="svgSize.w" 
               :height="svgSize.h" 
-              @click.self="closeRemote"
             >
               <path
                 v-for="conn in activeConnections"
@@ -61,13 +67,11 @@
                 :d="conn.path"
                 :stroke="conn.color"
                 class="conn-path"
-                :class="{ 
+                :class="{
                   'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data) 
+                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
                 }"
-                @click.stop="onEdgeClick(conn.data, $event)"
-                @mouseenter="onEdgeHover(conn.data, $event)"
-                @mouseleave="onEdgeHover(null)"
+                @click.stop="onEdgeClick(conn.data)"
               />
             </svg>
           </div>
@@ -128,12 +132,11 @@
               </div>
             </div>
 
-            <svg 
-              v-if="store.showConnections" 
-              class="line-svg" 
-              :width="svgSize.w" 
-              :height="svgSize.h" 
-              @click.self="closeRemote"
+            <svg
+              v-if="store.showConnections"
+              class="line-svg"
+              :width="svgSize.w"
+              :height="svgSize.h"
             >
               <path
                 v-for="conn in activeConnections"
@@ -141,13 +144,11 @@
                 :d="conn.path"
                 :stroke="conn.color"
                 class="conn-path"
-                :class="{ 
+                :class="{
                   'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data) 
+                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
                 }"
-                @click.stop="onEdgeClick(conn.data, $event)"
-                @mouseenter="onEdgeHover(conn.data, $event)"
-                @mouseleave="onEdgeHover(null)"
+                @click.stop="onEdgeClick(conn.data)"
               />
             </svg>
 
@@ -199,67 +200,13 @@
       </div>
     </main>
 
-    <Transition name="fade">
-      <div 
-        v-if="edgeTooltip.visible" 
-        class="edge-tooltip-popup" 
-        :style="{ left: edgeTooltip.x + 'px', top: (edgeTooltip.baseY - currentScrollY) + 'px', transform: `translate(${edgeTooltip.translateX}, ${edgeTooltip.translateY})` }"
-      >
-        <div class="et-track" :style="{ color: edgeTooltip.edge.color }">{{ store.getTrackById(edgeTooltip.edge.track)?.name }}</div>
-        <div class="et-nodes">
-          <span>{{ edgeTooltip.edge.from.tooltip?.title || edgeTooltip.edge.from.text }}</span>
-          <i class="fas fa-arrow-right" />
-          <span>{{ edgeTooltip.edge.to.tooltip?.title || edgeTooltip.edge.to.text }}</span>
-        </div>
-      </div>
-    </Transition>
-
-    <Transition name="pop-remote">
-      <div 
-        v-if="edgeRemote.visible" 
-        class="edge-remote-modal" 
-        :style="{ left: edgeRemote.x + 'px', top: (edgeRemote.baseY - currentScrollY) + 'px', transform: `translate(${edgeRemote.translateX}, ${edgeRemote.translateY})` }"
-      >
-        <div class="er-header">
-          <span class="er-track-name" :style="{ color: edgeRemote.edge.color }">
-            {{ store.getTrackById(edgeRemote.edge.track)?.name }} CONNECTION
-          </span>
-          <button class="er-close" @click.stop="closeRemote"><i class="fas fa-times"/></button>
-        </div>
-        <div class="er-body">
-          <div class="er-node">
-            <div class="er-node-color" :style="{ background: store.getTrackById(edgeRemote.edge.from.track)?.color }"></div>
-            <div class="er-node-info">
-              <div class="er-node-day">{{ formatNodeDate(edgeRemote.edge.from.day) }}</div>
-              <div class="er-node-title">{{ edgeRemote.edge.from.tooltip?.title || edgeRemote.edge.from.text }}</div>
-            </div>
-            <button class="btn-er-jump" @click.stop="jumpToNode(edgeRemote.edge.from)">
-              <i class="fas fa-location-arrow" /> JUMP
-            </button>
-          </div>
-          <div class="er-arrow"><i class="fas fa-arrow-down"/></div>
-          <div class="er-node">
-            <div class="er-node-color" :style="{ background: store.getTrackById(edgeRemote.edge.to.track)?.color }"></div>
-            <div class="er-node-info">
-              <div class="er-node-day">{{ formatNodeDate(edgeRemote.edge.to.day) }}</div>
-              <div class="er-node-title">{{ edgeRemote.edge.to.tooltip?.title || edgeRemote.edge.to.text }}</div>
-            </div>
-            <button class="btn-er-jump" @click.stop="jumpToNode(edgeRemote.edge.to)">
-              <i class="fas fa-location-arrow" /> JUMP
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-
     <NodeFormModal v-model="isScheduleModalOpen" :mode="modalMode" :initial-form="modalInitialForm" :edit-node-id="editTargetId" @save="handleSaveSchedule" @jump="handleModalJump" />
-    <BranchManageModal v-model="isTrackModalOpen" />
     <DayDetailModal v-model="isDayDetailOpen" :day-str="dayDetailTarget" :schedules="store.getSchedulesForDay(dayDetailTarget)" @add-schedule="(d) => { isDayDetailOpen = false; openCreateModal(d) }" @edit-schedule="(s) => { isDayDetailOpen = false; openEditModal(s) }" @delete-schedule="(id) => { handleDeleteSchedule(id) }" />
     
-    <AIReasoningModal 
-      v-if="isAIModalOpen" 
-      :node="aiModalNode" 
-      @close="isAIModalOpen = false" 
+    <AIReasoningModal
+      v-if="isAIModalOpen"
+      :data="aiModalData"
+      @close="isAIModalOpen = false"
     />
 
     <Teleport to="body">
@@ -287,7 +234,6 @@ import WeekScheduleCard  from '@/components/calendar/WeekScheduleCard.vue'
 import WeekGraphNode     from '@/components/calendar/WeekGraphNode.vue'
 import DayDetailModal    from '@/components/calendar/DayDetailModal.vue'
 import NodeFormModal     from '@/components/modal/NodeFormModal.vue'
-import BranchManageModal from '@/components/modal/BranchManageModal.vue'
 import AIReasoningModal     from '@/components/modal/AIReasoningModal.vue'
 
 const WEEK_LANE_SPACING = 28;
@@ -317,7 +263,6 @@ const svgSize = ref({ w: 0, h: 0 })
 const activeConnections = ref([])
 const weekSlideDir = ref(null)
 const isScheduleModalOpen = ref(false)
-const isTrackModalOpen = ref(false)
 const isDayDetailOpen = ref(false)
 const dayDetailTarget = ref(todayStr)
 const modalMode = ref('create')
@@ -326,14 +271,12 @@ const modalInitialForm = ref({})
 
 // AI 추론 요약 모달 상태
 const isAIModalOpen = ref(false)
-const aiModalNode = ref(null)
+const aiModalData = ref(null)
 
 const hiddenTracks = ref(new Set())
 function onHiddenTracksChange(set) { hiddenTracks.value = new Set(set) }
 
 const interactionState = ref({ hovered: null, clicked: null })
-const edgeTooltip = ref({ visible: false, x: 0, baseY: 0, translateX: '-50%', translateY: '-100%', edge: null })
-const edgeRemote = ref({ visible: false, x: 0, baseY: 0, translateX: '-50%', translateY: '-100%', edge: null })
 
 // 🚀 플라잉 애니메이션 상태
 const playEntryAnim = ref(false)
@@ -341,106 +284,13 @@ const playEntryAnim = ref(false)
 function onTrackHover(trackId) { interactionState.value.hovered = trackId ? { type: 'track', data: trackId } : null }
 function onNodeHover(schedule) { interactionState.value.hovered = schedule ? { type: 'node', data: schedule } : null }
 
-function onEdgeHover(edge, e) {
-  if (edge) {
-    interactionState.value.hovered = { type: 'edge', data: edge }
-    if (e) {
-      const x = e.clientX; const w = window.innerWidth;
-      let translateX = `-${(x / w) * 100}%`;
-      let translateY = '-100%';
-      let yOffset = -15;
-
-      if (e.clientY < 300) {
-        translateY = '0%';
-        yOffset = 15;
-      }
-
-      edgeTooltip.value = { visible: true, x, baseY: e.clientY + yOffset + currentScrollY.value, translateX, translateY, edge }
-    }
-  } else {
-    if (interactionState.value.hovered?.type === 'edge') interactionState.value.hovered = null
-    edgeTooltip.value.visible = false
-  }
-}
-
-function onEdgeClick(edge, e) {
-  if (edge) {
-    interactionState.value.clicked = { type: 'edge', data: edge }
-    activeTooltipId.value = null
-    edgeTooltip.value.visible = false 
-    if (e) {
-      const x = e.clientX; const w = window.innerWidth;
-      let translateX = `-${(x / w) * 100}%`;
-      let translateY = '-100%';
-      let yOffset = -15;
-
-      if (e.clientY < 380) {
-        translateY = '0%';
-        yOffset = 15;
-      }
-
-      edgeRemote.value = { visible: true, x, baseY: e.clientY + yOffset + currentScrollY.value, translateX, translateY, edge }
-    }
-  }
-}
-
-function closeRemote() { edgeRemote.value.visible = false; if (interactionState.value.clicked?.type === 'edge') interactionState.value.clicked = null; }
-
-function jumpToNode(node) {
-  if (!node || !node.day) return;
-  const d = parseDate(node.day);
-  if (isNaN(d.getTime())) return;
-
-  isAdjustingScroll = true;
-  anchorDate.value = new Date(d.getFullYear(), d.getMonth(), 1);
-  startOffsetWeeks.value = 16; 
-  endOffsetWeeks.value = 24; // 버퍼 넉넉히
-  currentYear.value = d.getFullYear(); 
-  currentMonth.value = d.getMonth() + 1;
-  focusedDay.value = node.day;
-  selectedDay.value = node.day;
-  
-  edgeRemote.value.visible = false; 
-  activeTooltipId.value = node.id; 
-  interactionState.value.clicked = { type: 'node', data: node };
-
-  if (currentView.value === 'month') {
-    // DOM이 생성될 때까지 여러 번 시도
-    let attempts = 0;
-    const tryScroll = () => {
-      attempts++;
-      const success = scrollToDate(node.day, 'auto', 'center');
-      if (success) {
-        setTimeout(() => {
-          isAdjustingScroll = false;
-          const cellEl = document.getElementById(`day-${node.day}`);
-          if (cellEl) {
-            cellEl.classList.remove('flash-target');
-            void cellEl.offsetWidth;
-            cellEl.classList.add('flash-target');
-            setTimeout(() => cellEl.classList.remove('flash-target'), 1500);
-          }
-        }, 100);
-      } else if (attempts < 20) {
-        requestAnimationFrame(tryScroll);
-      } else {
-        isAdjustingScroll = false;
-      }
-    };
-    nextTick(tryScroll);
-  } else {
-    isAdjustingScroll = false;
-  }
-}
 
 function getShortTrackName(name) { return name ? name.trim().split(' ')[0] : ''; }
-function formatNodeDate(dateStr) { const [y, m, d] = dateStr.split('-').map(Number); return `${m}월 ${d}일`; }
 
 function isEdgeHighlighted(edge) {
   const { hovered, clicked } = interactionState.value;
   const active = clicked || hovered;
   if (!active) return false;
-  if (active.type === 'edge') return active.data.from.id === edge.from.id && active.data.to.id === edge.to.id;
   // 노드 선택 시 연결된 선들 강조
   if (active.type === 'node') return edge.from.id === active.data.id || edge.to.id === active.data.id;
   return false;
@@ -472,12 +322,8 @@ const dimmedNodeIds = computed(() => {
       else if (store.connections.some(c => (c.from === targetId && c.to === s.id) || (c.to === targetId && c.from === s.id))) {
         isHL = true;
       }
-    } 
-    else if (activeHL.type === 'edge') {
-      // 3) 선택된 선의 양 끝 노드 강조
-      isHL = (s.id === activeHL.data.from.id || s.id === activeHL.data.to.id);
     }
-    
+
     if (!isHL) ids.add(s.id);
   });
   return ids;
@@ -699,15 +545,10 @@ function navigate(dir) {
   }
 }
 
-const tracksInCurrentView = computed(() => {
-  const prefix = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}`
-  const idsWithDataInMonth = new Set()
-  schedules.value.forEach(s => { if (s.day.startsWith(prefix)) idsWithDataInMonth.add(s.track) })
-  return allTracks.value.filter(t => {
-    if (t.isHighlight || t.id.includes('prompt') || t.id.includes('blog')) return true
-    return !t.isEnded || idsWithDataInMonth.has(t.id)
-  })
-})
+const flowChipTracks = computed(() => allTracks.value.filter(t => !t.isHighlight && !t.isEnded))
+function getTrackScheduleCount(trackId) {
+  return schedules.value.filter(s => s.track === trackId).length
+}
 
 const sortedAllTracks = computed(() => {
   return [...store.allTracks].sort((a,b) => {
@@ -776,9 +617,55 @@ function toggleTooltip(id) {
     interactionState.value.clicked = null; 
   } 
 }
+function buildReasoningData(kind, trackName, subject, summary) {
+  return {
+    kind,
+    flowName: trackName || '학습 흐름',
+    subject,
+    summary,
+    observations: [
+      '반복적으로 드러난 학습 패턴과 최근 활동 기록을 먼저 확인했습니다.',
+      '현재 기술 스택에서 부족하거나 보완이 필요한 영역을 파악했습니다.',
+      '기존에 작성한 블로그, 커밋, 캘린더 일정을 종합적으로 참고했습니다.',
+    ],
+    interpretations: [
+      '개념을 접한 경험은 있지만, 실제 코드에서 언제 어떤 패턴을 써야 하는지 판단하는 단계가 아직 약하다고 봤습니다.',
+      '짧은 학습 시간 안에서는 결과물이 남는 실습 중심 구성이 더 잘 맞는다고 해석했습니다.',
+      '이해에서 끝내지 말고 실습과 회고까지 닫힌 루프로 이어줘야 학습 유지가 가능하다고 판단했습니다.',
+    ],
+    plan: kind === 'edge'
+      ? [
+          '이전 활동에서 얻은 맥락이 다음 활동으로 자연스럽게 전달되도록 이 순서로 연결했습니다.',
+          '먼저 선택 기준을 잡고, 바로 다음 단계에서 실제 코드에 적용하게 만들었습니다.',
+          '실습 뒤에는 정리와 복습을 붙여 기억이 흩어지지 않도록 마무리했습니다.',
+        ]
+      : [
+          '이 활동을 현재 학습 맥락에서 가장 효과적인 위치에 배치했습니다.',
+          '먼저 선택 기준을 잡고, 바로 다음 단계에서 실제 코드에 적용하게 만들었습니다.',
+          '실습 뒤에는 정리와 복습을 붙여 기억이 흩어지지 않도록 마무리했습니다.',
+        ],
+  }
+}
+
 function openAIModal(s) {
-  aiModalNode.value = s;
-  isAIModalOpen.value = true;
+  const trackName = store.getTrackById?.(s.track)?.name || ''
+  const title = s.tooltip?.title || s.text
+  const day = s.day ? (() => { const [y, m, d] = s.day.split('-').map(Number); return `${m}월 ${d}일`; })() : ''
+  const subject = day ? `${day} · ${title}` : title
+  const summary = s.summary || '최근 학습 패턴을 분석하여 효율적인 복습 및 실전 적용 주기를 설계했습니다.'
+  aiModalData.value = buildReasoningData('node', trackName, subject, summary)
+  isAIModalOpen.value = true
+}
+
+function onEdgeClick(edge) {
+  if (!edge || !edge.from || !edge.to) return
+  const fromTitle = edge.from.tooltip?.title || edge.from.text
+  const toTitle = edge.to.tooltip?.title || edge.to.text
+  const trackName = store.getTrackById?.(edge.track)?.name || ''
+  const subject = `${fromTitle} → ${toTitle}`
+  const summary = `${fromTitle}에서 ${toTitle}(으)로 이어지는 흐름입니다. 이전 활동의 맥락을 다음 활동으로 전달하기 위해 이 순서로 배치했습니다.`
+  aiModalData.value = buildReasoningData('edge', trackName, subject, summary)
+  isAIModalOpen.value = true
 }
 function jumpToDate(date) {
   const d = date instanceof Date ? date : parseDate(date)
@@ -867,6 +754,13 @@ function onWeekWheel(e) {
 .theme-dark { --k-bg: #000000; --k-housing: #1C1C1E; --k-key-bg: #2C2C2E; --k-key-border: #3A3A3C; --k-key-shadow: rgba(0,0,0,0.3); --k-border-main: #3A3A3C; --bg-base: #000000; --bg-surface: #1C1C1E; --bg-elevated: #2C2C2E; --border: #3A3A3C; --border-mid: #48484A; --text-primary: #F5F5F7; --text-secondary: #A1A1A6; --text-muted: #86868B; --text-faint: #636366; --accent: #0A84FF; --today-bg: rgba(10, 132, 255, 0.15); --sun-color: #FF453A; --sat-color: #0A84FF; --k-acc-1-bg: #FF453A; --k-acc-1-shadow: #D70015; --k-acc-2-bg: #0A84FF; --k-acc-2-shadow: #0040DD; --k-acc-3-bg: #32D74B; --k-acc-3-shadow: #248A3D; }
 
 /* ── 공통 ── */
+/* Flow Legend Chips */
+.flow-chips { display: flex; gap: 12px; padding: 12px 24px; flex-shrink: 0; flex-wrap: wrap; }
+.flow-chip { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--border); background: var(--bg-surface); }
+.flow-chip-bar { width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0; }
+.flow-chip-name { font-size: 12px; font-weight: 800; color: var(--text-primary); }
+.flow-chip-sub { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+
 .calendar-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; background: var(--bg-base); }
 .calendar-wrapper { position: relative; width: 100%; min-height: 100%; display: flex; flex-direction: column; }
 
@@ -961,27 +855,6 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 @keyframes targetFlash { 0% { background-color: var(--text-primary); color: var(--bg-base); box-shadow: inset 0 0 0 4px var(--bg-base); } 100% { background-color: transparent; box-shadow: inset 0 0 0 0px transparent; } }
 :deep(.flash-target) { animation: targetFlash 0.8s ease-out; border-radius: 0; }
 
-/* ★ 툴팁 & 모달 통일 */
-.edge-tooltip-popup { position: absolute; z-index: 80; pointer-events: none; background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 12px; padding: 12px 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 8px; min-width: max-content; white-space: nowrap; }
-.et-track { font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); }
-.et-nodes { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--text-primary); }
-.et-nodes i { color: var(--text-muted); font-size: 11px; }
-
-.edge-remote-modal { position: absolute; z-index: 500; width: 280px; background: var(--bg-base); border: 1px solid var(--text-primary); box-shadow: 0 16px 48px rgba(0,0,0,0.15); display: flex; flex-direction: column; overflow: hidden; }
-.er-header { padding: 14px 16px; background: var(--bg-surface); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-.er-track-name { font-size: 13px; font-weight: 900; letter-spacing: 0.05em; text-transform: uppercase; }
-.er-close { background: none; border: none; color: var(--text-muted); font-size: 14px; cursor: pointer; transition: color 0.15s; padding: 0 4px; line-height: 1; }
-.er-close:hover { color: var(--text-primary); }
-.er-body { padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-.er-node { display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border); background: var(--bg-base); transition: all 0.2s; }
-.er-node:hover { border-color: var(--text-primary); background: var(--bg-surface); }
-.er-node-color { width: 4px; height: 32px; border-radius: 2px; flex-shrink: 0; }
-.er-node-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
-.er-node-day { font-size: 11px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.05em; }
-.er-node-title { font-size: 13px; font-weight: 900; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 130px; }
-.btn-er-jump { padding: 6px 10px; font-size: 10px; font-weight: 900; background: var(--text-primary); color: var(--bg-base); border: none; cursor: pointer; border-radius: 0; transition: all 0.15s; display: flex; align-items: center; gap: 6px; }
-.btn-er-jump:hover { opacity: 0.8; transform: scale(1.05); }
-.er-arrow { display: flex; justify-content: center; color: var(--text-muted); font-size: 10px; margin: 4px 0; }
 
 @keyframes slideInFromLeft { from { transform: translateX(-6%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }
 @keyframes slideInFromRight { from { transform: translateX(6%); opacity: 0.5; } to { transform: translateX(0); opacity: 1; } }

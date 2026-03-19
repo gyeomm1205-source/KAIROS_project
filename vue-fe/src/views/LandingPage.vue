@@ -123,11 +123,11 @@
         <div class="features-grid">
           <div class="feature-card reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
             <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             </div>
             <div class="fc-number">01</div>
-            <h3>GITHUB & VELOG SYNC</h3>
-            <p>커밋 기록과 블로그 포스팅이 자동으로 학습 캘린더에 연동됩니다. 분산된 개발 기록을 하나의 흐름으로 통합하세요.</p>
+            <h3>캘린더 기반 학습 관리</h3>
+            <p>학습 일정을 캘린더에서 관리하고 흐름을 한눈에 파악하세요.</p>
             <div class="fc-arrow">→</div>
           </div>
           <div class="feature-card reveal-elem parallax-delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
@@ -135,17 +135,26 @@
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 16v-4M12 8h.01"/></svg>
             </div>
             <div class="fc-number">02</div>
-            <h3>AI CURATION</h3>
-            <p>현재 레벨과 목표 트랙을 분석하여 최적의 학습 자료와 다음 단계를 AI가 미니멀하고 직관적으로 추천합니다.</p>
+            <h3>맞춤 추천</h3>
+            <p>최근 활동을 분석해 지금 이어서 하기 좋은 학습을 제안합니다.</p>
             <div class="fc-arrow">→</div>
           </div>
           <div class="feature-card reveal-elem parallax-delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
             <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
             </div>
             <div class="fc-number">03</div>
-            <h3>NODE CALENDAR</h3>
-            <p>단순한 달력을 넘어섰습니다. 학습 간의 인과관계를 그래프 형태로 연결하여 완벽한 커리큘럼 맵을 구축합니다.</p>
+            <h3>외부 서비스 연동</h3>
+            <p>GitHub, Velog, Google Calendar 활동을 자동으로 수집합니다.</p>
+            <div class="fc-arrow">→</div>
+          </div>
+          <div class="feature-card reveal-elem parallax-delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="fc-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+            </div>
+            <div class="fc-number">04</div>
+            <h3>성장 추적</h3>
+            <p>학습 히스토리와 성장 일지로 변화를 기록하세요.</p>
             <div class="fc-arrow">→</div>
           </div>
         </div>
@@ -162,8 +171,8 @@
               <div class="wf-index">01</div>
             </div>
             <div class="wf-content">
-              <h3>SET YOUR TRACK</h3>
-              <p>목표하는 기술 스택을 선언하고 커리큘럼을 등록합니다.</p>
+              <h3>연동</h3>
+              <p>GitHub, Velog, Google Calendar를 연결합니다.</p>
             </div>
             <div class="wf-arrow">→</div>
           </div>
@@ -172,8 +181,8 @@
               <div class="wf-index">02</div>
             </div>
             <div class="wf-content">
-              <h3>AUTO TRACKING</h3>
-              <p>GitHub 푸시와 기술 블로그 글을 AI가 스캔하여 일정을 자동 완료 처리합니다.</p>
+              <h3>분석</h3>
+              <p>최근 학습 활동과 기술 맥락을 분석합니다.</p>
             </div>
             <div class="wf-arrow">→</div>
           </div>
@@ -182,8 +191,28 @@
               <div class="wf-index">03</div>
             </div>
             <div class="wf-content">
-              <h3>GET INSIGHTS</h3>
-              <p>깊이 있는 분석 리포트와 AI 멘토링을 통해 성장의 빈틈을 완전히 메웁니다.</p>
+              <h3>추천</h3>
+              <p>맞춤형 커리큘럼과 다음 액션을 제안합니다.</p>
+            </div>
+            <div class="wf-arrow">→</div>
+          </div>
+          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="wf-left">
+              <div class="wf-index">04</div>
+            </div>
+            <div class="wf-content">
+              <h3>캘린더 반영</h3>
+              <p>추천 학습을 캘린더에 자동 등록합니다.</p>
+            </div>
+            <div class="wf-arrow">→</div>
+          </div>
+          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
+            <div class="wf-left">
+              <div class="wf-index">05</div>
+            </div>
+            <div class="wf-content">
+              <h3>성장 추적</h3>
+              <p>학습 기록과 성장 변화를 확인합니다.</p>
             </div>
             <div class="wf-arrow">→</div>
           </div>
@@ -245,7 +274,11 @@
       </div>
       <div class="footer-bottom">
         <span>© 2026 KAIROS. ALL RIGHTS RESERVED.</span>
-        <span>DESIGNED FOR DEVELOPERS</span>
+        <div class="footer-legal">
+          <span class="footer-legal-link">이용약관</span>
+          <span class="footer-legal-link">개인정보처리방침</span>
+          <span class="footer-legal-link">문의하기</span>
+        </div>
       </div>
     </footer>
   </div>
@@ -681,7 +714,7 @@ onUnmounted(() => {
   FEATURES GRID
 ────────────────────────────── */
 .features-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr);
+  display: grid; grid-template-columns: repeat(2, 1fr);
   border: 1px solid rgba(255,255,255,0.12); gap: 0;
 }
 .feature-card {
@@ -731,6 +764,15 @@ onUnmounted(() => {
   .feature-card { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
   .feature-card:last-child { border-bottom: none; }
 }
+
+.footer-legal {
+  display: flex; gap: 24px; align-items: center;
+}
+.footer-legal-link {
+  font-size: 11px; color: rgba(255,255,255,0.35); cursor: pointer;
+  transition: color 0.2s;
+}
+.footer-legal-link:hover { color: rgba(255,255,255,0.7); }
 
 /* ──────────────────────────────
   WORKFLOW SECTION

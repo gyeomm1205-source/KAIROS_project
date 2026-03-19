@@ -19,6 +19,8 @@
         <p>사용자의 활동 데이터와 기술 스택을 종합 분석 중입니다.</p>
       </div>
 
+      <p class="loading-wait-text">잠시만 기다려 주세요.<br>최근 활동을 바탕으로 맞춤 분석을 준비하고 있어요.</p>
+
       <div class="steps-container">
         <div v-for="(step, i) in steps" :key="step.label" class="step-item">
           <div class="step-status">
@@ -50,9 +52,10 @@ const currentStep = ref(0)
 const progressWidth = ref(0)
 
 const steps = [
-  { label: 'GitHub 및 Velog 데이터 수집' },
-  { label: '기술 숙련도 및 부족 역량 분석' },
-  { label: 'AI 맞춤형 커리큘럼 생성' },
+  { label: '계정 데이터 확인 중' },
+  { label: '활동 요약 중' },
+  { label: '기술 스택 분석 중' },
+  { label: '추천 준비 중' },
 ]
 
 let timer
@@ -71,7 +74,7 @@ onMounted(() => {
       clearInterval(timer)
       clearInterval(progressTimer)
       progressWidth.value = 100
-      setTimeout(() => router.push('/analyze'), 600)
+      setTimeout(() => router.push('/onboarding/result'), 600)
     }
   }, 1200)
 })
@@ -162,4 +165,6 @@ function statusClass(i) {
   width: calc(100% - 48px);
 }
 .progress-fill { height: 100%; background: var(--text-primary); transition: width 0.15s ease-out; }
+
+.loading-wait-text { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; text-align: center; margin-bottom: 32px; }
 </style>

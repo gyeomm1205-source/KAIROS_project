@@ -2,7 +2,7 @@
   <div class="page-root custom-scroll">
     <header class="page-header">
       <div class="header-left">
-        <button class="btn-icon" @click="$router.push('/analyze')">
+        <button class="btn-icon" @click="$router.push('/recommend')">
           <i class="fas fa-arrow-left" /> BACK
         </button>
       </div>
