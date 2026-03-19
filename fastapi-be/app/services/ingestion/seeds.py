@@ -36,16 +36,13 @@ BLOG_META: dict[str, dict] = {
     "woowa": {
         "source_type": "tech_blog",
         "language": "ko",
-        "freshness_grade": "stable",
     },
     "kakao": {
         "source_type": "tech_blog",
         "language": "ko",
-        "freshness_grade": "stable",
     },
     "naver": {
         "source_type": "tech_blog",
         "language": "ko",
-        "freshness_grade": "stable",
     },
 }

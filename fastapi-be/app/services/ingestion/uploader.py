@@ -66,8 +66,6 @@ def upload_document(
                 "source_type": source.get("source_type", ""),
                 "language": source.get("language", "ko"),
                 "published_at": source.get("published_at", ""),
-                "freshness_grade": source.get("freshness_grade", "stable"),
-                "allowed": True,
             },
         )
         points.append(point)
