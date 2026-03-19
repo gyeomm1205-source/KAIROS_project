@@ -55,10 +55,10 @@ def _make_simple_request() -> CurriculumRequest:
     )
 
 
-def _make_onboarding_request() -> CurriculumRequest:
+def _make_onboarding_request(level: str = "중급") -> CurriculumRequest:
     """온보딩 자동 생성 — isManual=False, GitHub/Velog 분석 결과 사용"""
     fixture = json.loads((FIXTURES_DIR / "zhy2on_profile.json").read_text(encoding="utf-8"))
-    profile = fixture["profile"]
+    profile = {**fixture["profile"], "level": level}
     return CurriculumRequest(
         userId=2,
         considerPersonalSchedule=False,
@@ -118,18 +118,16 @@ async def _run_test(request: CurriculumRequest, label: str):
     print(f"  summaryLine : {response.recommendation_reason.summary_line}")
     for node in response.nodes:
         print(f"  [{node.scheduled_date}] {node.title} ({node.expected_minutes}분)")
+        if node.description:
+            print(f"    → {node.description}")
     print()
     return response
 
 
 async def main():
-    simple_request = _make_simple_request()
-    complex_request = _make_request()
-    onboarding_request = _make_onboarding_request()
-
-    await _run_test(simple_request, "간단한 주제 (Git 기초)")
-    await _run_test(complex_request, "복잡한 주제 (Spring Security + JWT)")
-    response = await _run_test(onboarding_request, "온보딩 자동 생성 (zhy2on)")
+    await _run_test(_make_onboarding_request("초급"), "온보딩 자동 생성 (zhy2on / 초급)")
+    await _run_test(_make_onboarding_request("중급"), "온보딩 자동 생성 (zhy2on / 중급)")
+    response = await _run_test(_make_onboarding_request("고급"), "온보딩 자동 생성 (zhy2on / 고급)")
 
     result = response.model_dump(by_alias=True)
     out_path = RESULTS_DIR / "curriculum_result.json"

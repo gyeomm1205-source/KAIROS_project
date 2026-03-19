@@ -42,7 +42,7 @@ logger = logging.getLogger(__name__)
 
 class _CurriculumNodeOutput(BaseModel):
     title: str = Field(..., description="학습 주제 제목")
-    description: str | None = Field(None, description="학습 내용 한 줄 설명")
+    description: str | None = Field(None, description="title을 구체적으로 풀어쓴 설명. 무엇을 어떻게 학습하는지 1~2문장.")
     scheduled_date: str = Field(..., description="학습 예정일 (YYYY-MM-DD)")
     expected_minutes: int = Field(..., ge=30, le=240, description="예상 소요 시간(분)")
 
@@ -108,7 +108,14 @@ _MANUAL_USER_TEMPLATE = """\
 - 오늘: {today}
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
-위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).\
+위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+
+[노드 작성 기준]
+- title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
+- description: title을 보고 해당 내용의 학습을 위해 수행할 구체적인 행동을 3단계 레벨로 나누어 제시하세요.
+  완전히 처음 접하는 사람에게 추천할 학습: (구체적 행동)
+  가볍게 다루거나 공부해본 수준의 사람에게 추천할 학습: (구체적 행동)
+  실제로 해당 기술을 써서 프로젝트를 진행해본 경험이 있는 사람에게 추천할 실습: (구체적 행동)\
 """
 
 # 온보딩 자동 생성 (isManual=False): GitHub/Velog 분석 결과만으로 주제 자동 결정
@@ -137,7 +144,14 @@ _ONBOARDING_USER_TEMPLATE = """\
 - 오늘: {today}
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
-위 분석 결과를 바탕으로 이 사람에게 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).\
+위 분석 결과를 바탕으로 이 사람에게 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+
+[노드 작성 기준]
+- title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
+- description: title을 보고 해당 내용의 학습을 위해 수행할 구체적인 행동을 3단계 레벨로 나누어 제시하세요.
+  완전히 처음 접하는 사람에게 추천할 학습: (구체적 행동)
+  가볍게 다루거나 공부해본 수준의 사람에게 추천할 학습: (구체적 행동)
+  실제로 해당 기술을 써서 프로젝트를 진행해본 경험이 있는 사람에게 추천할 실습: (구체적 행동)\
 """
 
 
@@ -171,7 +185,7 @@ async def run_curriculum(request: CurriculumRequest) -> CurriculumResponse:
 
 async def _generate_with_llm(request: CurriculumRequest) -> _CurriculumOutput:
     """gpt-4o structured output으로 커리큘럼을 생성한다."""
-    llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.4)
+    llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.7)
     structured_llm = llm.with_structured_output(_CurriculumOutput)
 
     is_manual = request.manual_generation.is_manual if request.manual_generation else True
