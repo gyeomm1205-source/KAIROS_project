@@ -104,12 +104,23 @@ public class CalendarServiceImpl implements CalendarService {
         for (CurriculumNodeCalendarSync sync : notSyncedNodes) {
             CurriculumNode node = sync.getCurriculumNode();
             try {
-                Event event = googleCalendarClientService.createAllDayEvent(
-                        client,
-                        node.getTitle(),
-                        node.getDescription(),
-                        node.getScheduledDate()
-                );
+                Event event;
+                if (sync.getGoogleEventId() == null) {
+                    event = googleCalendarClientService.createAllDayEvent(
+                            client,
+                            node.getTitle(),
+                            node.getDescription(),
+                            node.getScheduledDate()
+                    );
+                } else {
+                    event = googleCalendarClientService.updateAllDayEvent(
+                            client,
+                            sync.getGoogleEventId(),
+                            node.getTitle(),
+                            node.getDescription(),
+                            node.getScheduledDate()
+                    );
+                }
                 sync.synced("primary", event.getId(), event.getEtag());
                 exportedNodes++;
             } catch (IOException e) {
