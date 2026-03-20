@@ -1,7 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import LandingPage from '../views/LandingPage.vue'
 import LoginPage from '../views/LoginPage.vue'
-import SignUpPage from '../views/SignUpPage.vue'
 import OnboardingConnect from '../views/OnboardingConnect.vue'
 import OnboardingSurvey from '../views/OnboardingSurvey.vue'
 import LoadingPage from '../views/LoadingPage.vue'
@@ -23,7 +22,6 @@ import AccountManagement from '../views/AccountManagement.vue'
 const routes = [
   { path: '/', name: 'Landing', component: LandingPage },
   { path: '/login', name: 'Login', component: LoginPage },
-  { path: '/signup', name: 'SignUp', component: SignUpPage },
 
   // 온보딩
   { path: '/onboarding/connect', name: 'OnboardingConnect', component: OnboardingConnect },

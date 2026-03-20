@@ -39,6 +39,41 @@
       </button>
     </div>
 
+    <div class="sidebar-footer">
+      <div class="user-profile" @click="router.push('/mypage')">
+        <div class="user-avatar">
+          <i class="fas fa-user-circle" />
+        </div>
+        <div class="user-details">
+          <span class="user-name">이카이로스</span>
+          <span class="user-email">kairos@ssafy.kr</span>
+        </div>
+      </div>
+      <button class="btn-logout" @click.stop="showLogoutModal = true" title="LOGOUT">
+        <i class="fas fa-power-off" />
+      </button>
+    </div>
+
+    <!-- LOGOUT MODAL -->
+    <Transition name="fade">
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+        <div class="modal-content base-panel">
+          <div class="modal-header" style="margin-bottom: 32px;">
+            <div class="flex-column">
+              <h3 class="modal-title">로그아웃 하시겠습니까?</h3>
+            </div>
+            <button @click="showLogoutModal = false" class="btn-close-modal">
+               <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-outline-small" @click="showLogoutModal = false">취소</button>
+            <button class="btn-primary-small btn-danger" @click="handleLogout">로그아웃</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
     <Transition name="toast">
       <div v-if="showToast" class="sync-toast">
         <i class="fas fa-check-circle" /> {{ toastMsg }}
@@ -49,10 +84,14 @@
 
 <script setup>
 import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 const isGithubSyncing = ref(false)
 const isVelogSyncing = ref(false)
 const showToast = ref(false)
+const showLogoutModal = ref(false)
 const toastMsg = ref('')
 
 const handleSync = (type) => {
@@ -68,6 +107,11 @@ const handleSync = (type) => {
     showToast.value = true
     setTimeout(() => showToast.value = false, 3000)
   }, 1500)
+}
+
+const handleLogout = () => {
+  showLogoutModal.value = false
+  router.push('/')
 }
 </script>
 
@@ -151,6 +195,58 @@ const handleSync = (type) => {
 }
 .btn-sync:hover:not(:disabled) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 .btn-sync:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 푸터 & 유저 섹션 */
+.sidebar-footer { 
+  padding: 16px; 
+  border-top: 1px solid var(--border); 
+  display: flex; align-items: center; gap: 8px; 
+  background: var(--bg-surface);
+}
+.user-profile { 
+  flex: 1; display: flex; align-items: center; gap: 12px; 
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 40px;
+  background: var(--bg-base); cursor: pointer; transition: all 0.2s;
+  overflow: hidden;
+}
+.user-profile:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.user-avatar { font-size: 20px; color: var(--text-muted); display: flex; align-items: center; }
+.user-details { display: flex; flex-direction: column; overflow: hidden; }
+.user-name { font-size: 11px; font-weight: 800; color: var(--text-primary); white-space: nowrap; text-overflow: ellipsis; }
+.user-email { font-size: 9px; color: var(--text-faint); white-space: nowrap; text-overflow: ellipsis; }
+
+.btn-logout { 
+  width: 40px; height: 40px; border-radius: 50%; 
+  display: flex; align-items: center; justify-content: center; 
+  border: 1px solid var(--border); background: var(--bg-base); 
+  color: var(--text-muted); cursor: pointer; transition: all 0.2s; 
+}
+.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+
+.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+
+/* 모달 공통 스타일에 맞춤 (Global 혹은 Local 선언) */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
+.modal-content { width: 100%; max-width: 400px; padding: 32px; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.btn-close-modal { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s; margin-top: -4px; margin-right: -4px; }
+.btn-close-modal:hover { color: var(--text-primary); }
+.modal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); margin-bottom: 6px; }
+.modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0; }
+.modal-body { margin-bottom: 24px; }
+.text-sm { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small:hover { background: transparent; color: var(--text-primary); }
+.btn-primary-small.btn-danger { background: #dc2626; border-color: #dc2626; color: white; }
+.btn-primary-small.btn-danger:hover { background: transparent; color: #dc2626; }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-outline-small:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+
+/* 애니메이션 및 기타 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 
 /* 토스트 메시지 */
 .sync-toast { 

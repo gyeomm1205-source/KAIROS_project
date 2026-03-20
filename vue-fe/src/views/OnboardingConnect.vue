@@ -12,7 +12,7 @@
 
     <div class="auth-card custom-scroll">
       <div class="header-top">
-        <button class="btn-back" @click="$router.push('/login')">
+        <button class="btn-back" @click="$router.push('/')">
           <i class="fas fa-arrow-left" /> BACK
         </button>
       </div>
@@ -44,6 +44,7 @@
         <button 
           class="link-btn"
           :class="{ 'is-connected': isGithubConnected }"
+          :disabled="!isGoogleConnected"
           @click="isGithubConnected = true"
         >
           <div class="link-btn-left">
@@ -58,6 +59,7 @@
         <button 
           class="link-btn"
           :class="{ 'is-connected': isVelogConnected }"
+          :disabled="!isGoogleConnected"
           @click="isVelogConnected = true"
         >
           <div class="link-btn-left">
@@ -137,10 +139,11 @@ const canProceed = computed(() => isGoogleConnected.value && isGithubConnected.v
 .section-label { font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: inline-block; }
 
 .link-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 14px 16px; background: transparent; cursor: pointer; margin-bottom: 12px; color: var(--text-primary); font-weight: 700; font-size: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.link-btn:hover:not(.is-connected) { background: var(--bg-hover); border-color: var(--text-primary); }
-.link-btn:hover:not(.is-connected) .link-icon { border-color: var(--text-primary); }
+.link-btn:hover:not(.is-connected):not(:disabled) { background: var(--bg-hover); border-color: var(--text-primary); }
+.link-btn:hover:not(.is-connected):not(:disabled) .link-icon { border-color: var(--text-primary); }
 .link-btn.is-connected { background: transparent; border-color: rgba(255,255,255,0.2); color: var(--text-secondary); cursor: default; }
 .link-btn.is-connected .link-icon { border-color: rgba(255,255,255,0.2); color: var(--text-secondary); }
+.link-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
 .link-btn-left { display: flex; align-items: center; gap: 12px; }
 .link-icon { width: 32px; height: 32px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.3s; }

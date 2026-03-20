@@ -24,7 +24,7 @@
         <button class="btn-outline" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/login')">
           LOGIN
         </button>
-        <button class="btn-solid" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
+        <button class="btn-solid" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/onboarding/connect')">
           GET STARTED <span class="btn-arrow">→</span>
         </button>
       </div>
@@ -61,7 +61,7 @@
             개발자 성장을 위한 가장 스마트한 방법.
           </p>
           <div class="hero-cta reveal-elem delay-4">
-            <button class="btn-cta-primary" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
+            <button class="btn-cta-primary" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/onboarding/connect')">
               <span>무료로 시작하기</span>
               <span class="btn-cta-arrow">→</span>
             </button>

@@ -24,18 +24,19 @@
       </div>
 
       <div v-if="currentView === 'month'" class="calendar-area">
-        <div ref="calendarWrapper" class="calendar-wrapper">
-          <div class="calendar-header-row grid-cols-7 month-dow-header">
-            <div v-for="(d, i) in DAY_LABELS" :key="d" class="day-header"
-              :class="{ 'day-header--sat': i===6, 'day-header--sun': i===0 }">
-              {{ d }}
-            </div>
-          </div>
-          
           <div class="month-scroll-body custom-scroll" ref="monthScrollBody" @scroll.passive="handleMonthScroll">
+            <!-- Header moved inside to share width/scrollbar context for perfect alignment -->
+            <div class="calendar-header-row grid-cols-7 month-dow-header">
+              <div v-for="(d, i) in DAY_LABELS" :key="d" class="day-header"
+                :class="{ 'day-header--sat': i===6, 'day-header--sun': i===0 }">
+                {{ d }}
+              </div>
+            </div>
+
             <div class="calendar-grid grid-cols-7" :style="{ gridAutoRows: 'var(--month-row-height, 150px)' }">
               <CalendarCell
                 v-for="cell in monthCells"
+                :id="'day-' + cell.dateStr"
                 :key="cell.dateStr"
                 :date-str="cell.dateStr"
                 :current-month="currentMonth" 
@@ -75,16 +76,14 @@
               />
             </svg>
           </div>
+          <Transition name="floatbar">
+            <div v-if="selectedSchedules.length" class="floating-action-bar">
+              <span class="sel-count">{{ selectedSchedules.length }} SELECTED</span>
+              <button class="btn-sel-delete" @click="deleteSelected"><i class="fas fa-trash" /> DELETE</button>
+              <button class="btn-sel-clear" @click="selectedSchedules = []"><i class="fas fa-times" /></button>
+            </div>
+          </Transition>
         </div>
-
-        <Transition name="floatbar">
-          <div v-if="selectedSchedules.length" class="floating-action-bar">
-            <span class="sel-count">{{ selectedSchedules.length }} SELECTED</span>
-            <button class="btn-sel-delete" @click="deleteSelected"><i class="fas fa-trash" /> DELETE</button>
-            <button class="btn-sel-clear" @click="selectedSchedules = []"><i class="fas fa-times" /></button>
-          </div>
-        </Transition>
-      </div>
 
       <div v-else-if="currentView === 'week'" class="calendar-area">
         <div ref="calendarWrapper" class="week-wrapper custom-scroll"
@@ -428,13 +427,15 @@ function handleMonthScroll(e) {
       const el = monthScrollBody.value
       if (!el) { scrollTicking = false; return; }
 
-      const centerLine = el.scrollTop + (el.clientHeight / 2) + 50 
+      const centerLine = el.scrollTop + (el.clientHeight / 2)
       const firstCell = el.querySelector('.calendar-cell')
       if (firstCell) {
         const rowHeight = firstCell.offsetHeight || 150
-        const rowIndex = Math.floor(centerLine / rowHeight)
+        const headerH = el.querySelector('.calendar-header-row')?.offsetHeight || 40
+        const rowIndex = Math.floor((centerLine - headerH) / rowHeight)
         const target = monthCells.value[rowIndex * 7 + 3] 
-        if (target && (target.month !== currentMonth.value || target.year !== currentYear.value)) {
+        // 🚀 Add a guard to prevent jumping to month detection before the initial scroll has landed
+        if (target && !isAdjustingScroll && (target.month !== currentMonth.value || target.year !== currentYear.value)) {
           currentMonth.value = target.month; currentYear.value = target.year;
         }
       }
@@ -471,12 +472,15 @@ function handleMonthScroll(e) {
 }
 
 function initMonthScroll() { 
+  isAdjustingScroll = true; // 🚀 Block month detection during initial scroll
   startOffsetWeeks.value = 12;
   endOffsetWeeks.value = 16;
   anchorDate.value = new Date(currentYear.value, currentMonth.value - 1, 1);
   nextTick(() => {
-    const firstDayStr = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}-01`;
-    scrollToDate(firstDayStr, 'auto', 'top');
+    setTimeout(() => {
+      const firstDayStr = `${currentYear.value}-${String(currentMonth.value).padStart(2,'0')}-01`;
+      scrollToDate(firstDayStr, 'auto', 'top');
+    }, 50); // Small wait for DOM IDs to be ready
   });
 }
 
@@ -714,10 +718,18 @@ watch(currentYear, (y) => store.fetchHolidaysForYear(y))
 onMounted(() => { 
   store.fetchHolidaysForYear(currentYear.value); 
   nextTick(() => {
+    // 🚀 Ensure we start at current month
+    const now = new Date();
+    currentYear.value = now.getFullYear();
+    currentMonth.value = now.getMonth() + 1;
+    focusedDay.value = toDateStr(now);
+
     initMonthScroll();
     setTimeout(() => {
       scrollToDate(todayStr, 'smooth', 'center');
-    }, 100);
+      // 🚀 Re-enable detection only after we've landed on the correct date
+      setTimeout(() => { isAdjustingScroll = false; }, 600);
+    }, 200); 
   });
 
   // 🚀 온보딩 페이지에서 넘어왔는지 확인 후 파트 2 애니메이션 재생
@@ -768,8 +780,7 @@ function onWeekWheel(e) {
 .month-scroll-body { flex: 1; position: relative; z-index: 10; scroll-behavior: auto; }
 .calendar-header-row { display: grid; border-bottom: 1px solid var(--border-mid); background: var(--bg-surface); z-index: 150 !important; position: sticky; top: 0; }
 .grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
-.day-header { padding: 14px 0; text-align: center; font-size: 13px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; border-right: 1px solid var(--border); }
-.day-header:last-child { border-right: none; }
+.day-header { padding: 14px 0; text-align: center; font-size: 13px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; border-right: 1px solid var(--border); box-sizing: border-box; }
 .day-header--sat { color: #2563eb !important; }
 .day-header--sun { color: #dc2626 !important; }
 .line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
@@ -779,7 +790,7 @@ function onWeekWheel(e) {
 .conn-path.is-dimmed { opacity: 0.05 !important; }
 h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; border-left: 1px solid var(--border); }
 
 /* ── Floating Action Bar ── */
 .floating-action-bar {

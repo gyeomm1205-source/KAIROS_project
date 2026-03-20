@@ -83,7 +83,7 @@ const visibleSchedules = computed(() => labelSchedules.value.slice(0, MAX_VISIBL
 const hiddenCount      = computed(() => Math.max(0, labelSchedules.value.length - MAX_VISIBLE))
 
 function trackColor(id) { return store.getTrackById?.(id)?.color || 'var(--text-primary)' }
-function handleCellClick() { emit('toggle-tooltip', null); emit('cell-click', props.dateStr); if (isCurrentMonth.value) emit('day-detail', props.dateStr) }
+function handleCellClick() { emit('toggle-tooltip', null); emit('cell-click', props.dateStr); }
 function handleDblClick() { emit('day-detail', props.dateStr) }
 </script>
 

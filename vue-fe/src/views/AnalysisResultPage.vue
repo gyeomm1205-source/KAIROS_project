@@ -1,144 +1,168 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col font-sans">
-    <div class="h-14 bg-white border-b border-gray-200 flex items-center px-6">
-      <button @click="router.back()" class="flex items-center gap-1 text-gray-500 hover:text-gray-700 text-sm">
-        <i class="fas fa-arrow-left"></i> 뒤로
-      </button>
+  <div class="setup-root">
+    <!-- ONBOARDING STEPPER -->
+    <div class="global-stepper-wrap">
+      <div class="page-stepper">
+        <div class="step done">1. 계정 연동</div>
+        <div class="step done">2. 사전 설문</div>
+        <div class="step done">3. 데이터 분석</div>
+        <div class="step active">4. 결과 확인</div>
+      </div>
     </div>
 
-    <div v-if="isLoadingAI" class="flex-1 flex flex-col items-center justify-center text-gray-500">
-      <i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-blue-500"></i>
-      <p>AI가 사용자의 학습 활동을 분석하고 있습니다...</p>
-    </div>
+    <div class="setup-card custom-scroll">
+      <div class="header-top">
+        <button @click="router.back()" class="btn-back">
+          <i class="fas fa-arrow-left" /> BACK
+        </button>
+      </div>
 
-    <div v-else-if="analysisResult" class="flex-1 flex items-start justify-center pt-10 px-6 pb-12">
-      <div class="w-full max-w-2xl">
-        <h2 class="text-gray-900 mb-2 text-center text-2xl font-bold">
-          현재 학습 상태를 이렇게 이해했어요
-        </h2>
-        <p class="text-gray-500 text-center mb-8 text-sm">
-          최근 GitHub, Velog, Google Calendar 활동을 종합 분석한 결과입니다
-        </p>
+      <div class="setup-header">
+        <h2>현재 학습 상태 분석 결과</h2>
+        <p>최근 GitHub, Velog, Google Calendar 활동을 종합 분석한 결과입니다.</p>
+      </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex items-center gap-2 mb-3 text-gray-600 font-semibold text-sm">
+      <!-- LOADING STATE -->
+      <div v-if="isLoadingAI" class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">AI가 활동을 분석 중입니다...</p>
+      </div>
+
+      <!-- ANALYSIS CONTENT -->
+      <div v-else-if="analysisResult" class="analysis-body">
+        <div class="analysis-grid mb-lg">
+          <!-- Recent Techs -->
+          <div class="base-panel p-md">
+            <div class="panel-header mb-md">
               <i class="fas fa-code"></i>
-              <h3>최근 활동 기술</h3>
+              <h3>RECENT TECHS</h3>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <span v-for="t in analysisResult.recentTechs" :key="t" class="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+            <div class="tech-tags">
+              <span v-for="t in analysisResult.recentTechs" :key="t" class="outline-badge">
                 {{ t }}
               </span>
             </div>
           </div>
 
-          <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex items-center gap-2 mb-3 text-gray-600 font-semibold text-sm">
+          <!-- Skill Levels -->
+          <div class="base-panel p-md">
+            <div class="panel-header mb-md">
               <i class="fas fa-chart-bar"></i>
-              <h3>전반적인 기술 숙련도</h3>
+              <h3>SKILL LEVELS</h3>
             </div>
-            <div class="space-y-2">
-              <div v-for="s in analysisResult.skillLevels" :key="s.name" class="flex items-center gap-2">
-                <span class="w-20 text-gray-600 shrink-0 text-xs">{{ s.name }}</span>
-                <div class="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div class="h-full bg-gray-600 rounded-full" :style="{ width: s.level + '%' }"></div>
+            <div class="skill-list">
+              <div v-for="s in analysisResult.skillLevels" :key="s.name" class="skill-item">
+                <div class="skill-info">
+                  <span class="skill-name">{{ s.name }}</span>
+                  <span class="skill-percent">{{ s.level }}%</span>
                 </div>
-                <span class="text-gray-400 w-8 text-right text-xs">{{ s.level }}%</span>
+                <div class="progress-bar-bg">
+                  <div class="progress-bar-fill" :style="{ width: s.level + '%' }"></div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex items-center gap-2 mb-3 text-gray-600 font-semibold text-sm">
+          <!-- Repeated Techs -->
+          <div class="base-panel p-md">
+            <div class="panel-header mb-md">
               <i class="fas fa-redo"></i>
-              <h3>반복적으로 다룬 기술</h3>
+              <h3>REPEATED TECHS</h3>
             </div>
-            <div class="space-y-2">
-              <div v-for="t in analysisResult.repeatedTechs" :key="t.name" class="flex items-center justify-between text-sm">
-                <span class="text-gray-700">{{ t.name }}</span>
-                <span class="text-gray-400 text-xs">{{ t.count }}회 등장</span>
+            <div class="repeated-list">
+              <div v-for="t in analysisResult.repeatedTechs" :key="t.name" class="repeated-item">
+                <span class="tech-name">{{ t.name }}</span>
+                <span class="tech-count">{{ t.count }}회 등장</span>
               </div>
             </div>
           </div>
 
-          <div class="bg-white border border-gray-200 rounded-lg p-5">
-            <div class="flex items-center gap-2 mb-3 text-gray-600 font-semibold text-sm">
+          <!-- Recommended Position -->
+          <div class="base-panel p-md">
+            <div class="panel-header mb-md">
               <i class="fas fa-compass"></i>
-              <h3>추천 포지션</h3>
+              <h3>RECOMMENDED POSITION</h3>
             </div>
-            <div class="space-y-2 text-sm">
-              <div v-for="pos in analysisResult.recommendedPositions" :key="pos.title" class="flex items-center justify-between">
-                <span class="text-gray-700">{{ pos.title }}</span>
-                <span class="px-2 py-0.5 rounded-full text-xs" 
-                      :class="pos.isHighMatch ? 'bg-gray-800 text-white' : 'bg-gray-200 text-gray-600'">
-                  {{ pos.isHighMatch ? '적합도 높음' : '가능성 있음' }}
+            <div class="position-list">
+              <div v-for="pos in analysisResult.recommendedPositions" :key="pos.title" class="position-item">
+                <span class="pos-title">{{ pos.title }}</span>
+                <span class="match-badge" :class="{ 'high': pos.isHighMatch }">
+                  {{ pos.isHighMatch ? 'HIGH MATCH' : 'POTENTIAL' }}
                 </span>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-lg p-5 mb-8">
-          <h3 class="text-gray-800 mb-2 font-semibold text-sm">요약</h3>
-          <p class="text-gray-600 text-sm leading-relaxed">
+        <!-- Summary Panel -->
+        <div class="base-panel summary-panel p-lg mb-lg">
+          <div class="panel-header mb-sm">
+            <h3 class="text-xs font-black letter-spacing-wide">SUMMARY</h3>
+          </div>
+          <p class="summary-text">
             {{ analysisResult.summary }}
           </p>
         </div>
 
-        <div class="bg-white border border-gray-200 rounded-lg p-5 text-center">
-          <p class="text-gray-700 mb-4 font-semibold">분석 결과가 실제와 잘 맞나요?</p>
-          <div class="flex gap-3 justify-center">
-            <button @click="router.push('/curriculum/suggest')" class="px-6 py-2.5 bg-gray-800 text-white rounded hover:bg-gray-700 text-sm">
+        <!-- Action Section -->
+        <div class="action-section">
+          <p class="action-desc">분석 결과가 실제와 잘 맞나요?</p>
+          <div class="action-buttons">
+            <button @click="router.push('/curriculum/suggest')" class="btn-primary px-xl">
               결과가 맞아요
             </button>
-            <button @click="showFeedback = true" class="px-6 py-2.5 border border-gray-300 text-gray-600 rounded hover:bg-gray-50 text-sm">
+            <button @click="showFeedback = true" class="btn-outline px-xl">
               수정할게요
             </button>
           </div>
         </div>
       </div>
-    </div>
 
-    <div v-else class="flex-1 flex flex-col items-center justify-center text-red-500">
-      <i class="fas fa-exclamation-triangle text-3xl mb-4"></i>
-      <p>분석 데이터를 불러오지 못했습니다.</p>
-    </div>
-
-    <div v-if="showFeedback" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div class="bg-white rounded-xl w-full max-w-md mx-4 p-6 shadow-lg">
-        <div class="flex items-center justify-between mb-1">
-          <h3 class="text-gray-800 font-bold text-lg">어떤 부분을 수정하면 좋을까요?</h3>
-          <button @click="closeFeedback" class="text-gray-400 hover:text-gray-600">
-            <i class="fas fa-times"></i>
-          </button>
-        </div>
-        <p class="text-gray-400 mb-4 text-xs">
-          기술 숙련도, 관심 분야, 추천 포지션 등 수정이 필요한 내용을 자유롭게 적어주세요
-        </p>
-        <textarea
-          v-model="feedbackText"
-          placeholder="예: TypeScript 숙련도가 실제보다 낮게 나온 것 같아요."
-          class="w-full border border-gray-300 rounded-lg p-3 text-gray-800 text-sm focus:outline-none focus:border-gray-500 resize-none"
-          rows="4"
-        ></textarea>
-        <div class="flex gap-3 mt-4 justify-end">
-          <button @click="closeFeedback" class="px-4 py-2 border border-gray-300 text-gray-500 rounded hover:bg-gray-50 text-sm">
-            취소
-          </button>
-          <button
-            @click="submitFeedback"
-            :disabled="!feedbackText.trim() || isSubmitting"
-            :class="feedbackText.trim() ? 'bg-gray-800 text-white hover:bg-gray-700' : 'bg-gray-200 text-gray-400 cursor-not-allowed'"
-            class="px-4 py-2 rounded flex items-center gap-1.5 text-sm transition"
-          >
-            <i class="fas fa-paper-plane" v-if="!isSubmitting"></i>
-            <i class="fas fa-spinner fa-spin" v-else></i>
-            피드백 제출
-          </button>
-        </div>
+      <!-- ERROR STATE -->
+      <div v-else class="error-container">
+        <i class="fas fa-exclamation-triangle text-2xl mb-md"></i>
+        <p>분석 데이터를 불러오지 못했습니다.</p>
+        <button @click="store.loadAnalysisResult('user-123')" class="btn-outline-small mt-md">재시도</button>
       </div>
     </div>
+
+    <!-- FEEDBACK MODAL -->
+    <Transition name="fade">
+      <div v-if="showFeedback" class="modal-overlay" @click.self="closeFeedback">
+        <div class="modal-content base-panel">
+          <div class="modal-header">
+            <div class="flex-column">
+              <h3 class="modal-title">EDIT FEEDBACK</h3>
+              <p class="modal-subtitle">수정이 필요한 내용을 적어주세요</p>
+            </div>
+            <button @click="closeFeedback" class="btn-close">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+          
+          <div class="modal-body">
+            <textarea
+              v-model="feedbackText"
+              placeholder="예: TypeScript 숙련도가 실제보다 낮게 나온 것 같아요."
+              class="base-textarea"
+              rows="5"
+            ></textarea>
+          </div>
+
+          <div class="modal-footer">
+            <button @click="closeFeedback" class="btn-outline-small px-lg">취소</button>
+            <button
+              @click="submitFeedback"
+              :disabled="!feedbackText.trim() || isSubmitting"
+              class="btn-primary-small"
+            >
+              <i class="fas fa-spinner fa-spin mr-2" v-if="isSubmitting"></i>
+              제출하기
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -174,11 +198,9 @@ const submitFeedback = async () => {
   if (feedbackText.value.trim()) {
     isSubmitting.value = true
     try {
-      // 피드백 전송 API 호출 (캘린더 API에 구현했다고 가정)
-      // await store.submitAnalysisFeedback({ text: feedbackText.value })
-      
-      // 완료 후 이동
-      router.push('/calendar')
+      // API call simulation
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      router.push('/curriculum/suggest')
     } catch (e) {
       console.error(e)
     } finally {
@@ -188,3 +210,135 @@ const submitFeedback = async () => {
   }
 }
 </script>
+
+<style scoped>
+.setup-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-base); padding: 72px 24px 24px;
+  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative;
+}
+.setup-card {
+  width: 100%; max-width: 800px; max-height: calc(100vh - 100px);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
+
+/* ── Stepper (Matched) ── */
+.global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
+.page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
+.page-stepper .step {
+  flex: 1; text-align: center; padding: 10px 4px;
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: 12px; font-weight: 700; font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); white-space: nowrap;
+  border-right: 1px solid var(--border);
+}
+.page-stepper .step:last-child { border-right: none; }
+.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+@media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
+
+/* ── Header ── */
+.header-top { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; }
+.btn-back {
+  background: transparent; border: 1px solid var(--border);
+  font-weight: 800; font-size: 11px; color: var(--text-muted);
+  cursor: pointer; transition: all 0.2s; letter-spacing: 0.1em;
+  padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+
+.setup-header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
+.setup-header h2 { font-size: 24px; font-weight: 900; color: var(--text-primary); margin-bottom: 6px; letter-spacing: -0.02em; }
+.setup-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+/* Analysis Content */
+.analysis-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+@media (max-width: 768px) { .analysis-grid { grid-template-columns: 1fr; } }
+
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.analysis-grid .base-panel:hover, .summary-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+
+.panel-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+.panel-header i { font-size: 14px; color: var(--text-primary); margin-right: 4px; }
+.panel-header h3 { font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; }
+
+/* Tech Tags */
+.tech-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.outline-badge { padding: 4px 12px; border: 1px solid var(--border); border-radius: 40px; font-size: 11px; font-weight: 700; color: var(--text-secondary); transition: all 0.2s; }
+.outline-badge:hover { border-color: var(--text-primary); color: var(--text-primary); }
+
+/* Skill List */
+.skill-list { display: flex; flex-direction: column; gap: 14px; }
+.skill-item { display: flex; flex-direction: column; gap: 4px; }
+.skill-info { display: flex; justify-content: space-between; align-items: center; }
+.skill-icon-wrap i { font-size: 18px; color: var(--text-primary); margin-right: 12px; }
+.skill-name { font-size: 13px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.02em; }
+.skill-percent { font-size: 11px; font-weight: 800; color: var(--text-muted); font-family: 'Space Grotesk', monospace; }
+.progress-bar-bg { height: 2px; background: var(--border); overflow: hidden; }
+.progress-bar-fill { height: 100%; background: var(--text-primary); transition: width 1s ease-out; }
+
+/* Repeated List */
+.repeated-list { display: flex; flex-direction: column; gap: 8px; }
+.repeated-item { display: flex; justify-content: space-between; align-items: center; font-size: 12px; font-weight: 600; }
+.tech-count { font-size: 10px; color: var(--text-muted); font-weight: 700; }
+
+/* Position List */
+.position-list { display: flex; flex-direction: column; gap: 10px; }
+.position-item { display: flex; justify-content: space-between; align-items: center; }
+.pos-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
+.match-badge { font-size: 9px; font-weight: 900; padding: 3px 8px; border: 1px solid var(--border); border-radius: 40px; color: var(--text-muted); }
+.match-badge.high { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+
+/* Summary */
+.summary-text { font-size: 13px; line-height: 1.7; color: var(--text-secondary); font-weight: 500; }
+.letter-spacing-wide { letter-spacing: 0.2em; }
+
+/* Action Sections */
+.action-section { text-align: center; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 16px; }
+.action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
+.action-buttons { display: flex; gap: 12px; justify-content: center; }
+
+.btn-primary { padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-primary:hover { background: transparent; color: var(--text-primary); }
+
+.btn-outline { padding: 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+
+/* Loading & Error */
+.loading-container, .error-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Modal Styles */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
+.modal-content { width: 100%; max-width: 480px; padding: 32px; background: var(--modal-bg); border: 1px solid var(--modal-border); box-shadow: var(--modal-shadow); }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.modal-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); margin-bottom: 2px; }
+.modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.btn-close { background: transparent; border: none; color: var(--text-muted); cursor: pointer; transition: color 0.2s; font-size: 18px; }
+.btn-close:hover { color: var(--text-primary); }
+.base-textarea { width: 100%; background: transparent; border: 1px solid var(--border); padding: 16px; color: var(--text-primary); font-family: inherit; font-size: 13px; outline: none; transition: border-color 0.3s; resize: none; border-radius: 0; }
+.base-textarea:focus { border-color: var(--text-primary); background: var(--bg-hover); }
+.modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
+
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small:hover:not(:disabled) { background: transparent; color: var(--text-primary); }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+
+/* Utils & Transitions */
+.p-md { padding: 20px; }
+.p-lg { padding: 32px; }
+.mb-md { margin-bottom: 16px; }
+.mb-lg { margin-bottom: 40px; }
+.px-lg { padding-left: 24px; padding-right: 24px; }
+.px-xl { padding-left: 40px; padding-right: 40px; }
+.mr-2 { margin-right: 8px; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+</style>
+```
