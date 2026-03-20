@@ -135,9 +135,16 @@ def _parse_toss_list(xml_data: str, skill: list[str]) -> tuple[list[dict], str |
         title_tag = item.find("title")
         title = title_tag.get_text(strip=True) if title_tag else ""
         
-        # 발행일
-        date_tag = item.find("pubdate")
+        # 발행일 (RSS 표준 pubDate 대소문자 구분)
+        date_tag = item.find("pubDate")
         date_str = date_tag.get_text(strip=True) if date_tag else ""
+        if date_str:
+            try:
+                from email.utils import parsedate_to_datetime
+                dt = parsedate_to_datetime(date_str)
+                date_str = dt.strftime("%Y-%m-%d")
+            except Exception:
+                pass
         
         articles.append({
             "url": url,
@@ -149,10 +156,58 @@ def _parse_toss_list(xml_data: str, skill: list[str]) -> tuple[list[dict], str |
     return articles, None
 
 
+def _parse_naver_list(json_str: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """네이버 D2 기술 블로그 API 응답 파싱."""
+    import json
+    try:
+        data = json.loads(json_str)
+    except Exception:
+        return [], None
+        
+    articles = []
+    content_list = data.get("content", [])
+    
+    for item in content_list:
+        raw_url = item.get("url", "")
+        if not raw_url.startswith("http"):
+            url = f"https://d2.naver.com{raw_url}"
+        else:
+            url = raw_url
+            
+        title = item.get("postTitle", item.get("title", ""))
+        
+        # Timestamp 변환
+        pub_ts = item.get("postPublishedAt", 0)
+        date_str = ""
+        if pub_ts:
+            from datetime import datetime
+            try:
+                date_str = datetime.fromtimestamp(pub_ts / 1000).strftime('%Y-%m-%d')
+            except Exception:
+                pass
+            
+        articles.append({
+            "url": url,
+            "title": title,
+            "skill": skill,
+            "published_at": date_str,
+        })
+        
+    next_url = None
+    if not data.get("last", True):
+        current_page = data.get("number", 0)
+        next_page = current_page + 1
+        # API 다음 페이지 호출
+        next_url = f"https://d2.naver.com/api/v1/contents?categoryId=2&page={next_page}&size=20"
+        
+    return articles, next_url
+
+
 PARSERS = {
     "woowa": _parse_woowa_list,
     "kakao": _parse_kakao_list,
     "toss": _parse_toss_list,
+    "naver": _parse_naver_list,
 }
 
 

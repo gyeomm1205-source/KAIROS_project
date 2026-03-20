@@ -43,8 +43,10 @@ SEEDS_TOSS: list[dict] = [
 ]
 
 # ─── 네이버 D2 ──────────────────────────────────────────────────────
-# 네이버 D2도 구조 확인 후 추가 예정
-SEEDS_NAVER: list[dict] = []
+# 네이버 D2 기술 블로그 (HelloWorld) 숨겨진 API
+SEEDS_NAVER: list[dict] = [
+    {"tag_url": "https://d2.naver.com/api/v1/contents?categoryId=2&page=0&size=20", "skill": ["Naver", "D2"]},
+]
 
 # ─── 전체 시드 맵 ───────────────────────────────────────────────────
 ALL_SEEDS: dict[str, list[dict]] = {

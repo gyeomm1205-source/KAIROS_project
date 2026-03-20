@@ -73,6 +73,32 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
             print(f"  [Crawler] 카카오 API 예외: {e}")
             return {**article, "raw_text": ""}
 
+    # [네이버 D2 예외 처리]: 클라이언트 렌더링(CSR)을 우회하기 위해 본문 데이터를 단건 상세 API로 가져옵니다.
+    if "d2.naver.com/helloworld/" in url:
+        post_id = url.split("/helloworld/")[-1]
+        api_url = f"https://d2.naver.com/api/v1/contents/{post_id}"
+        try:
+            resp = await session.get(api_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            if resp.status_code == 200:
+                data = resp.json()
+                # postTxt 필드에 텍스트가 바로 오거나, postHtml로 제공될 경우 대비
+                raw_text = data.get("postTxt", data.get("postHtml", ""))
+                if raw_text and "<" in raw_text:
+                    soup_api = BeautifulSoup(raw_text, "lxml")
+                    raw_text = soup_api.get_text(separator=" ", strip=True)
+                
+                return {
+                    **article,
+                    "title": data.get("postTitle", article.get("title", "")),
+                    "raw_text": raw_text,
+                }
+            else:
+                print(f"  [Crawler] 네이버 D2 API 에러: HTTP {resp.status_code}")
+                return {**article, "raw_text": ""}
+        except Exception as e:
+            print(f"  [Crawler] 네이버 D2 API 예외: {e}")
+            return {**article, "raw_text": ""}
+
     # [나머지 일반 블로그]: 순수 HTML 파싱
     try:
         resp = await session.get(
