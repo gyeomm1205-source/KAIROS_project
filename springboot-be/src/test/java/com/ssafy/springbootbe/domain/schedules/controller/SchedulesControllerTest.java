@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.schedules.controller;
 
 import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleCreateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleUpdateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.response.ScheduleResponse;
@@ -42,6 +43,9 @@ class SchedulesControllerTest {
 
     @MockitoBean
     private JWTUtils jwtUtils;
+
+    @MockitoBean
+    private RedisService redisService;
 
     private static final String BEARER_TOKEN = "Bearer test-token";
     private static final Long USER_ID = 1L;

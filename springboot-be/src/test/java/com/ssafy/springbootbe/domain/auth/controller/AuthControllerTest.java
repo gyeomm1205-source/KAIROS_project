@@ -1,5 +1,7 @@
 package com.ssafy.springbootbe.domain.auth.controller;
 
+import com.ssafy.springbootbe.common.jwt.JWTUtils;
+import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
@@ -18,23 +20,27 @@ import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
+import io.jsonwebtoken.Claims;
 import org.hamcrest.Matchers;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import jakarta.servlet.http.Cookie;
+
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
+import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
-import jakarta.servlet.http.Cookie;
 
 @WebMvcTest(AuthController.class)
 class AuthControllerTest {
@@ -44,6 +50,19 @@ class AuthControllerTest {
 
     @MockitoBean
     private AuthService authService;
+
+    @MockitoBean
+    private JWTUtils jwtUtils;
+
+    @MockitoBean
+    private RedisService redisService;
+
+    @BeforeEach
+    void setUp() {
+        Claims claims = mock(Claims.class);
+        given(claims.get("userId")).willReturn(1L);
+        given(jwtUtils.getClaims(anyString())).willReturn(claims);
+    }
 
     @Test
     void 구글_콜백_신규_유저_성공() throws Exception {
