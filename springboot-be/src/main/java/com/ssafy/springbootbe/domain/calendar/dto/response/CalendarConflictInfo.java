@@ -11,8 +11,11 @@ import java.util.List;
 public class CalendarConflictInfo {
 
     private Long curriculumNodeId;
-    private String title;
+    private String ourTitle;
+    private String ourDescription;
     private LocalDate ourDate;
+    private String googleTitle;
+    private String googleDescription;
     private LocalDate googleDate;
     private List<String> options;
 }

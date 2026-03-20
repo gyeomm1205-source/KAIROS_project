@@ -180,8 +180,11 @@ public class CalendarServiceImpl implements CalendarService {
                     sync.updateEtag(googleEtag);
                     conflictNodes.add(CalendarConflictInfo.builder()
                             .curriculumNodeId(node.getCurriculumNodeId())
-                            .title(node.getTitle())
+                            .ourTitle(node.getTitle())
+                            .ourDescription(node.getDescription())
                             .ourDate(node.getScheduledDate())
+                            .googleTitle(event.getSummary())
+                            .googleDescription(event.getDescription())
                             .googleDate(googleStartDate)
                             .options(List.of("USE_GOOGLE", "USE_OURS", "DISCARD"))
                             .build());
