@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.common.exception;
 
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
+import com.ssafy.springbootbe.domain.calendar.exception.GoogleOAuthNotFoundException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
@@ -156,6 +157,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleUserNotFoundException(UserNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(GoogleOAuthNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleGoogleOAuthNotFoundException(GoogleOAuthNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
     }
