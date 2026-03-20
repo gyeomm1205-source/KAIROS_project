@@ -99,6 +99,34 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
             print(f"  [Crawler] 네이버 D2 API 예외: {e}")
             return {**article, "raw_text": ""}
 
+    # [위키독스 예외 처리]: page-content 클래스에서 본문 추출
+    if "wikidocs.net/" in url:
+        try:
+            resp = await session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            if resp.status_code != 200:
+                print(f"  [Crawler] 위키독스 HTTP {resp.status_code}: {url}")
+                return {**article, "raw_text": ""}
+            soup = BeautifulSoup(resp.text, "lxml")
+
+            page_content = soup.find(class_="page-content")
+            if page_content:
+                # 불필요한 태그 제거
+                for tag in page_content(["script", "style", "nav", "aside"]):
+                    tag.decompose()
+                lines = []
+                for elem in page_content.find_all(["h1", "h2", "h3", "h4", "p", "li", "pre", "code", "td"]):
+                    text = elem.get_text(separator=" ", strip=True)
+                    if text:
+                        lines.append(text)
+                raw_text = "\n".join(lines)
+            else:
+                raw_text = _extract_text(soup)
+
+            return {**article, "raw_text": raw_text}
+        except Exception as e:
+            print(f"  [Crawler] 위키독스 예외: {e}")
+            return {**article, "raw_text": ""}
+
     # [나머지 일반 블로그]: 순수 HTML 파싱
     try:
         resp = await session.get(
