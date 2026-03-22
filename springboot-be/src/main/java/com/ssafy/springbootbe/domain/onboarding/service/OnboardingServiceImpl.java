@@ -100,7 +100,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         return OnboardingSurveyResponse.builder()
                 .userId(user.getUserId())
                 .status(user.getStatus())
-                .considerPersonalSchedule(user.getCalendarSyncEnabled())
+                .considerPersonalSchedule(user.getConsiderPersonalSchedule())
                 .analysisReportId(analysisReport.getAnalysisReportId())
                 .analysisStatus(analysisReport.getStatus())
                 .build();

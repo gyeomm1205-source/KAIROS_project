@@ -1,11 +1,14 @@
 package com.ssafy.springbootbe.domain.schedules.service;
 
 import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
+import com.ssafy.springbootbe.domain.calendar.service.GoogleCalendarClientService;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleCreateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleUpdateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.response.ScheduleResponse;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
+import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.schedule.entity.UserSchedule;
 import com.ssafy.springbootbe.persistence.schedule.repository.UserScheduleRepository;
 import com.ssafy.springbootbe.persistence.user.entity.User;
@@ -35,6 +38,12 @@ class SchedulesServiceImplTest {
     private UserRepository userRepository;
     @Mock
     private RedisService redisService;
+    @Mock
+    private OAuthAccountRepository oAuthAccountRepository;
+    @Mock
+    private GoogleCalendarClientService googleCalendarClientService;
+    @Mock
+    private OAuthTokenCryptoService oAuthTokenCryptoService;
 
     @InjectMocks
     private SchedulesServiceImpl schedulesService;

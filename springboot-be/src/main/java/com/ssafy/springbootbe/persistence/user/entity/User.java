@@ -43,9 +43,9 @@ public class User {
     @Column(name = "velog_username", length = 100)
     private String velogUsername;
 
-    @Column(name = "calendar_sync_enabled", nullable = false)
+    @Column(name = "consider_personal_schedule", nullable = false)
     @Builder.Default
-    private Boolean calendarSyncEnabled = false;
+    private Boolean considerPersonalSchedule = false;
 
     @Column(name = "dark_mode_enabled", nullable = false)
     @Builder.Default
@@ -59,9 +59,9 @@ public class User {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    public void updateProfile(UserPosition position, Boolean calendarSyncEnabled) {
+    public void updateProfile(UserPosition position, Boolean considerPersonalSchedule) {
         if (position != null) this.position = position;
-        if (calendarSyncEnabled != null) this.calendarSyncEnabled = calendarSyncEnabled;
+        if (considerPersonalSchedule != null) this.considerPersonalSchedule = considerPersonalSchedule;
     }
 
     public void updateDarkMode(Boolean darkModeEnabled) {

@@ -40,6 +40,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
 import static org.mockito.Mockito.mock;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -215,7 +216,6 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.accessToken").value("service-access-token"))
                 .andExpect(jsonPath("$.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.userId").value(11L))
-                .andExpect(jsonPath("$.githubTaskId").value("task_github_abc"))
                 .andExpect(header().string("Set-Cookie", Matchers.containsString("refresh_token=service-refresh-token")))
                 .andExpect(header().string("Set-Cookie", Matchers.containsString("Path=/api/v1/auth/reissue")));
     }
@@ -241,6 +241,10 @@ class AuthControllerTest {
 
     @Test
     void 깃허브_콜백_code_누락_실패() throws Exception {
+        // given
+        given(authService.linkGithub(null, "onboarding-token"))
+                .willThrow(new GithubAuthorizationCodeMissingException());
+
         // when & then
         mockMvc.perform(post("/auth/link-github")
                         .header("Authorization", "Bearer onboarding-token")
