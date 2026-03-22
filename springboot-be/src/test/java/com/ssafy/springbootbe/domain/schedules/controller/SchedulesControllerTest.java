@@ -1,24 +1,33 @@
 package com.ssafy.springbootbe.domain.schedules.controller;
 
 import tools.jackson.databind.ObjectMapper;
-import com.ssafy.springbootbe.common.jwt.JWTUtils;
-import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
+import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleCreateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.request.ScheduleUpdateRequest;
 import com.ssafy.springbootbe.domain.schedules.dto.response.ScheduleResponse;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.schedules.service.SchedulesService;
-import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -29,32 +38,24 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(SchedulesController.class)
+@ExtendWith(MockitoExtension.class)
 class SchedulesControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
+    @Mock
     private SchedulesService schedulesService;
 
-    @MockitoBean
-    private JWTUtils jwtUtils;
+    private MockMvc mockMvc;
+    private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private RedisService redisService;
-
-    private static final String BEARER_TOKEN = "Bearer test-token";
     private static final Long USER_ID = 1L;
 
     @BeforeEach
     void setUp() {
-        Claims claims = mock(Claims.class);
-        given(claims.get("userId", Long.class)).willReturn(USER_ID);
-        given(jwtUtils.getClaims("test-token")).willReturn(claims);
+        objectMapper = new ObjectMapper();
+        mockMvc = MockMvcBuilders.standaloneSetup(new SchedulesController(schedulesService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new LoginUserPrincipalArgumentResolver())
+                .build();
     }
 
     // ===== POST /schedules =====
@@ -82,7 +83,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(post("/schedules")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -101,7 +102,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(post("/schedules")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
@@ -130,7 +131,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(patch("/schedules/1")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -145,7 +146,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(patch("/schedules/99")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ScheduleUpdateRequest())))
                 .andExpect(status().isNotFound())
@@ -160,7 +161,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(patch("/schedules/1")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ScheduleUpdateRequest())))
                 .andExpect(status().isForbidden())
@@ -173,7 +174,7 @@ class SchedulesControllerTest {
     void 일정_삭제_성공() throws Exception {
         // when & then
         mockMvc.perform(delete("/schedules/1")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser()))
                 .andExpect(status().isNoContent());
     }
 
@@ -185,7 +186,7 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(delete("/schedules/99")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }
@@ -198,8 +199,36 @@ class SchedulesControllerTest {
 
         // when & then
         mockMvc.perform(delete("/schedules/1")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser()))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
+    }
+
+    private UsernamePasswordAuthenticationToken authenticatedUser() {
+        LoginUserPrincipal principal = LoginUserPrincipal.builder()
+                .userId(USER_ID)
+                .nickName("tester")
+                .email("test@test.com")
+                .build();
+        return new UsernamePasswordAuthenticationToken(principal, null, List.of());
+    }
+
+    private static class LoginUserPrincipalArgumentResolver implements HandlerMethodArgumentResolver {
+        @Override
+        public boolean supportsParameter(MethodParameter parameter) {
+            return parameter.hasParameterAnnotation(AuthenticationPrincipal.class)
+                    && parameter.getParameterType().equals(LoginUserPrincipal.class);
+        }
+
+        @Override
+        public Object resolveArgument(
+                MethodParameter parameter,
+                ModelAndViewContainer mavContainer,
+                NativeWebRequest webRequest,
+                WebDataBinderFactory binderFactory
+        ) {
+            Authentication authentication = (Authentication) webRequest.getUserPrincipal();
+            return authentication == null ? null : authentication.getPrincipal();
+        }
     }
 }
