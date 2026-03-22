@@ -60,7 +60,7 @@ class AuthControllerTest {
     @BeforeEach
     void setUp() {
         Claims claims = mock(Claims.class);
-        given(claims.get("userId")).willReturn(1L);
+        given(claims.get("userId", Long.class)).willReturn(1L);
         given(jwtUtils.getClaims(anyString())).willReturn(claims);
     }
 

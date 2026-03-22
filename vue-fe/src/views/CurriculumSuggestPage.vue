@@ -1,146 +1,327 @@
-<script setup>
-import { useRouter } from 'vue-router'
-
-const router = useRouter()
-
-// 일자별 커리큘럼 예시 데이터
-const curriculumSchedule = [
-  { date: '3월 8일 (수)', title: 'React 기초 및 렌더링 최적화', time: '2시간' },
-  { date: '3월 9일 (목)', title: '상태 관리 심화 (Zustand/Pinia)', time: '1시간 30분' },
-  { date: '3월 10일 (금)', title: 'TypeScript 고급 타입 활용', time: '2시간' },
-  { date: '3월 11일 (토)', title: '번들 최적화 및 Lighthouse 분석', time: '3시간' },
-]
-</script>
-
 <template>
-  <div class="modal-root">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h2>다음 주 커리큘럼을 제안드려요</h2>
-        <button class="btn-close" @click="router.push('/analysis')"><i class="fas fa-times"></i></button>
+  <div class="setup-root">
+    <!-- ONBOARDING STEPPER -->
+    <div class="global-stepper-wrap">
+      <div class="page-stepper">
+        <div class="step done">1. 계정 연동</div>
+        <div class="step done">2. 사전 설문</div>
+        <div class="step done">3. 데이터 분석</div>
+        <div class="step active">4. 결과 확인</div>
       </div>
-      
-      <div class="modal-body">
-        <p class="desc">
-          최근 블로그와 GitHub 활동을 바탕으로 맞춤형 학습 커리큘럼을 작성했어요.<br>
-          이대로 캘린더에 업로드해볼까요?
-        </p>
+    </div>
 
-        <h3 class="section-title"><i class="fas fa-book-open"></i> 제안된 학습 주제</h3>
-        <div class="topic-list">
-          <div class="topic-item">
-            <div class="dot"></div>
-            <div>
-              <h4>React 고급 패턴 학습</h4>
-              <p>컴포넌트 최적화 및 상태 관리 심화</p>
-            </div>
-          </div>
-          <div class="topic-item">
-            <div class="dot"></div>
-            <div>
-              <h4>TypeScript 실전 활용</h4>
-              <p>타입 안정성 강화 및 고급 타입 시스템</p>
-            </div>
-          </div>
-          <div class="topic-item">
-            <div class="dot"></div>
-            <div>
-              <h4>성능 최적화 기법</h4>
-              <p>번들 최적화 및 렌더링 성능 개선</p>
-            </div>
-          </div>
-        </div>
+    <div class="setup-card custom-scroll">
+      <div class="header-top">
+        <button @click="router.back()" class="btn-back">
+          <i class="fas fa-arrow-left" /> BACK
+        </button>
+      </div>
 
-        <!-- 새로 추가된 실제 커리큘럼(일정표) UI -->
-        <h3 class="section-title"><i class="fas fa-calendar-check"></i> 생성될 커리큘럼 일정</h3>
-        <div class="schedule-timeline">
-          <div v-for="(day, index) in curriculumSchedule" :key="index" class="schedule-item">
-            <div class="schedule-marker">
-              <div class="marker-dot"></div>
-              <div class="marker-line" v-if="index !== curriculumSchedule.length - 1"></div>
-            </div>
-            <div class="schedule-content">
-              <span class="schedule-date">{{ day.date }}</span>
-              <div class="schedule-card">
-                <h5>{{ day.title }}</h5>
-                <span class="schedule-time"><i class="far fa-clock"></i> {{ day.time }} 예상</span>
+      <div class="setup-header">
+        <div class="icon-wrap"><i class="fas fa-lightbulb" /></div>
+        <h2>맞춤형 커리큘럼이 준비됐어요</h2>
+        <p>분석 결과를 기반으로 최적의 학습 계획을 구성했습니다.<br>확인 후 캘린더에 반영해보세요.</p>
+      </div>
+
+      <div class="curriculum-body">
+        <!-- Timeline Section -->
+        <section class="base-panel p-lg mb-lg">
+          <div class="panel-header mb-md">
+            <i class="fas fa-calendar-alt"></i>
+            <h3>PLANNED SCHEDULE</h3>
+          </div>
+          
+          <div class="timeline-container">
+            <div class="timeline-line"></div>
+            <div v-for="(item, idx) in scheduleItems" :key="idx" class="timeline-item">
+              <div class="timeline-dot"></div>
+              <div class="timeline-date">{{ item.date }}</div>
+              <div class="timeline-card base-panel">
+                <span class="tc-title">{{ item.title }}</span>
+                <span class="tc-duration"><i class="fas fa-clock" /> {{ item.duration }}</span>
               </div>
             </div>
           </div>
-        </div>
 
-        <h3 class="section-title"><i class="fas fa-lightbulb"></i> 추천 이유 요약</h3>
-        <div class="reason-box">
-          <div class="reason-item">
-            <i class="fab fa-github"></i>
-            <div>
-              <h5>GitHub 활동 분석</h5>
-              <p>최근 React 프로젝트 커밋 패턴과 코드 리뷰 내용을 기반으로 학습 방향을 설정했어요.</p>
+          <div class="summary-badge-wrap mt-md">
+            <div class="outline-badge">
+              <i class="fas fa-flag-checkered mr-2" /> 총 6개 학습 · 약 12시간 소요 예상
             </div>
           </div>
-          <div class="reason-item">
-            <i class="fab fa-blogger-b"></i>
-            <div>
-              <h5>블로그 포스팅 트렌드</h5>
-              <p>작성하신 기술 블로그 주제들과 관심 분야를 분석하여 연관성 높은 커리큘럼을 구성했어요.</p>
-            </div>
-          </div>
-          <div class="reason-item">
-            <i class="fas fa-chart-line"></i>
-            <div>
-              <h5>학습 진도 예측</h5>
-              <p>현재 실력 수준을 고려하여 적절한 난이도와 학습량으로 계획을 세웠어요.</p>
-            </div>
-          </div>
-        </div>
-      </div>
+        </section>
 
-      <div class="modal-footer">
-        <button class="btn-text" @click="router.push('/activity-select')">다른 활동도 알아볼래요</button>
-        <button class="btn-primary" @click="router.push('/main')">네, 캘린더에 업로드할게요</button>
+        <!-- Reason Section -->
+        <section class="base-panel p-lg mb-lg">
+          <div class="panel-header mb-md">
+            <i class="fas fa-magic"></i>
+            <h3>WHY THIS PLAN?</h3>
+          </div>
+          
+          <div class="reason-list">
+            <div v-for="(section, idx) in reasonSections" :key="idx" class="reason-box base-panel p-md">
+              <div class="reason-header mb-sm">
+                <div class="reason-title-wrap">
+                  <i :class="section.icon" class="text-muted" />
+                  <span class="reason-title">{{ section.title }}</span>
+                </div>
+                <span class="reason-meta">{{ section.meta }}</span>
+              </div>
+              <div class="reason-body">
+                <div v-for="(bullet, bIdx) in section.bullets" :key="bIdx" class="bullet-item">
+                  <div class="bullet-dot"></div>
+                  <div class="bullet-text">
+                    {{ bullet.text }}
+                    <span class="bullet-hint">{{ bullet.hint }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="final-summary-box p-md">
+              <i class="fas fa-quote-left text-muted mb-sm" />
+              <p class="final-summary-text">
+                <strong class="text-primary">종합:</strong> 
+                실제 코드·글에서 드러난 약점 보강 → 실전 적용 → 스택 확장 순서로 배치했습니다. 일정은 캘린더 여유 시간과 희망 학습량을 기준으로 산정했습니다.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <!-- Action Panel -->
+        <section class="action-section">
+          <p class="action-desc">이 커리큘럼을 캘린더에 반영할까요?</p>
+          <div class="action-buttons">
+            <button class="btn-outline px-xl" @click="router.push('/curriculum/alternative')">
+              다른 커리큘럼 추천받기
+            </button>
+            <button class="btn-primary px-xl" @click="openCoachmark">
+              <i class="fas fa-calendar-plus" /> 캘린더에 추가하기
+            </button>
+          </div>
+        </section>
       </div>
     </div>
+
+    <!-- MODAL -->
+    <Transition name="fade">
+      <div v-if="showCoachmark" class="modal-overlay" @click.self="closeCoachmark">
+        <div class="modal-content base-panel">
+          <div class="modal-header">
+            <div class="flex-column">
+              <h3 class="modal-title">ADD TO CALENDAR</h3>
+              <p class="modal-subtitle">추천된 일정을 반영하시겠습니까?</p>
+            </div>
+            <button @click="closeCoachmark" class="btn-close-modal">
+               <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-body mb-lg">
+            <p class="text-sm text-secondary">
+              확인 버튼을 누르면 캘린더 페이지로 이동하며,<br>추천된 항목들이 새로운 노드로 자동 생성됩니다.
+            </p>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-outline-small" @click="closeCoachmark">취소</button>
+            <button class="btn-primary-small" @click="confirmAndGoCalendar">확인하고 이동</button>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Teleport to="body">
+      <div v-if="isAnimating" class="fly-overlay">
+        <div class="flying-curriculum-part1">
+          <i class="fas fa-calendar-check" />
+          <span>일정 생성 중...</span>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
+<script setup>
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
+const showCoachmark = ref(false)
+const isAnimating = ref(false)
+
+const scheduleItems = [
+  { date: "3월 11일 (수)", title: "React 기초 및 렌더링 최적화", duration: "2시간 예상" },
+  { date: "3월 12일 (목)", title: "상태 관리 심화 (Zustand/Pinia)", duration: "1시간 30분 예상" },
+  { date: "3월 13일 (금)", title: "TypeScript 고급 타입 활용", duration: "2시간 예상" },
+  { date: "3월 14일 (토)", title: "번들 최적화 및 Lighthouse 분석", duration: "3시간 예상" },
+  { date: "3월 16일 (월)", title: "Next.js App Router 심화", duration: "2시간 예상" },
+  { date: "3월 17일 (화)", title: "API 설계 패턴 및 데이터 패칭 전략", duration: "1시간 30분 예상" },
+]
+
+const reasonSections = [
+  {
+    icon: "fab fa-github",
+    title: "GitHub",
+    meta: "· 최근 90일 · 커밋 247건",
+    bullets: [
+      { text: "React 커밋 68% 차지하나, useEffect 의존성 오류·리렌더링 패턴 반복", hint: "→ 1일차 렌더링 최적화" },
+      { text: "Next.js 레포 존재하나 App Router 미사용, 번들 경고 커밋 2건", hint: "→ 4~5일차 번들·App Router 심화" },
+    ],
+  },
+  {
+    icon: "fas fa-file-alt",
+    title: "Velog",
+    meta: "· 최근 6개월 · 포스트 12편",
+    bullets: [
+      { text: "상태 관리 비교글 4편 작성했으나 결론 없이 종료 반복", hint: "→ 2일차 상태 관리 심화" },
+      { text: "TS 제네릭 관련 질문글 3편, 타입 추론 이해 부족 확인", hint: "→ 3일차 TypeScript 고급 타입" },
+    ],
+  },
+  {
+    icon: "fas fa-calendar",
+    title: "Google Calendar + 사전설문",
+    meta: "· 최근 30일",
+    bullets: [
+      { text: "평일 19~22시 빈 슬롯 확인, 기존 학습 이벤트 평균 1.5h", hint: "→ 일 1.5~3h, 일요일 제외 배치" },
+      { text: "사전설문 응답: 하루 2시간 이내 희망 · 실습 위주 선호", hint: "→ 학습량 상한 기준 반영" },
+    ],
+  },
+]
+
+const openCoachmark = () => { showCoachmark.value = true }
+const closeCoachmark = () => { showCoachmark.value = false }
+
+const confirmAndGoCalendar = () => {
+  showCoachmark.value = false
+  isAnimating.value = true
+  
+  setTimeout(() => {
+    sessionStorage.setItem('playCalendarEntryAnim', 'true')
+    router.push('/calendar')
+  }, 600) 
+}
+</script>
+
 <style scoped>
-.modal-root { height: 100%; min-height: 100vh; overflow-y: auto; display: flex; align-items: flex-start; justify-content: center; background: rgba(0,0,0,0.4); font-family: 'Escoredream', sans-serif; padding: 40px 20px; }
-.modal-card { width: 100%; max-width: 540px; background: #fff; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.1); overflow: hidden; margin-top: 20px; margin-bottom: 20px; }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid #eee; }
-.modal-header h2 { font-size: 18px; font-weight: 800; color: #111; }
-.btn-close { background: none; border: none; font-size: 18px; color: #999; cursor: pointer; }
+.setup-root {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: var(--bg-base); padding: 80px 24px 40px;
+  font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative;
+}
+.setup-card {
+  width: 100%; max-width: 800px; max-height: calc(100vh - 120px);
+  background: var(--bg-surface); border: 1px solid var(--border);
+  padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+}
+@keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
-.modal-body { padding: 32px; }
-.desc { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 32px; }
-.section-title { font-size: 14px; font-weight: 700; color: #333; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-.section-title i { color: #818cf8; }
+.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
+.custom-scroll::-webkit-scrollbar { display: none; }
 
-.topic-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; }
-.topic-item { display: flex; gap: 14px; padding: 16px; border: 1px solid #eaeaea; border-radius: 10px; background: #fafafa; }
-.dot { width: 8px; height: 8px; background: #818cf8; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
-.topic-item h4 { font-size: 14px; font-weight: 600; color: #222; margin-bottom: 4px; }
-.topic-item p { font-size: 12px; color: #777; }
+/* Stepper */
+.global-stepper-wrap { position: fixed; top: 24px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
+.page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
+.page-stepper .step {
+  flex: 1; text-align: center; padding: 12px 4px;
+  background: var(--bg-surface); color: var(--text-muted);
+  font-size: 11px; font-weight: 700; transition: all 0.3s;
+  border-right: 1px solid var(--border);
+}
+.page-stepper .step:last-child { border-right: none; }
+.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); }
+.page-stepper .step.done { color: var(--text-primary); }
 
-/* 새로 추가된 스케줄 타임라인 스타일 */
-.schedule-timeline { margin-bottom: 36px; padding-left: 8px; }
-.schedule-item { display: flex; gap: 16px; min-height: 70px; }
-.schedule-marker { display: flex; flex-direction: column; align-items: center; width: 12px; }
-.marker-dot { width: 12px; height: 12px; border-radius: 50%; background: #fff; border: 3px solid #818cf8; z-index: 2; margin-top: 2px; }
-.marker-line { width: 2px; height: 100%; background: #e0e7ff; margin-top: -2px; flex-grow: 1; }
-.schedule-content { flex: 1; padding-bottom: 20px; }
-.schedule-date { font-size: 12px; font-weight: 700; color: #818cf8; margin-bottom: 6px; display: block; }
-.schedule-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); display: flex; justify-content: space-between; align-items: center; }
-.schedule-card h5 { font-size: 14px; font-weight: 600; color: #1e293b; margin: 0; }
-.schedule-time { font-size: 12px; color: #64748b; display: flex; align-items: center; gap: 4px; }
+.header-top { margin-bottom: 24px; }
+.btn-back {
+  background: transparent; border: 1px solid var(--border);
+  font-weight: 800; font-size: 11px; color: var(--text-muted); padding: 8px 14px;
+  cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 
-.reason-box { background: #fafafa; border: 1px solid #eaeaea; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-.reason-item { display: flex; gap: 14px; }
-.reason-item i { font-size: 18px; color: #555; margin-top: 2px; width: 20px; text-align: center; }
-.reason-item h5 { font-size: 13px; font-weight: 700; color: #333; margin-bottom: 4px; }
-.reason-item p { font-size: 12px; color: #666; line-height: 1.5; }
+.setup-header { text-align: center; margin-bottom: 40px; border-bottom: 1px solid var(--border); padding-bottom: 32px; }
+.icon-wrap { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-primary); margin: 0 auto 16px; }
+.setup-header h2 { font-size: 24px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; }
+.setup-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
 
-.modal-footer { display: flex; justify-content: flex-end; align-items: center; gap: 16px; padding: 24px 32px; border-top: 1px solid #eee; background: #fafafa; }
-.btn-text { background: #fff; border: 1px solid #ddd; padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #555; cursor: pointer; font-family: inherit; }
-.btn-primary { background: #111; border: none; padding: 12px 28px; border-radius: 8px; font-size: 13px; font-weight: 600; color: #fff; cursor: pointer; font-family: inherit; transition: background 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.btn-primary:hover { background: #333; }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); transition: all 0.3s; }
+.panel-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
+.panel-header i { font-size: 18px; color: var(--text-primary); margin-right: 4px; }
+.panel-header h3 { font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: var(--text-muted); }
+
+/* Timeline */
+.timeline-container { position: relative; padding-left: 20px; }
+.timeline-line { position: absolute; left: 23px; top: 10px; bottom: 10px; width: 2px; background: var(--border); }
+.timeline-item { position: relative; padding-bottom: 24px; padding-left: 24px; }
+.timeline-dot { position: absolute; left: -2px; top: 6px; width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; z-index: 2; }
+.timeline-date { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; }
+.timeline-card { border: 1px solid var(--border); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+.timeline-card:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.tc-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.tc-duration { font-size: 11px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+
+.outline-badge { display: inline-flex; align-items: center; padding: 6px 16px; border: 1px solid var(--border); border-radius: 40px; font-size: 11px; font-weight: 700; color: var(--text-secondary); }
+
+/* Reasons */
+.reason-box:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.reason-header { display: flex; justify-content: space-between; align-items: center; }
+.reason-title-wrap { display: flex; align-items: center; gap: 10px; }
+.reason-title-wrap i { font-size: 14px; margin-right: 2px; }
+.reason-title { font-size: 13px; font-weight: 800; color: var(--text-primary); }
+.reason-meta { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+.bullet-item { display: flex; align-items: flex-start; gap: 10px; margin-top: 12px; }
+.bullet-dot { margin-top: 8px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-primary); }
+.bullet-text { font-size: 12.5px; font-weight: 500; color: var(--text-primary); line-height: 1.7; }
+.bullet-hint { font-weight: 700; color: var(--text-muted); margin-left: 6px; display: inline-block; }
+
+.final-summary-box { border: 1px dashed var(--border); margin-top: 16px; }
+.final-summary-text { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+
+/* Actions */
+.action-section { text-align: center; border-top: 1px solid var(--border); padding-top: 32px; margin-top: 16px; }
+.action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
+.action-buttons { display: flex; gap: 12px; justify-content: center; }
+
+.btn-primary { padding: 16px 32px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-primary:hover { background: transparent; color: var(--text-primary); }
+.btn-outline { padding: 16px 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
+.modal-content { width: 100%; max-width: 480px; padding: 32px; background: var(--modal-bg); border: 1px solid var(--modal-border); box-shadow: var(--modal-shadow); }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: none; padding-bottom: 0; }
+.btn-close-modal { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s; margin-top: -4px; margin-right: -4px; }
+.btn-close-modal:hover { color: var(--text-primary); }
+.modal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); margin-bottom: 6px; }
+.modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+
+/* Fly Anim */
+.fly-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: center; }
+.flying-curriculum-part1 { 
+  display: flex; align-items: center; gap: 12px; padding: 20px 32px; 
+  background: var(--text-primary); color: var(--bg-base); font-size: 16px; font-weight: 800; 
+  border-radius: 40px; animation: packToCenter 0.6s forwards; 
+}
+@keyframes packToCenter { 0% { transform: scale(1); opacity: 0; } 30% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(0.45); opacity: 1; } }
+
+/* Helpers */
+.p-md { padding: 16px; }
+.p-lg { padding: 32px; }
+.mb-sm { margin-bottom: 12px; }
+.mb-md { margin-bottom: 16px; }
+.mb-lg { margin-bottom: 40px; }
+.mt-md { margin-top: 16px; }
+.px-xl { padding-left: 40px; padding-right: 40px; }
+.mr-2 { margin-right: 8px; }
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+@media (max-width: 640px) {
+  .setup-card { padding: 24px; }
+  .action-buttons { flex-direction: column; }
+  .btn-outline, .btn-primary { width: 100%; }
+}
 </style>

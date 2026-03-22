@@ -10,6 +10,7 @@
 import asyncio
 import re
 from datetime import datetime
+from urllib.parse import urljoin
 
 from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
@@ -111,9 +112,176 @@ def _parse_kakao_list(html_or_json: str, skill: list[str]) -> tuple[list[dict], 
     return articles, None
 
 
+def _parse_toss_list(xml_data: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """토스 기술 블로그 RSS 피드 파싱."""
+    # lxml-xml 파서 강제 사용
+    soup = BeautifulSoup(xml_data, "xml")
+    articles = []
+    
+    # RSS의 <item> 태그 단위로 파싱
+    for item in soup.find_all("item"):
+        link_tag = item.find("link")
+        if not link_tag:
+            continue
+            
+        url = link_tag.get_text(strip=True)
+        if not url.startswith("http"):
+            continue
+            
+        # 영문 번역본(-eng) 제거
+        if url.endswith("-eng"):
+            continue
+            
+        # RSS 내부의 실제 타이틀
+        title_tag = item.find("title")
+        title = title_tag.get_text(strip=True) if title_tag else ""
+        
+        # 발행일 (RSS 표준 pubDate 대소문자 구분)
+        date_tag = item.find("pubDate")
+        date_str = date_tag.get_text(strip=True) if date_tag else ""
+        if date_str:
+            try:
+                from email.utils import parsedate_to_datetime
+                dt = parsedate_to_datetime(date_str)
+                date_str = dt.strftime("%Y-%m-%d")
+            except Exception:
+                pass
+        
+        articles.append({
+            "url": url,
+            "title": title,
+            "skill": skill,
+            "published_at": date_str,
+        })
+        
+    return articles, None
+
+
+def _parse_naver_list(json_str: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """네이버 D2 기술 블로그 API 응답 파싱."""
+    import json
+    try:
+        data = json.loads(json_str)
+    except Exception:
+        return [], None
+        
+    articles = []
+    content_list = data.get("content", [])
+    
+    for item in content_list:
+        raw_url = item.get("url", "")
+        if not raw_url.startswith("http"):
+            url = f"https://d2.naver.com{raw_url}"
+        else:
+            url = raw_url
+            
+        title = item.get("postTitle", item.get("title", ""))
+        
+        # Timestamp 변환
+        pub_ts = item.get("postPublishedAt", 0)
+        date_str = ""
+        if pub_ts:
+            from datetime import datetime
+            try:
+                date_str = datetime.fromtimestamp(pub_ts / 1000).strftime('%Y-%m-%d')
+            except Exception:
+                pass
+            
+        articles.append({
+            "url": url,
+            "title": title,
+            "skill": skill,
+            "published_at": date_str,
+        })
+        
+    next_url = None
+    if not data.get("last", True):
+        current_page = data.get("number", 0)
+        next_page = current_page + 1
+        # API 다음 페이지 호출
+        next_url = f"https://d2.naver.com/api/v1/contents?categoryId=2&page={next_page}&size=20"
+        
+    return articles, next_url
+
+
+def _parse_wikidocs_list(html: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """위키독스 book 목차 페이지에서 챕터 링크(javascript:page(ID)) 파싱."""
+    soup = BeautifulSoup(html, "lxml")
+    articles = []
+
+    list_group = soup.find(class_="list-group")
+    if not list_group:
+        return [], None
+
+    pattern = re.compile(r"javascript:page\((\d+)\)")
+    for a_tag in list_group.find_all("a", href=True):
+        m = pattern.match(a_tag["href"])
+        if not m:
+            continue
+        page_id = m.group(1)
+        title = a_tag.get_text(strip=True)
+        if not title:
+            continue
+        articles.append({
+            "url": f"https://wikidocs.net/{page_id}",
+            "title": title,
+            "skill": skill,
+            "published_at": "",
+        })
+
+    return articles, None
+
+
+def _parse_official_docs_list(html: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """공식문서 목차/사이드바에서 하위 문서 링크 파싱."""
+    soup = BeautifulSoup(html, "lxml")
+    articles = []
+    seen_urls: set[str] = set()
+
+    # 기본 URL 추출 (base 태그 또는 canonical)
+    base_tag = soup.find("base", href=True)
+    canonical = soup.find("link", rel="canonical")
+
+    # nav, aside, main 내부의 링크를 수집
+    containers = soup.find_all(["nav", "aside", "main", "article"])
+    if not containers:
+        containers = [soup.body] if soup.body else []
+
+    for container in containers:
+        for a_tag in container.find_all("a", href=True):
+            href = a_tag["href"].strip()
+            # 앵커, 외부 링크, javascript 제외
+            if href.startswith("#") or href.startswith("javascript:"):
+                continue
+            if href.startswith("http") and not any(
+                d in href for d in ["docs.spring.io", "react.dev", "docs.python.org", "docs.docker.com"]
+            ):
+                continue
+
+            title = a_tag.get_text(strip=True)
+            if not title or len(title) < 3:
+                continue
+
+            # 상대경로 → 절대경로 변환은 하지 않음 (seed의 tag_url 기반으로 조립)
+            if href not in seen_urls:
+                seen_urls.add(href)
+                articles.append({
+                    "url": href,
+                    "title": title,
+                    "skill": skill,
+                    "published_at": "",
+                })
+
+    return articles, None
+
+
 PARSERS = {
     "woowa": _parse_woowa_list,
     "kakao": _parse_kakao_list,
+    "toss": _parse_toss_list,
+    "naver": _parse_naver_list,
+    "wikidocs": _parse_wikidocs_list,
+    "official_docs": _parse_official_docs_list,
 }
 
 
@@ -174,6 +342,11 @@ async def discover_articles(seeds: dict | None = None) -> list[dict]:
                         break
 
                     articles, next_url = parser(html, skill)
+
+                    # 상대경로 → 절대경로 변환 (공식문서용)
+                    for a in articles:
+                        if not a["url"].startswith("http"):
+                            a["url"] = urljoin(page_url, a["url"])
 
                     # 블로그 공통 메타데이터 병합
                     for a in articles:

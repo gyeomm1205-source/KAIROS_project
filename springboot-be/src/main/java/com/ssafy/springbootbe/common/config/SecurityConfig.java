@@ -50,6 +50,7 @@ public class SecurityConfig {
                 .addFilterBefore(verificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/analysis/complete").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }

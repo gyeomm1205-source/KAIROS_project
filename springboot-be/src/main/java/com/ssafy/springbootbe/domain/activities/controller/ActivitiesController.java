@@ -4,6 +4,7 @@ import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.domain.activities.dto.request.ActivityInclusionRequest;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityInclusionResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageResponse;
+import com.ssafy.springbootbe.domain.activities.dto.response.GrowthReportResponse;
 import com.ssafy.springbootbe.domain.activities.service.ActivitiesService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,12 @@ import org.springframework.web.bind.annotation.*;
 public class ActivitiesController {
 
     private final ActivitiesService activitiesService;
+
+    @GetMapping("/growth-report")
+    public ResponseEntity<GrowthReportResponse> getGrowthReport(
+            @AuthenticationPrincipal LoginUserPrincipal principal) {
+        return ResponseEntity.ok(activitiesService.getGrowthReport(principal.getUserId()));
+    }
 
     @GetMapping
     public ResponseEntity<ActivityPageResponse> getActivities(

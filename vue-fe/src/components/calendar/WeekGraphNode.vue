@@ -3,7 +3,8 @@
     :id="`node-${schedule.id}`"
     class="week-node"
     :style="nodeStyle"
-    @click.stop="$emit('edit', schedule)"
+    @click.stop="$emit('select', schedule)"
+    @dblclick.stop="$emit('open-ai-modal', schedule)"
     @mouseenter="$emit('hover', schedule)"
     @mouseleave="$emit('hover', null)"
   >
@@ -22,7 +23,7 @@ const props = defineProps({
   isDimmed: { type: Boolean, default: false }
 })
 
-defineEmits(['hover', 'edit'])
+defineEmits(['hover', 'edit', 'select'])
 const store = useCalendarStore()
 
 const trackObj = computed(() => store.getTrackById(props.schedule.track))

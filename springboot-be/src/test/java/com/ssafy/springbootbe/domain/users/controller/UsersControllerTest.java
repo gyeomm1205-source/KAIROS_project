@@ -1,8 +1,8 @@
 package com.ssafy.springbootbe.domain.users.controller;
 
 import tools.jackson.databind.ObjectMapper;
-import com.ssafy.springbootbe.common.jwt.JWTUtils;
-import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
+import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
@@ -10,14 +10,22 @@ import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateRespons
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
 import com.ssafy.springbootbe.domain.users.service.UsersService;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
-import io.jsonwebtoken.Claims;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 import java.util.Map;
@@ -26,37 +34,28 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(UsersController.class)
+@ExtendWith(MockitoExtension.class)
 class UsersControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @Autowired
-    private ObjectMapper objectMapper;
-
-    @MockitoBean
+    @Mock
     private UsersService usersService;
 
-    @MockitoBean
-    private JWTUtils jwtUtils;
+    private MockMvc mockMvc;
+    private ObjectMapper objectMapper;
 
-    @MockitoBean
-    private RedisService redisService;
-
-    private static final String BEARER_TOKEN = "Bearer test-token";
     private static final Long USER_ID = 1L;
 
     @BeforeEach
     void setUp() {
-        Claims claims = mock(Claims.class);
-        given(claims.get("userId")).willReturn(USER_ID);
-        given(jwtUtils.getClaims("test-token")).willReturn(claims);
+        objectMapper = new ObjectMapper();
+        mockMvc = MockMvcBuilders.standaloneSetup(new UsersController(usersService))
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .setCustomArgumentResolvers(new LoginUserPrincipalArgumentResolver())
+                .build();
     }
 
     // ===== GET /users/me =====
@@ -78,7 +77,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(get("/users/me")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.userId").value(1))
                 .andExpect(jsonPath("$.email").value("user@gmail.com"))
@@ -93,7 +92,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(get("/users/me")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }
@@ -118,7 +117,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(patch("/users/me/profile")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -133,7 +132,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(patch("/users/me/profile")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UserProfileUpdateRequest())))
                 .andExpect(status().isNotFound())
@@ -150,7 +149,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(patch("/users/me/settings/dark-mode")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new DarkModeUpdateRequest(true))))
                 .andExpect(status().isOk())
@@ -165,7 +164,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(patch("/users/me/settings/dark-mode")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new DarkModeUpdateRequest(false))))
                 .andExpect(status().isOk())
@@ -180,7 +179,7 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(patch("/users/me/settings/dark-mode")
-                        .header("Authorization", BEARER_TOKEN)
+                        .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new DarkModeUpdateRequest(true))))
                 .andExpect(status().isNotFound())
@@ -193,7 +192,8 @@ class UsersControllerTest {
     void 회원_탈퇴_성공() throws Exception {
         // when & then
         mockMvc.perform(delete("/users/me")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser())
+                        .header("Authorization", "Bearer test-token"))
                 .andExpect(status().isNoContent());
     }
 
@@ -205,8 +205,37 @@ class UsersControllerTest {
 
         // when & then
         mockMvc.perform(delete("/users/me")
-                        .header("Authorization", BEARER_TOKEN))
+                        .principal(authenticatedUser())
+                        .header("Authorization", "Bearer test-token"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+    }
+
+    private UsernamePasswordAuthenticationToken authenticatedUser() {
+        LoginUserPrincipal principal = LoginUserPrincipal.builder()
+                .userId(USER_ID)
+                .nickName("teddynu")
+                .email("user@gmail.com")
+                .build();
+        return new UsernamePasswordAuthenticationToken(principal, null, List.of());
+    }
+
+    private static class LoginUserPrincipalArgumentResolver implements HandlerMethodArgumentResolver {
+        @Override
+        public boolean supportsParameter(MethodParameter parameter) {
+            return parameter.hasParameterAnnotation(AuthenticationPrincipal.class)
+                    && parameter.getParameterType().equals(LoginUserPrincipal.class);
+        }
+
+        @Override
+        public Object resolveArgument(
+                MethodParameter parameter,
+                ModelAndViewContainer mavContainer,
+                NativeWebRequest webRequest,
+                WebDataBinderFactory binderFactory
+        ) {
+            Authentication authentication = (Authentication) webRequest.getUserPrincipal();
+            return authentication == null ? null : authentication.getPrincipal();
+        }
     }
 }
