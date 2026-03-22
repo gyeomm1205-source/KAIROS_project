@@ -40,7 +40,7 @@ public class UserProfileResponse {
                 .profileImageUrl(user.getProfileImageUrl())
                 .position(user.getPosition())
                 .darkModeEnabled(user.getDarkModeEnabled())
-                .considerPersonalSchedule(user.getCalendarSyncEnabled())
+                .considerPersonalSchedule(user.getConsiderPersonalSchedule())
                 .desiredPositions(desiredPositions)
                 .techStacks(techStacks)
                 .curriculumCategories(curriculumCategories)

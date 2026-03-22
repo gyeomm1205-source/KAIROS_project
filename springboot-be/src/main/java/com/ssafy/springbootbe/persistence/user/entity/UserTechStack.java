@@ -24,4 +24,12 @@ public class UserTechStack {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tech_stack_id", nullable = false)
     private TechStack techStack;
+
+    @Column(name = "score", nullable = false)
+    @Builder.Default
+    private Integer score = 0;
+
+    public void updateScore(Integer score) {
+        this.score = score;
+    }
 }

@@ -70,6 +70,7 @@ public class SchedulesServiceImpl implements SchedulesService {
         LocalDate previousStartDate = schedule.getStartDate();
         LocalDate previousEndDate = schedule.getEndDate();
 
+        String googleEventId = schedule.getGoogleEventId();
         schedule.update(request.getTitle(), request.getDescription(), request.getStartDate(), request.getEndDate());
 
         // 변경 전후 날짜 범위 모두 무효화
@@ -78,6 +79,11 @@ public class SchedulesServiceImpl implements SchedulesService {
             LocalDate newStartDate = request.getStartDate() != null ? request.getStartDate() : previousStartDate;
             LocalDate newEndDate = request.getEndDate() != null ? request.getEndDate() : previousEndDate;
             invalidateCalendarCache(userId, newStartDate, newEndDate);
+        }
+
+        if (googleEventId != null) {
+            updateGoogleCalendarEvent(userId, googleEventId, schedule.getTitle(),
+                    schedule.getDescription(), schedule.getStartDate(), schedule.getEndDate());
         }
 
         log.info("개인 일정 수정 완료. userId={}, scheduleId={}", userId, scheduleId);
@@ -124,6 +130,22 @@ public class SchedulesServiceImpl implements SchedulesService {
         if (!schedule.getUser().getUserId().equals(userId)) {
             throw new ScheduleAccessDeniedException(schedule.getUserScheduleId());
         }
+    }
+
+    private void updateGoogleCalendarEvent(Long userId, String googleEventId, String title,
+                                            String description, LocalDate startDate, LocalDate endDate) {
+        oAuthAccountRepository.findByUserUserIdAndProvider(userId, OAuthProvider.GOOGLE)
+                .ifPresentOrElse(oAuthAccount -> {
+                    try {
+                        String refreshToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
+                        com.google.api.services.calendar.Calendar client =
+                                googleCalendarClientService.buildCalendarClient(refreshToken);
+                        googleCalendarClientService.updateAllDayEvent(client, googleEventId, title, description, startDate, endDate);
+                        log.info("Google Calendar 이벤트 수정 완료. userId={}, eventId={}", userId, googleEventId);
+                    } catch (IOException e) {
+                        log.warn("Google Calendar 이벤트 수정 실패. userId={}, eventId={}", userId, googleEventId, e);
+                    }
+                }, () -> log.warn("Google OAuth 계정 없음 — Google Calendar 이벤트 수정 건너뜀. userId={}", userId));
     }
 
     private void deleteGoogleCalendarEvent(Long userId, String googleEventId) {
