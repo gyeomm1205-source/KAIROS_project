@@ -48,12 +48,35 @@ SEEDS_NAVER: list[dict] = [
     {"tag_url": "https://d2.naver.com/api/v1/contents?categoryId=2&page=0&size=20", "skill": ["Naver", "D2"]},
 ]
 
+# ─── 위키독스 ──────────────────────────────────────────────────────
+# 위키독스는 book 목차 페이지에서 javascript:page(ID) 링크를 파싱합니다.
+SEEDS_WIKIDOCS: list[dict] = [
+    {"tag_url": "https://wikidocs.net/book/1",      "skill": ["Python"]},
+    {"tag_url": "https://wikidocs.net/book/4223",    "skill": ["Django", "Python"]},
+    {"tag_url": "https://wikidocs.net/book/31",      "skill": ["Java"]},
+    {"tag_url": "https://wikidocs.net/book/7601",    "skill": ["Spring Boot", "Java"]},
+    {"tag_url": "https://wikidocs.net/book/8531",    "skill": ["FastAPI", "Python"]},
+    {"tag_url": "https://wikidocs.net/book/4542",    "skill": ["Flask", "Python"]},
+    {"tag_url": "https://wikidocs.net/book/2155",    "skill": ["Machine Learning", "AI", "Python"]},
+]
+
+# ─── 공식문서 ──────────────────────────────────────────────────────
+# 공식문서는 목차/사이드바 페이지에서 하위 문서 링크를 파싱합니다.
+SEEDS_OFFICIAL_DOCS: list[dict] = [
+    {"tag_url": "https://docs.spring.io/spring-boot/reference/",        "skill": ["Spring Boot", "Java"]},
+    {"tag_url": "https://react.dev/learn",                              "skill": ["React", "JavaScript"]},
+    {"tag_url": "https://docs.python.org/3/tutorial/",                  "skill": ["Python"]},
+    {"tag_url": "https://docs.docker.com/get-started/introduction/",    "skill": ["Docker", "Container"]},
+]
+
 # ─── 전체 시드 맵 ───────────────────────────────────────────────────
 ALL_SEEDS: dict[str, list[dict]] = {
     "woowa": SEEDS_WOOWA,
     "kakao": SEEDS_KAKAO,
     "toss": SEEDS_TOSS,
     "naver": SEEDS_NAVER,
+    "wikidocs": SEEDS_WIKIDOCS,
+    "official_docs": SEEDS_OFFICIAL_DOCS,
 }
 
 # 블로그별 공통 메타데이터
@@ -73,5 +96,13 @@ BLOG_META: dict[str, dict] = {
     "naver": {
         "source_type": "tech_blog_naver",
         "language": "ko",
+    },
+    "wikidocs": {
+        "source_type": "wiki",
+        "language": "ko",
+    },
+    "official_docs": {
+        "source_type": "official_docs",
+        "language": "en",
     },
 }
