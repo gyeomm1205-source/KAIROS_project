@@ -30,6 +30,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -85,10 +86,19 @@ public class UsersServiceImpl implements UsersService {
         }
 
         if (request.getTechStackIds() != null) {
+            List<UserTechStack> existing = userTechStackRepository.findByUserUserId(userId);
+            Map<Long, Integer> scoreMap = new HashMap<>();
+            for (UserTechStack uts : existing) {
+                scoreMap.put(uts.getTechStack().getTechStackId(), uts.getScore());
+            }
             userTechStackRepository.deleteByUserUserId(userId);
             List<TechStack> techStacks = techStackRepository.findAllById(request.getTechStackIds());
             List<UserTechStack> newTechStacks = techStacks.stream()
-                    .map(ts -> UserTechStack.builder().user(user).techStack(ts).build())
+                    .map(ts -> UserTechStack.builder()
+                            .user(user)
+                            .techStack(ts)
+                            .score(scoreMap.getOrDefault(ts.getTechStackId(), 0))
+                            .build())
                     .toList();
             userTechStackRepository.saveAll(newTechStacks);
         }
@@ -120,7 +130,7 @@ public class UsersServiceImpl implements UsersService {
                 .desiredPositions(desiredPositions)
                 .techStacks(techStacks)
                 .curriculumCategories(curriculumCategories)
-                .considerPersonalSchedule(user.getCalendarSyncEnabled())
+                .considerPersonalSchedule(user.getConsiderPersonalSchedule())
                 .build();
     }
 

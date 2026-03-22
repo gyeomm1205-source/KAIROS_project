@@ -50,7 +50,7 @@ class ActivitiesControllerTest {
     @BeforeEach
     void setUp() {
         Claims claims = mock(Claims.class);
-        given(claims.get("userId")).willReturn(USER_ID);
+        given(claims.get("userId", Long.class)).willReturn(USER_ID);
         given(jwtUtils.getClaims("test-token")).willReturn(claims);
     }
 

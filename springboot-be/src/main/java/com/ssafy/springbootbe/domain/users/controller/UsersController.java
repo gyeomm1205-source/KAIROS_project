@@ -45,7 +45,8 @@ public class UsersController {
     public ResponseEntity<Void> deleteUser(
             @AuthenticationPrincipal LoginUserPrincipal principal,
             HttpServletRequest request) {
-        String token = request.getHeader("Authorization").substring(7);
+        String authHeader = request.getHeader("Authorization");
+        String token = (authHeader != null) ? authHeader.substring(7) : null;
         usersService.deleteUser(principal.getUserId(), token);
         return ResponseEntity.noContent().build();
     }
