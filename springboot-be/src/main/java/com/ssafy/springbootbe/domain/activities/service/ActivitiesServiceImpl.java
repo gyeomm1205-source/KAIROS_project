@@ -36,7 +36,6 @@ public class ActivitiesServiceImpl implements ActivitiesService {
 
     private static final int TOP_TECH_STACKS_LIMIT = 10;
     private static final int TECH_ACTIVITY_RANKING_LIMIT = 5;
-    private static final int TECH_SCORE_SNAPSHOT_LIMIT = 6;
     private static final int RECENT_GROWTH_DAYS = 30;
 
     private final ActivityHistoryRepository activityHistoryRepository;
