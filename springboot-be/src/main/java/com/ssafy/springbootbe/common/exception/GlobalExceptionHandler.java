@@ -20,6 +20,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
+import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
 import com.ssafy.springbootbe.domain.onboarding.exception.AnalysisReportPreparationException;
 import com.ssafy.springbootbe.domain.onboarding.exception.InvalidSurveyInputException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDeniedException;
@@ -141,6 +142,13 @@ public class GlobalExceptionHandler {
             GithubRedirectGenerationException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(VelogCollectAsyncFailedException.class)
+    public ResponseEntity<Map<String, String>> handleVelogCollectAsyncFailedException(
+            VelogCollectAsyncFailedException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
     }
 
     @ExceptionHandler(ScheduleNotFoundException.class)

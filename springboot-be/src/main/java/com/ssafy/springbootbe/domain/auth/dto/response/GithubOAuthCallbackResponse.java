@@ -14,12 +14,14 @@ public class GithubOAuthCallbackResponse {
     private String accessToken;
     private String tokenType;
     private Long userId;
+    private String githubTaskId;
 
-    public static GithubOAuthCallbackResponse of(String accessToken, Long userId) {
+    public static GithubOAuthCallbackResponse of(String accessToken, Long userId, String githubTaskId) {
         return GithubOAuthCallbackResponse.builder()
                 .accessToken(accessToken)
                 .tokenType("Bearer")
                 .userId(userId)
+                .githubTaskId(githubTaskId)
                 .build();
     }
 }

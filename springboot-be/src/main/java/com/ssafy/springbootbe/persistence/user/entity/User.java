@@ -68,6 +68,10 @@ public class User {
         this.darkModeEnabled = darkModeEnabled;
     }
 
+    public void updateVelogUsername(String velogUsername) {
+        this.velogUsername = velogUsername;
+    }
+
     public void updateStatus(UserStatus status) {
         this.status = status;
     }
