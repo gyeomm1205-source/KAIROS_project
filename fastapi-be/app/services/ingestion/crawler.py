@@ -122,9 +122,35 @@ async def fetch_article(session: AsyncSession, article: dict) -> dict:
             else:
                 raw_text = _extract_text(soup)
 
-            return {**article, "raw_text": raw_text}
+            # "마지막 편집일시 : 2025년 2월 19일 10:42 오전" → "2025-02-19"
+            published_at = ""
+            date_div = soup.find("div", class_="muted")
+            if date_div:
+                date_match = re.search(r"(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일", date_div.get_text())
+                if date_match:
+                    y, m, d = date_match.groups()
+                    published_at = f"{y}-{int(m):02d}-{int(d):02d}"
+
+            return {**article, "raw_text": raw_text, "published_at": published_at}
         except Exception as e:
             print(f"  [Crawler] 위키독스 예외: {e}")
+            return {**article, "raw_text": ""}
+
+    # [공식문서 예외 처리]: Last-Modified 헤더 또는 meta/HTML에서 문서 수정일 추출
+    if article.get("source_type") == "official_docs":
+        try:
+            resp = await session.get(url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+            if resp.status_code != 200:
+                print(f"  [Crawler] 공식문서 HTTP {resp.status_code}: {url}")
+                return {**article, "raw_text": ""}
+            soup = BeautifulSoup(resp.text, "lxml")
+            raw_text = _extract_text(soup)
+
+            published_at = _extract_official_docs_date(resp, soup)
+
+            return {**article, "raw_text": raw_text, "published_at": published_at}
+        except Exception as e:
+            print(f"  [Crawler] 공식문서 예외: {e}")
             return {**article, "raw_text": ""}
 
     # [나머지 일반 블로그]: 순수 HTML 파싱
@@ -220,6 +246,76 @@ def _extract_text(soup: BeautifulSoup) -> str:
             lines.append(text)
 
     return "\n".join(lines)
+
+
+def _extract_official_docs_date(resp, soup: BeautifulSoup) -> str:
+    """공식문서 페이지에서 문서 수정일을 추출한다. 우선순위: meta 태그 → HTML 요소 → HTTP 헤더."""
+    # 1. meta 태그 (Docker 등)
+    for prop in ["article:modified_time", "article:published_time", "og:updated_time"]:
+        meta = soup.find("meta", property=prop)
+        if meta and meta.get("content"):
+            raw = meta["content"][:10]  # "2026-02-21 12:16:43..." → "2026-02-21"
+            if re.match(r"\d{4}-\d{2}-\d{2}", raw):
+                return raw
+
+    # 2. HTML 요소 — "Last updated" 텍스트 근처 (Python 등)
+    for tag in soup.find_all(string=re.compile(r"Last updated|Last modified", re.I)):
+        parent = tag.parent
+        if parent:
+            date_match = re.search(r"(\d{4}-\d{2}-\d{2})", parent.get_text())
+            if date_match:
+                return date_match.group(1)
+            # "Mar 22, 2026" 같은 형식
+            date_match2 = re.search(
+                r"([A-Z][a-z]{2})\s+(\d{1,2}),?\s+(\d{4})", parent.get_text()
+            )
+            if date_match2:
+                from datetime import datetime
+                try:
+                    dt = datetime.strptime(date_match2.group(0).replace(",", ""), "%b %d %Y")
+                    return dt.strftime("%Y-%m-%d")
+                except ValueError:
+                    pass
+
+    # 3. HTTP Last-Modified 헤더 (Spring Boot 등)
+    last_modified = resp.headers.get("Last-Modified", "")
+    if last_modified:
+        from email.utils import parsedate_to_datetime
+        try:
+            dt = parsedate_to_datetime(last_modified)
+            return dt.strftime("%Y-%m-%d")
+        except Exception:
+            pass
+
+    # 4. React.dev — GitHub API로 마지막 커밋 날짜 추출
+    source_url = resp.url if hasattr(resp, 'url') else ""
+    if "react.dev/" in str(source_url):
+        return _fetch_react_date_from_github(str(source_url))
+
+    return ""
+
+
+def _fetch_react_date_from_github(page_url: str) -> str:
+    """React.dev 페이지의 GitHub 소스 파일 마지막 커밋 날짜를 가져온다."""
+    try:
+        from curl_cffi.requests import Session
+        from datetime import datetime
+
+        path_part = page_url.split("react.dev/")[1].rstrip("/")
+        file_path = f"src/content/{path_part}.md"
+        api_url = f"https://api.github.com/repos/reactjs/react.dev/commits?path={file_path}&page=1&per_page=1"
+
+        s = Session(impersonate="chrome120")
+        resp = s.get(api_url, timeout=10)
+        commits = resp.json()
+
+        if isinstance(commits, list) and commits:
+            date = commits[0]["commit"]["committer"]["date"]
+            return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ").strftime("%Y-%m-%d")
+    except Exception as e:
+        print(f"    [Crawler] React GitHub API 실패: {e}")
+
+    return ""
 
 
 async def crawl_all(articles: list[dict]) -> list[dict]:

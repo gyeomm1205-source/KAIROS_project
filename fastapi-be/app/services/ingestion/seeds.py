@@ -57,7 +57,7 @@ SEEDS_WIKIDOCS: list[dict] = [
     {"tag_url": "https://wikidocs.net/book/7601",    "skill": ["Spring Boot", "Java"]},
     {"tag_url": "https://wikidocs.net/book/8531",    "skill": ["FastAPI", "Python"]},
     {"tag_url": "https://wikidocs.net/book/4542",    "skill": ["Flask", "Python"]},
-    {"tag_url": "https://wikidocs.net/book/2165",    "skill": ["Machine Learning", "AI", "Python"]},
+    {"tag_url": "https://wikidocs.net/book/2155",    "skill": ["Machine Learning", "AI", "Python"]},
 ]
 
 # ─── 공식문서 ──────────────────────────────────────────────────────
