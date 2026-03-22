@@ -81,7 +81,7 @@ class OnboardingServiceImplTest {
                 .email("guest@gmail.com")
                 .nickname("guest")
                 .status(UserStatus.GUEST)
-                .calendarSyncEnabled(false)
+                .considerPersonalSchedule(false)
                 .build();
 
         validRequest = new OnboardingSurveyRequest(
@@ -165,7 +165,7 @@ class OnboardingServiceImplTest {
         assertThat(response.getAnalysisStatus()).isEqualTo(AnalysisStatus.PENDING);
         assertThat(guestUser.getPosition()).isEqualTo(UserPosition.STUDENT);
         assertThat(guestUser.getStatus()).isEqualTo(UserStatus.SURVEYED);
-        assertThat(guestUser.getCalendarSyncEnabled()).isTrue();
+        assertThat(guestUser.getConsiderPersonalSchedule()).isTrue();
     }
 
     @Test

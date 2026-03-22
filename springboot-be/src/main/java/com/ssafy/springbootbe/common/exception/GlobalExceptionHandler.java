@@ -2,6 +2,10 @@ package com.ssafy.springbootbe.common.exception;
 
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
 import com.ssafy.springbootbe.domain.calendar.exception.GoogleOAuthNotFoundException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
@@ -165,6 +169,30 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleGoogleOAuthNotFoundException(GoogleOAuthNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(CurriculumNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleCurriculumNotFoundException(CurriculumNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(CurriculumAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleCurriculumAccessDeniedException(CurriculumAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(CurriculumNodeNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleCurriculumNodeNotFoundException(CurriculumNodeNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(CurriculumNodeAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleCurriculumNodeAccessDeniedException(CurriculumNodeAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
     }
 
     @ExceptionHandler(ActivityNotFoundException.class)

@@ -72,7 +72,7 @@ class UsersServiceImplTest {
                 .email("user@gmail.com")
                 .nickname("teddynu")
                 .darkModeEnabled(false)
-                .calendarSyncEnabled(false)
+                .considerPersonalSchedule(false)
                 .build();
     }
 
