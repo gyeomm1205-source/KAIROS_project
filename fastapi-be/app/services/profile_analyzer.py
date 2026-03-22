@@ -12,9 +12,11 @@ from .github_data_preprocess import main as get_github_context
 from .velog_data_preprocess import main as get_velog_context
 
 
+from dotenv import load_dotenv
+
 # ==========================================
-os.environ["OPENAI_API_KEY"] = "S14P22A506-20649484-f08a-4522-a9fe-a26f5b4a9246"
-os.environ["OPENAI_API_BASE"] = "https://gms.ssafy.io/gmsapi/api.openai.com/v1"
+# 환경 변수 로드 (API Key 등)
+load_dotenv()
 
 # 2. 통합된 분석 결과를 받을 Pydantic 스키마 정의
 class ActivitySummary(BaseModel):
@@ -230,6 +232,47 @@ async def start_velog_and_analysis(velog_username: str, github_context: str):
     return {
         "profile": final_profile,
         "activities": all_activities
+    }
+    
+    
+async def analyze_from_activity_history(activity_records: list[dict | BaseModel]) -> dict:
+    """SpringBoot에서 전달받은 activity_history 레코드를 기반으로 FinalProfile을 생성합니다. (기존 온보딩 분기 대체용)"""
+    
+    # 1. ActivityHistoryItem 포맷을 generate_final_profile이 기대하는 ActivitySummary(JSON 배열) 포맷으로 매핑
+    converted_activities = []
+    for i, item in enumerate(activity_records):
+        act = item.model_dump() if hasattr(item, "model_dump") else item
+        
+        # 키 호환성 처리 (카멜케이스 or 스네이크케이스)
+        act_type = act.get("activityType") or act.get("activity_type") or "추가 활동"
+        if act_type == "COMMIT":
+            mapped_type = "Github Commit"
+        elif act_type == "PR":
+            mapped_type = "Github PR"
+        elif act_type == "VELOG":
+            mapped_type = "Velog Post"
+        else:
+            mapped_type = "기타 활동"
+
+        converted_activities.append({
+            "id": i + 1,
+            "type": mapped_type,
+            "tech_stacks": act.get("techStacks") or act.get("tech_stacks") or [],
+            "summary": act.get("title", ""),
+            "category": act.get("category", "개발")
+        })
+
+    # 2. 로깅
+    print(f"\n▶️ [Activity History 기반 분석] 총 {len(converted_activities)}개 레코드 처리 시작...")
+    
+    # 3. 기존 FinalProfile 생성 로직 재활용
+    final_profile = await asyncio.to_thread(generate_final_profile, converted_activities)
+    
+    print("✅ Activity History 기반 데이터로 프로필 갱신 완료!")
+    
+    return {
+        "profile": final_profile,
+        "activities": converted_activities
     }
 
 if __name__ == "__main__":

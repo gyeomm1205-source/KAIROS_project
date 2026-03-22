@@ -10,7 +10,7 @@ vue-fe/dist/
 __pycache__/
 *.pyc
 fastapi-be/.venv/
-
+fastapi-be/venv/
 # Java/Gradle
 springboot-be/.gradle/
 springboot-be/build/
