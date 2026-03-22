@@ -242,7 +242,8 @@ class AuthControllerTest {
     @Test
     void 깃허브_콜백_code_누락_실패() throws Exception {
         // given
-        given(authService.linkGithub(null, "onboarding-token"))
+        given(authService.linkGithub(org.mockito.ArgumentMatchers.eq("Bearer onboarding-token"),
+                org.mockito.ArgumentMatchers.any(LinkGithubRequest.class)))
                 .willThrow(new GithubAuthorizationCodeMissingException());
 
         // when & then
