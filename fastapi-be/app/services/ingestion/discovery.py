@@ -10,6 +10,7 @@
 import asyncio
 import re
 from datetime import datetime
+from urllib.parse import urljoin
 
 from curl_cffi.requests import AsyncSession
 from bs4 import BeautifulSoup
@@ -203,11 +204,84 @@ def _parse_naver_list(json_str: str, skill: list[str]) -> tuple[list[dict], str 
     return articles, next_url
 
 
+def _parse_wikidocs_list(html: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """위키독스 book 목차 페이지에서 챕터 링크(javascript:page(ID)) 파싱."""
+    soup = BeautifulSoup(html, "lxml")
+    articles = []
+
+    list_group = soup.find(class_="list-group")
+    if not list_group:
+        return [], None
+
+    pattern = re.compile(r"javascript:page\((\d+)\)")
+    for a_tag in list_group.find_all("a", href=True):
+        m = pattern.match(a_tag["href"])
+        if not m:
+            continue
+        page_id = m.group(1)
+        title = a_tag.get_text(strip=True)
+        if not title:
+            continue
+        articles.append({
+            "url": f"https://wikidocs.net/{page_id}",
+            "title": title,
+            "skill": skill,
+            "published_at": "",
+        })
+
+    return articles, None
+
+
+def _parse_official_docs_list(html: str, skill: list[str]) -> tuple[list[dict], str | None]:
+    """공식문서 목차/사이드바에서 하위 문서 링크 파싱."""
+    soup = BeautifulSoup(html, "lxml")
+    articles = []
+    seen_urls: set[str] = set()
+
+    # 기본 URL 추출 (base 태그 또는 canonical)
+    base_tag = soup.find("base", href=True)
+    canonical = soup.find("link", rel="canonical")
+
+    # nav, aside, main 내부의 링크를 수집
+    containers = soup.find_all(["nav", "aside", "main", "article"])
+    if not containers:
+        containers = [soup.body] if soup.body else []
+
+    for container in containers:
+        for a_tag in container.find_all("a", href=True):
+            href = a_tag["href"].strip()
+            # 앵커, 외부 링크, javascript 제외
+            if href.startswith("#") or href.startswith("javascript:"):
+                continue
+            if href.startswith("http") and not any(
+                d in href for d in ["docs.spring.io", "react.dev", "docs.python.org", "docs.docker.com"]
+            ):
+                continue
+
+            title = a_tag.get_text(strip=True)
+            if not title or len(title) < 3:
+                continue
+
+            # 상대경로 → 절대경로 변환은 하지 않음 (seed의 tag_url 기반으로 조립)
+            if href not in seen_urls:
+                seen_urls.add(href)
+                articles.append({
+                    "url": href,
+                    "title": title,
+                    "skill": skill,
+                    "published_at": "",
+                })
+
+    return articles, None
+
+
 PARSERS = {
     "woowa": _parse_woowa_list,
     "kakao": _parse_kakao_list,
     "toss": _parse_toss_list,
     "naver": _parse_naver_list,
+    "wikidocs": _parse_wikidocs_list,
+    "official_docs": _parse_official_docs_list,
 }
 
 
@@ -268,6 +342,11 @@ async def discover_articles(seeds: dict | None = None) -> list[dict]:
                         break
 
                     articles, next_url = parser(html, skill)
+
+                    # 상대경로 → 절대경로 변환 (공식문서용)
+                    for a in articles:
+                        if not a["url"].startswith("http"):
+                            a["url"] = urljoin(page_url, a["url"])
 
                     # 블로그 공통 메타데이터 병합
                     for a in articles:

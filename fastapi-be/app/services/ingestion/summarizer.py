@@ -11,23 +11,38 @@ if "OPENAI_API_KEY" not in os.environ:
 import json
 import re
 
-def summarize_article_sync(title: str, text: str) -> str:
-    """단일 아티클의 제목과 본문을 받아 3줄 이내로 요약합니다."""
-    if not text:
-        return ""
-        
-    llm = init_chat_model("gpt-4o-mini", model_provider="openai", temperature=0.1)
-    prompt = PromptTemplate(
-        template="""당신은 시니어 개발자입니다. 다음 기술 블로그 글을 읽고, 주니어 개발자에게 이 글을 추천하는 이유를 설명하듯이 3줄 이내로 핵심만 요약해 줘.
+_PROMPT_BLOG = """당신은 시니어 개발자입니다. 다음 기술 블로그 글을 읽고, 주니어 개발자에게 이 글을 추천하는 이유를 설명하듯이 3줄 이내로 핵심만 요약해 줘.
 
 [제목]: {title}
 [본문 일부]:
 {text}
-""",
-        input_variables=["title", "text"]
-    )
+"""
+
+_PROMPT_OFFICIAL_DOCS = """당신은 시니어 개발자입니다. 다음 공식문서 페이지를 읽고, 3줄 이내로 요약해 줘.
+
+[요약 기준]
+1. 이 문서의 성격을 먼저 판별하세요 (튜토리얼 / 가이드 / API 레퍼런스 / 부록 / Changelog 등)
+2. 이 문서가 실제로 담고 있는 내용을 객관적으로 설명하세요
+3. 어떤 상황의 개발자가 이 문서를 참고하면 유용한지 명시하세요
+4. 문서가 다루지 않는 내용을 추측하거나 과장하지 마세요
+
+[제목]: {title}
+[본문 일부]:
+{text}
+"""
+
+
+def summarize_article_sync(title: str, text: str, source_type: str = "") -> str:
+    """단일 아티클의 제목과 본문을 받아 3줄 이내로 요약합니다."""
+    if not text:
+        return ""
+
+    llm = init_chat_model("gpt-4o-mini", model_provider="openai", temperature=0.1)
+
+    template = _PROMPT_OFFICIAL_DOCS if source_type == "official_docs" else _PROMPT_BLOG
+    prompt = PromptTemplate(template=template, input_variables=["title", "text"])
     chain = prompt | llm
-    
+
     # 텍스트가 너무 길면 앞부분 4000자만 잘라서 넘김 (비용 및 토큰 제한 방지)
     res = chain.invoke({"title": title, "text": text[:4000]})
     # 문자열로 안전하게 형변환하여 반환
@@ -113,9 +128,10 @@ async def summarize_articles(articles: list[dict]) -> list[dict]:
                 else:
                     # 카카오, 우아한형제들 등은 원본 3줄 요약만 수행합니다.
                     summary = await asyncio.to_thread(
-                        summarize_article_sync, 
-                        article.get("title", ""), 
-                        article["raw_text"]
+                        summarize_article_sync,
+                        article.get("title", ""),
+                        article["raw_text"],
+                        article.get("source_type", ""),
                     )
                     article["summary"] = summary
                     print(f"    - 요약 완료: {article.get('title', '')[:30]}...")
