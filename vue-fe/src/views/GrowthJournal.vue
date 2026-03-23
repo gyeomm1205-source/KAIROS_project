@@ -150,10 +150,7 @@
             <div>
               <h4 class="font-bold text-sm mb-xs">성장 요약</h4>
               <p class="text-sm text-muted font-bold lh-lg m-0">
-                최근 4주 동안 <strong class="text-primary">React, Next.js, TypeScript</strong> 관련 활동이 꾸준히 증가했습니다.
-                특히 <strong class="text-primary">SSR/SSG 영역</strong>이 가입 시점 대비 가장 큰 성장폭(+45pt)을 보이고 있으며,
-                상태관리와 프론트엔드 전반에서 중급 수준으로 성장하고 있습니다.
-                다음 단계로 <strong class="text-primary">DevOps와 백엔드</strong> 영역을 확장하면 풀스택 역량을 키울 수 있습니다.
+                {{ growthSummary }}
               </p>
             </div>
           </div>
@@ -165,7 +162,11 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { postGrowthSummary } from '@/api/aiApi'
+
+const growthSummary = ref('성장 요약을 불러오는 중...')
 
 const summaryStats = [
   { icon: "fas fa-bolt", label: "가장 자주 다룬 기술", value: "React", sub: "총 18회 활동" },
@@ -219,6 +220,27 @@ const getPoint = (i, ratio) => {
 const getPolygonPoints = (ratio) => {
   return skillRadar.map((_, i) => getPoint(i, ratio)).join(" ")
 }
+
+onMounted(async () => {
+  try {
+    const { data } = await postGrowthSummary({
+      userId: 1,
+      stats: {
+        topTechStacks: topSkills.map(s => s.name),
+        totalActivityCount: 36,
+        recentGrowthTech: 'SSR/SSG',
+        maxStreakDays: 10,
+        techScoreSnapshot: {},
+        monthlyActivityCounts: {},
+        techActivityRanking: topSkills.map(s => s.name)
+      }
+    })
+    growthSummary.value = data.summary
+  } catch (e) {
+    growthSummary.value = '성장 요약을 불러오지 못했습니다.'
+    console.error('growth/summary 호출 실패:', e)
+  }
+})
 
 </script>
 

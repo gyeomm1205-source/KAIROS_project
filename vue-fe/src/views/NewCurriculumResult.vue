@@ -128,30 +128,54 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 const router = useRouter()
 
-const missions = [
+const missions = ref([
   { day: "1일차", title: "Docker 핵심 개념 이해", desc: "컨테이너, 이미지, Dockerfile의 기본 개념을 학습합니다", time: "40분", tag: "개념" },
   { day: "2일차", title: "Dockerfile 작성 실습", desc: "간단한 Node.js 앱을 Docker로 컨테이너화하는 실습", time: "50분", tag: "실습" },
   { day: "3일차", title: "Docker Compose 학습", desc: "멀티 컨테이너 환경 구성과 docker-compose.yml 작성", time: "45분", tag: "심화" },
   { day: "4일차", title: "프로젝트에 Docker 적용", desc: "기존 개인 프로젝트를 Docker 환경으로 전환", time: "60분", tag: "실전" },
   { day: "5일차", title: "학습 정리 + 복습 퀴즈", desc: "Docker 학습 내용을 블로그로 정리하고 퀴즈로 점검", time: "35분", tag: "정리" },
-]
+])
 
-const references = [
+const references = ref([
   { title: "Docker 공식 Getting Started", reason: "Docker의 기본 워크플로우를 실습 중심으로 설명", type: "공식 문서", freshness: "2026.01 업데이트" },
   { title: "Docker for Node.js", reason: "현재 기술 스택(Node.js)에 맞는 Docker 활용법", type: "튜토리얼", freshness: "2025.12 작성" },
   { title: "Docker Compose 실전 (한국어)", reason: "멀티 컨테이너 환경 구성을 실전 예제로 설명", type: "기술 블로그", freshness: "2026.02 작성" },
-]
+])
 
-const tips = [
+const tips = ref([
   "각 미션은 하루에 하나씩 진행하는 것을 권장합니다",
   "실습 미션은 레퍼런스를 먼저 읽고 시작하면 효과적입니다",
   "마지막 날 블로그 정리로 학습 내용을 정착시키세요",
-]
+])
+
+const tags = ['개념', '실습', '심화', '실전', '정리']
+
+onMounted(() => {
+  const cached = localStorage.getItem('curriculumResult')
+  if (!cached) return
+
+  try {
+    const data = JSON.parse(cached)
+
+    if (data.nodes && data.nodes.length > 0) {
+      missions.value = data.nodes.map((n, i) => ({
+        day: `${i + 1}일차`,
+        title: n.title,
+        desc: n.description || '',
+        time: `${n.expectedMinutes}분`,
+        tag: tags[i % tags.length]
+      }))
+    }
+  } catch (e) {
+    console.error('커리큘럼 결과 로드 실패:', e)
+  }
+})
 </script>
 
 <style scoped>

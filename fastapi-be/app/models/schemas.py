@@ -305,6 +305,9 @@ class QuizResponse(_CamelModel):
     """POST /api/v1/ai/quizzes/generate-async 응답."""
     curriculum_id: int
     total_questions: int
+    title: str
+    description: str
+    expected_minutes: int
     questions: list[QuizQuestion]
 
 
@@ -413,6 +416,31 @@ class GrowthSummaryRequest(_CamelModel):
 class GrowthSummaryResponse(_CamelModel):
     """POST /api/v1/ai/growth/summary 응답."""
     summary: str  # LLM이 생성한 한 문장 성장 요약
+
+
+# ---------------------------------------------------------------------------
+# 프로필 피드백 재분석 — POST /api/v1/ai/profile/feedback
+# ---------------------------------------------------------------------------
+
+class PreviousAnalysis(_CamelModel):
+    """브라우저 Cache에 저장된 이전 분석 결과."""
+    summary: str
+    tech_details: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_positions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ProfileFeedbackRequest(_CamelModel):
+    """POST /api/v1/ai/profile/feedback 요청."""
+    user_id: int
+    previous_analysis: PreviousAnalysis
+    user_feedback: str
+
+
+class ProfileFeedbackResponse(_CamelModel):
+    """POST /api/v1/ai/profile/feedback 응답."""
+    summary: str
+    tech_details: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_positions: list[dict[str, Any]] = Field(default_factory=list)
 
 
 # ---------------------------------------------------------------------------

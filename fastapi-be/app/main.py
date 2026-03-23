@@ -5,6 +5,7 @@ import uuid
 
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette import status
 
@@ -12,6 +13,7 @@ from app.api.internal.curriculum import router as internal_curriculum_router
 from app.api.internal.quiz import router as internal_quiz_router
 from app.api.internal.recommend import router as internal_recommend_router
 from app.api.internal.daily_recommend import router as daily_recommend_router
+from app.api.internal.feedback import router as feedback_router
 from app.api.test import router as test_router
 from app.schemas.common import ErrorResponse
 from app.services.errors import AppError
@@ -37,11 +39,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(test_router)
 app.include_router(internal_curriculum_router)
 app.include_router(internal_quiz_router)
 app.include_router(internal_recommend_router)
 app.include_router(daily_recommend_router)
+app.include_router(feedback_router)
 
 # 데모용 인메모리 저장소 (실제로는 DB로 교체 필요)
 fake_db = {}

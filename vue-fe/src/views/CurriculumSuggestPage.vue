@@ -140,23 +140,25 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { postCurriculumGenerate } from '@/api/aiApi'
 
 const router = useRouter()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
+const isLoading = ref(true)
 
-const scheduleItems = [
+const scheduleItems = ref([
   { date: "3월 11일 (수)", title: "React 기초 및 렌더링 최적화", duration: "2시간 예상" },
   { date: "3월 12일 (목)", title: "상태 관리 심화 (Zustand/Pinia)", duration: "1시간 30분 예상" },
   { date: "3월 13일 (금)", title: "TypeScript 고급 타입 활용", duration: "2시간 예상" },
   { date: "3월 14일 (토)", title: "번들 최적화 및 Lighthouse 분석", duration: "3시간 예상" },
   { date: "3월 16일 (월)", title: "Next.js App Router 심화", duration: "2시간 예상" },
   { date: "3월 17일 (화)", title: "API 설계 패턴 및 데이터 패칭 전략", duration: "1시간 30분 예상" },
-]
+])
 
-const reasonSections = [
+const reasonSections = ref([
   {
     icon: "fab fa-github",
     title: "GitHub",
@@ -184,7 +186,49 @@ const reasonSections = [
       { text: "사전설문 응답: 하루 2시간 이내 희망 · 실습 위주 선호", hint: "→ 학습량 상한 기준 반영" },
     ],
   },
-]
+])
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr)
+  const days = ['일', '월', '화', '수', '목', '금', '토']
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await postCurriculumGenerate({
+      userId: 1,
+      curriculumType: 'ONBOARDING',
+      considerPersonalSchedule: false
+    })
+
+    if (data.nodes && data.nodes.length > 0) {
+      localStorage.setItem('curriculumResult', JSON.stringify(data))
+      scheduleItems.value = data.nodes.map(n => ({
+        date: formatDate(n.scheduledDate),
+        title: n.title,
+        duration: `${n.expectedMinutes}분 예상`
+      }))
+    }
+
+    if (data.recommendationReason) {
+      const r = data.recommendationReason
+      reasonSections.value = [{
+        icon: "fas fa-robot",
+        title: "AI 분석",
+        meta: r.summaryLine || '',
+        bullets: [
+          { text: r.userContext || '', hint: '' },
+          { text: r.aiInterpretation || '', hint: '' },
+        ].filter(b => b.text)
+      }]
+    }
+  } catch (e) {
+    console.error('curriculum/generate 호출 실패:', e)
+  } finally {
+    isLoading.value = false
+  }
+})
 
 const openCoachmark = () => { showCoachmark.value = true }
 const closeCoachmark = () => { showCoachmark.value = false }
