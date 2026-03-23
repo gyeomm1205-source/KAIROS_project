@@ -203,6 +203,7 @@ onMounted(async () => {
     })
 
     if (data.nodes && data.nodes.length > 0) {
+      localStorage.setItem('curriculumResult', JSON.stringify(data))
       scheduleItems.value = data.nodes.map(n => ({
         date: formatDate(n.scheduledDate),
         title: n.title,
