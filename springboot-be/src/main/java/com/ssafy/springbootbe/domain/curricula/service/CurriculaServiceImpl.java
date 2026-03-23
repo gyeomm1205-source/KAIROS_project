@@ -1,21 +1,58 @@
 package com.ssafy.springbootbe.domain.curricula.service;
 
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import com.google.api.services.calendar.Calendar;
+import com.google.api.services.calendar.model.Event;
+import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
+import com.ssafy.springbootbe.domain.calendar.service.GoogleCalendarClientService;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumGenerateRequest;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
+import com.ssafy.springbootbe.domain.curricula.dto.request.GoogleCalendarEventDto;
+import com.ssafy.springbootbe.domain.curricula.dto.request.SkillStatDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumGenerateResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
+import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
-import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAlreadyActiveException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
+import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumRecommendationReason;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRecommendationReasonRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
+import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
+import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
+import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
+import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
+import com.ssafy.springbootbe.persistence.user.entity.User;
+import com.ssafy.springbootbe.persistence.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestClientException;
+
+import java.io.IOException;
+import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -25,6 +62,64 @@ public class CurriculaServiceImpl implements CurriculaService {
     private final CurriculumRepository curriculumRepository;
     private final CurriculumNodeRepository curriculumNodeRepository;
     private final CurriculumRecommendationReasonRepository curriculumRecommendationReasonRepository;
+    private final UserRepository userRepository;
+    private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
+    private final OAuthAccountRepository oAuthAccountRepository;
+    private final GoogleCalendarClientService googleCalendarClientService;
+    private final OAuthTokenCryptoService oAuthTokenCryptoService;
+    private final AIRestClient aiRestClient;
+    private final RedisService redisService;
+    private final ObjectMapper objectMapper;
+
+    @Value("${ai.server-url}")
+    private String aiServerUrl;
+
+    @Value("${ai.curriculum-generate-path:/api/v1/ai/curriculum/generate}")
+    private String curriculumGeneratePath;
+
+    @Override
+    @Transactional(readOnly = true)
+    public CurriculumPreviewResponse preview(Long userId, CurriculumPreviewRequest request) {
+        if (curriculumRepository.existsByUserUserIdAndStatus(userId, CurriculumStatus.ACTIVE)) {
+            throw new CurriculumAlreadyActiveException(userId);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. userId=" + userId));
+
+        List<GoogleCalendarEventDto> googleEvents = new ArrayList<>();
+        if (Boolean.TRUE.equals(user.getConsiderPersonalSchedule())) {
+            googleEvents = fetchGoogleCalendarEvents(userId);
+        }
+
+        List<SkillStatDto> userTechStacks = buildUserTechStacks(userId);
+
+        CurriculumGenerateRequest aiRequest = CurriculumGenerateRequest.builder()
+                .userId(userId)
+                .curriculumType("ONBOARDING")
+                .considerPersonalSchedule(user.getConsiderPersonalSchedule())
+                .googleCalendarEvents(googleEvents)
+                .analysisData(request.getAnalysisData())
+                .userTechStacks(userTechStacks)
+                .build();
+
+        CurriculumGenerateResponse aiResponse = callFastApi(aiRequest);
+
+        int duration = calculateDuration(aiResponse.getNodes());
+
+        String uuid = UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+        String previewKey = "curriculumPreview:" + userId + ":" + uuid;
+        savePreviewToRedis(previewKey, aiResponse);
+
+        log.info("커리큘럼 미리보기 생성 완료. userId={}, previewKey={}", userId, previewKey);
+
+        return CurriculumPreviewResponse.builder()
+                .curriculumPreviewKey(previewKey)
+                .duration(duration)
+                .recommendationReason(aiResponse.getRecommendationReason())
+                .nodes(aiResponse.getNodes())
+                .build();
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -58,5 +153,83 @@ public class CurriculaServiceImpl implements CurriculaService {
         log.info("커리큘럼 노드 상세 조회. userId={}, curriculumNodeId={}", userId, curriculumNodeId);
 
         return CurriculumNodeResponse.from(node);
+    }
+
+    private List<GoogleCalendarEventDto> fetchGoogleCalendarEvents(Long userId) {
+        try {
+            OAuthAccount oAuthAccount = oAuthAccountRepository
+                    .findByUserUserIdAndProvider(userId, OAuthProvider.GOOGLE)
+                    .orElse(null);
+            if (oAuthAccount == null || oAuthAccount.getRefreshToken() == null) {
+                return List.of();
+            }
+            String refreshToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
+            Calendar client = googleCalendarClientService.buildCalendarClient(refreshToken);
+            List<Event> events = googleCalendarClientService.listAllEvents(client);
+            return events.stream()
+                    .filter(e -> e.getSummary() != null)
+                    .map(e -> GoogleCalendarEventDto.builder()
+                            .title(e.getSummary())
+                            .startDate(googleCalendarClientService.parseEventStartDate(e).toString())
+                            .endDate(googleCalendarClientService.parseEventEndDate(e).toString())
+                            .build())
+                    .toList();
+        } catch (IOException | IllegalStateException e) {
+            log.warn("Google Calendar 이벤트 조회 실패, 빈 목록으로 진행. userId={}", userId, e);
+            return List.of();
+        }
+    }
+
+    private List<SkillStatDto> buildUserTechStacks(Long userId) {
+        List<Object[]> rows = activityHistoryTechStackRepository
+                .findTechStackCountsByUserId(userId, PageRequest.of(0, 10));
+        return rows.stream()
+                .map(row -> SkillStatDto.builder()
+                        .skill(((TechStack) row[0]).getTechName())
+                        .count(((Long) row[1]).intValue())
+                        .build())
+                .toList();
+    }
+
+    private CurriculumGenerateResponse callFastApi(CurriculumGenerateRequest request) {
+        try {
+            CurriculumGenerateResponse response = aiRestClient.buildAiRestClient()
+                    .post()
+                    .uri(aiServerUrl + curriculumGeneratePath)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(CurriculumGenerateResponse.class);
+            if (response == null) {
+                throw new IllegalStateException("FastAPI 커리큘럼 생성 응답이 null입니다.");
+            }
+            return response;
+        } catch (RestClientException e) {
+            throw new IllegalStateException("FastAPI 커리큘럼 생성 요청 실패", e);
+        }
+    }
+
+    private int calculateDuration(List<PreviewNodeDto> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return 0;
+        }
+        LocalDate minDate = nodes.stream()
+                .map(PreviewNodeDto::getScheduledDate)
+                .min(Comparator.naturalOrder())
+                .orElse(LocalDate.now());
+        LocalDate maxDate = nodes.stream()
+                .map(PreviewNodeDto::getScheduledDate)
+                .max(Comparator.naturalOrder())
+                .orElse(LocalDate.now());
+        return (int) (maxDate.toEpochDay() - minDate.toEpochDay() + 1);
+    }
+
+    private void savePreviewToRedis(String previewKey, CurriculumGenerateResponse data) {
+        try {
+            String json = objectMapper.writeValueAsString(data);
+            redisService.save(previewKey, json, 30L, TimeUnit.MINUTES);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("커리큘럼 미리보기 Redis 저장 실패", e);
+        }
     }
 }

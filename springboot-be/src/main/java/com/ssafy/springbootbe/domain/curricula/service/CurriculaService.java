@@ -1,9 +1,13 @@
 package com.ssafy.springbootbe.domain.curricula.service;
 
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
 
 public interface CurriculaService {
+
+    CurriculumPreviewResponse preview(Long userId, CurriculumPreviewRequest request);
 
     CurriculumReasonResponse getReason(Long userId, Long curriculumId);
 
