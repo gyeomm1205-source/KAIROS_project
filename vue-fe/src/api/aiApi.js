@@ -1,4 +1,4 @@
-import { fastApi } from '@/services/api'
+import { fastApi, springApi } from '@/services/api'
 
 /**
  * 비동기 작업 진행 상태 확인
@@ -30,4 +30,12 @@ export const postProfileFeedback = (data) => {
  */
 export const postCurriculumGenerate = (data) => {
   return fastApi.post('/api/v1/ai/curriculum/generate', data, { timeout: 120000 })
+}
+
+/**
+ * 커리큘럼 확정 저장 (Spring Boot)
+ * POST /api/v1/curricula/confirm
+ */
+export const postCurriculaConfirm = (data) => {
+  return springApi.post('/api/v1/curricula/confirm', data)
 }

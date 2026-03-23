@@ -117,7 +117,7 @@
           </div>
           <div class="flex-align gap-md flex-wrap">
             <button class="btn-outline" @click="$router.push('/recommend')">돌아가기</button>
-            <button class="btn-primary" @click="$router.push('/calendar')">
+            <button class="btn-primary" @click="confirmAndGoCalendar">
               <i class="fas fa-calendar-plus" /> 캘린더에 추가하기
             </button>
           </div>
@@ -130,6 +130,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { postCurriculaConfirm } from '@/api/aiApi'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 const router = useRouter()
@@ -176,6 +177,18 @@ onMounted(() => {
     console.error('커리큘럼 결과 로드 실패:', e)
   }
 })
+
+const confirmAndGoCalendar = async () => {
+  try {
+    const cached = localStorage.getItem('curriculumResult')
+    if (cached) {
+      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+    }
+  } catch (e) {
+    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+  }
+  router.push('/calendar')
+}
 </script>
 
 <style scoped>

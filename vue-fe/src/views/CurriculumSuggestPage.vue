@@ -142,7 +142,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { postCurriculumGenerate } from '@/api/aiApi'
+import { postCurriculumGenerate, postCurriculaConfirm } from '@/api/aiApi'
 
 const router = useRouter()
 const showCoachmark = ref(false)
@@ -233,14 +233,23 @@ onMounted(async () => {
 const openCoachmark = () => { showCoachmark.value = true }
 const closeCoachmark = () => { showCoachmark.value = false }
 
-const confirmAndGoCalendar = () => {
+const confirmAndGoCalendar = async () => {
   showCoachmark.value = false
   isAnimating.value = true
-  
+
+  try {
+    const cached = localStorage.getItem('curriculumResult')
+    if (cached) {
+      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+    }
+  } catch (e) {
+    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+  }
+
   setTimeout(() => {
     sessionStorage.setItem('playCalendarEntryAnim', 'true')
     router.push('/calendar')
-  }, 600) 
+  }, 600)
 }
 </script>
 
