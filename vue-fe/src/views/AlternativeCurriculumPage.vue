@@ -23,7 +23,13 @@
         <p>이번에는 프로젝트 적용성과 협업 효율을 높이는 방향으로 다시 구성했습니다.<br>기존 추천안과 비교해 더 맞는 흐름을 선택해보세요.</p>
       </div>
 
-      <div class="curriculum-body">
+      <!-- LOADING STATE -->
+      <div v-if="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">AI가 대체 커리큘럼을 생성 중입니다...</p>
+      </div>
+
+      <div v-else class="curriculum-body">
         <!-- Timeline Section -->
         <section class="base-panel p-lg mb-lg">
           <div class="panel-header mb-md">
@@ -143,10 +149,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { postCurriculumGenerate, postCurriculaConfirm } from '@/api/aiApi'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const router = useRouter()
+const store = useCalendarStore()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
+const isLoading = ref(true)
 
 const scheduleItems = ref([
   { date: "3월 11일 (수)", title: "TanStack Query로 서버 상태 설계하기", duration: "1시간 30분 예상" },
@@ -202,7 +211,7 @@ onMounted(async () => {
     })
 
     if (data.nodes && data.nodes.length > 0) {
-      localStorage.setItem('curriculumResult', JSON.stringify(data))
+      store.curriculumResult = data
       scheduleItems.value = data.nodes.map(n => ({
         date: formatDate(n.scheduledDate),
         title: n.title,
@@ -224,6 +233,8 @@ onMounted(async () => {
     }
   } catch (e) {
     console.error('curriculum/generate 호출 실패:', e)
+  } finally {
+    isLoading.value = false
   }
 })
 
@@ -235,8 +246,7 @@ const confirmAndGoCalendar = async () => {
   isAnimating.value = true
 
   try {
-    const cached = localStorage.getItem('curriculumResult')
-    if (cached) {
+    if (store.curriculumResult) {
       await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
     }
   } catch (e) {
@@ -374,4 +384,9 @@ const confirmAndGoCalendar = async () => {
   .action-buttons { flex-direction: column; }
   .btn-outline, .btn-primary { width: 100%; }
 }
+
+.loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 </style>

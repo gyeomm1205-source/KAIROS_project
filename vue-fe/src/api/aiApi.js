@@ -39,3 +39,35 @@ export const postCurriculumGenerate = (data) => {
 export const postCurriculaConfirm = (data) => {
   return springApi.post('/api/v1/curricula/confirm', data)
 }
+
+/**
+ * 성장 통계 조회 (Spring Boot)
+ * GET /api/v1/activities/growth-report
+ */
+export const getGrowthReport = () => {
+  return springApi.get('/api/v1/activities/growth-report')
+}
+
+/**
+ * 퀴즈 세션 시작 (Spring Boot)
+ * POST /api/v1/quizzes/sessions
+ */
+export const postQuizSessionStart = (data) => {
+  return springApi.post('/api/v1/quizzes/sessions', data)
+}
+
+/**
+ * 퀴즈 답안 제출 (Spring Boot)
+ * POST /api/v1/quizzes/sessions/{sessionId}/answers
+ */
+export const postQuizAnswer = (sessionId, data) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/answers`, data)
+}
+
+/**
+ * 퀴즈 세션 완료 (Spring Boot)
+ * POST /api/v1/quizzes/sessions/{sessionId}/complete
+ */
+export const postQuizComplete = (sessionId) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/complete`)
+}
