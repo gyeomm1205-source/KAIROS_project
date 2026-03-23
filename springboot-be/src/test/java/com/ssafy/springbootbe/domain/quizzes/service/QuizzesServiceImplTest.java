@@ -2,13 +2,18 @@ package com.ssafy.springbootbe.domain.quizzes.service;
 
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizGenerateAsyncRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizGenerateAsyncResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCachePayload;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
@@ -266,6 +271,108 @@ class QuizzesServiceImplTest {
         assertThat(cachedPayload.getQuestions().getFirst().getIsCorrect()).isNull();
     }
 
+    @Test
+    void submitAnswer_정상_답안_제출시_정답여부와_정답을_반환하고_Redis에_저장한다() throws Exception {
+        // given
+        stubCurriculumOwnedByUser();
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(redisService.get("quiz_session:1")).willReturn(quizSessionPayloadJson());
+
+        // when
+        QuizAnswerSubmitResponse response =
+                quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(1, " singleton "));
+
+        // then
+        assertThat(response.getQuestionNumber()).isEqualTo(1);
+        assertThat(response.getIsCorrect()).isTrue();
+        assertThat(response.getCorrectAnswer()).isEqualTo("singleton");
+        assertThat(response.getSelectedAnswer()).isEqualTo("singleton");
+
+        ArgumentCaptor<String> payloadCaptor = ArgumentCaptor.forClass(String.class);
+        verify(redisService).save(
+                eq("quiz_session:1"),
+                payloadCaptor.capture(),
+                eq(2L),
+                eq(TimeUnit.HOURS)
+        );
+
+        QuizSessionCachePayload updatedPayload =
+                objectMapper.readValue(payloadCaptor.getValue(), QuizSessionCachePayload.class);
+        QuizSessionCachePayload.Question updatedQuestion = updatedPayload.getQuestions().getFirst();
+
+        assertThat(updatedQuestion.getQuestionNumber()).isEqualTo(1);
+        assertThat(updatedQuestion.getSelectedAnswer()).isEqualTo("singleton");
+        assertThat(updatedQuestion.getCorrectAnswer()).isEqualTo("singleton");
+        assertThat(updatedQuestion.getIsCorrect()).isTrue();
+    }
+
+    @Test
+    void submitAnswer_다른_유저의_커리큘럼이면_ACCESS_DENIED를_던진다() {
+        // given
+        Curriculum otherUsersCurriculum = Curriculum.builder()
+                .curriculumId(10L)
+                .user(User.builder().userId(2L).email("other@gmail.com").nickname("other").build())
+                .status(CurriculumStatus.ACTIVE)
+                .duration(20)
+                .build();
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(otherUsersCurriculum));
+
+        // when & then
+        assertThatThrownBy(() -> quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(2, "singleton")))
+                .isInstanceOf(QuizAccessDeniedException.class)
+                .hasMessageContaining("curriculumId=10");
+    }
+
+    @Test
+    void submitAnswer_존재하지_않는_curriculumId면_NOT_FOUND를_던진다() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(2, "singleton")))
+                .isInstanceOf(QuizCurriculumNotFoundException.class)
+                .hasMessageContaining("curriculumId=10");
+    }
+
+    @Test
+    void submitAnswer_존재하지_않는_questionNumber면_NOT_FOUND를_던진다() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(redisService.get("quiz_session:1")).willReturn(quizSessionPayloadJson());
+
+        // when & then
+        assertThatThrownBy(() -> quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(99, "singleton")))
+                .isInstanceOf(QuizQuestionNotFoundException.class)
+                .hasMessageContaining("questionNumber=99");
+    }
+
+    @Test
+    void submitAnswer_이미_제출한_문제면_CONFLICT를_던진다() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(redisService.get("quiz_session:1")).willReturn(submittedQuizSessionPayloadJson());
+
+        // when & then
+        assertThatThrownBy(() -> quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(2, "singleton")))
+                .isInstanceOf(QuizAnswerConflictException.class)
+                .hasMessageContaining("questionNumber=2");
+    }
+
+    @Test
+    void submitAnswer_진행중_세션이_없으면_NOT_FOUND를_던진다() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(redisService.get("quiz_session:1")).willReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> quizzesService.submitAnswer(1L, 10L, new QuizAnswerSubmitRequest(2, "singleton")))
+                .isInstanceOf(QuizSessionNotFoundException.class)
+                .hasMessageContaining("curriculumId=10");
+    }
+
     private String recommendationPayloadJson() {
         return """
                 {
@@ -310,5 +417,69 @@ class QuizzesServiceImplTest {
 
     private String quizPayloadJsonCompact() throws Exception {
         return objectMapper.writeValueAsString(objectMapper.readValue(quizPayloadJson(), QuizGenerateAsyncResponse.class));
+    }
+
+    private String quizSessionPayloadJson() {
+        return """
+                {
+                  "curriculumId": 10,
+                  "totalQuestions": 2,
+                  "title": "Spring 핵심 개념 점검 퀴즈",
+                  "description": "추천 탭에서 바로 풀어볼 수 있는 Spring 중심 사전 생성 퀴즈입니다.",
+                  "expectedMinutes": 15,
+                  "questions": [
+                    {
+                      "questionNumber": 1,
+                      "question": "Spring Bean의 기본 스코프는?",
+                      "quizType": "MULTIPLE_CHOICE",
+                      "options": ["singleton", "prototype", "request", "session"],
+                      "correctAnswer": "singleton",
+                      "selectedAnswer": null,
+                      "isCorrect": null
+                    },
+                    {
+                      "questionNumber": 2,
+                      "question": "DI의 장점을 한 문장으로 설명하세요.",
+                      "quizType": "SHORT_ANSWER",
+                      "options": null,
+                      "correctAnswer": "결합도를 낮춘다.",
+                      "selectedAnswer": null,
+                      "isCorrect": null
+                    }
+                  ]
+                }
+                """;
+    }
+
+    private String submittedQuizSessionPayloadJson() {
+        return """
+                {
+                  "curriculumId": 10,
+                  "totalQuestions": 2,
+                  "title": "Spring 핵심 개념 점검 퀴즈",
+                  "description": "추천 탭에서 바로 풀어볼 수 있는 Spring 중심 사전 생성 퀴즈입니다.",
+                  "expectedMinutes": 15,
+                  "questions": [
+                    {
+                      "questionNumber": 1,
+                      "question": "Spring Bean의 기본 스코프는?",
+                      "quizType": "MULTIPLE_CHOICE",
+                      "options": ["singleton", "prototype", "request", "session"],
+                      "correctAnswer": "singleton",
+                      "selectedAnswer": null,
+                      "isCorrect": null
+                    },
+                    {
+                      "questionNumber": 2,
+                      "question": "DI의 장점을 한 문장으로 설명하세요.",
+                      "quizType": "SHORT_ANSWER",
+                      "options": null,
+                      "correctAnswer": "결합도를 낮춘다.",
+                      "selectedAnswer": "결합도를 낮춘다.",
+                      "isCorrect": true
+                    }
+                  ]
+                }
+                """;
     }
 }

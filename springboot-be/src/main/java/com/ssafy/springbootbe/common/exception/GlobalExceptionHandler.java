@@ -41,12 +41,16 @@ import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationPay
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationQuizGenerationException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizGenerationException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizPayloadParsingException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSourceNotFoundException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
@@ -311,6 +315,16 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
     }
 
+    @ExceptionHandler({
+            QuizQuestionNotFoundException.class,
+            QuizSessionNotFoundException.class,
+            QuizSourceNotFoundException.class
+    })
+    public ResponseEntity<Map<String, String>> handleQuizNotFoundExceptions(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(QuizAccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleQuizAccessDeniedException(QuizAccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -319,6 +333,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(QuizSessionConflictException.class)
     public ResponseEntity<Map<String, String>> handleQuizSessionConflictException(QuizSessionConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizAnswerConflictException.class)
+    public ResponseEntity<Map<String, String>> handleQuizAnswerConflictException(QuizAnswerConflictException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
     }

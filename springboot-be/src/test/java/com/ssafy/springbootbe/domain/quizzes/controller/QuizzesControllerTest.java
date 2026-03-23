@@ -2,8 +2,11 @@ package com.ssafy.springbootbe.domain.quizzes.controller;
 
 import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
+import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
 import com.ssafy.springbootbe.domain.quizzes.service.QuizzesService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -83,6 +86,67 @@ class QuizzesControllerTest {
                 .andExpect(jsonPath("$.questions[0].question").value("Spring Bean의 기본 스코프는?"))
                 .andExpect(jsonPath("$.questions[0].quizType").value("MULTIPLE_CHOICE"))
                 .andExpect(jsonPath("$.questions[0].correctAnswer").doesNotExist());
+    }
+
+    @Test
+    void 퀴즈_답안_제출_응답_필드명이_camelCase와_일치한다() throws Exception {
+        // given
+        QuizAnswerSubmitResponse response = QuizAnswerSubmitResponse.builder()
+                .questionNumber(2)
+                .isCorrect(true)
+                .correctAnswer("singleton")
+                .selectedAnswer("singleton")
+                .build();
+        given(quizzesService.submitAnswer(eq(1L), eq(10L), any(QuizAnswerSubmitRequest.class))).willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/quizzes/sessions/10/answers")
+                        .principal(authenticatedUser())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "questionNumber": 2,
+                                  "selectedAnswer": "singleton"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.questionNumber").value(2))
+                .andExpect(jsonPath("$.isCorrect").value(true))
+                .andExpect(jsonPath("$.correctAnswer").value("singleton"))
+                .andExpect(jsonPath("$.selectedAnswer").value("singleton"));
+    }
+
+    @Test
+    void 퀴즈_답안_제출시_selectedAnswer가_공백이면_INVALID_INPUT을_반환한다() throws Exception {
+        mockMvc.perform(post("/quizzes/sessions/10/answers")
+                        .principal(authenticatedUser())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "questionNumber": 2,
+                                  "selectedAnswer": "   "
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
+    }
+
+    @Test
+    void 퀴즈_답안_제출시_다른_유저의_커리큘럼이면_ACCESS_DENIED를_반환한다() throws Exception {
+        given(quizzesService.submitAnswer(eq(1L), eq(10L), any(QuizAnswerSubmitRequest.class)))
+                .willThrow(new QuizAccessDeniedException(10L));
+
+        mockMvc.perform(post("/quizzes/sessions/10/answers")
+                        .principal(authenticatedUser())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "questionNumber": 2,
+                                  "selectedAnswer": "singleton"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
     }
 
     private UsernamePasswordAuthenticationToken authenticatedUser() {

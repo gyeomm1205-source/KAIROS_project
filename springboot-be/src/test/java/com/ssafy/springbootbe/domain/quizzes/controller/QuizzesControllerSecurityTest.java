@@ -62,4 +62,18 @@ class QuizzesControllerSecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
     }
+
+    @Test
+    void 인증_없는_퀴즈_답안_제출_요청은_401을_반환한다() throws Exception {
+        mockMvc.perform(post("/quizzes/sessions/10/answers")
+                        .contentType("application/json")
+                        .content("""
+                                {
+                                  "questionNumber": 2,
+                                  "selectedAnswer": "singleton"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
 }

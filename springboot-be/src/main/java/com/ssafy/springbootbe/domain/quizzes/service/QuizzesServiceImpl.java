@@ -2,18 +2,24 @@ package com.ssafy.springbootbe.domain.quizzes.service;
 
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizGenerateAsyncRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizGenerateAsyncResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCachePayload;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizGenerationException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizPayloadParsingException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSourceNotFoundException;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationCachePayload;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
@@ -78,6 +84,41 @@ public class QuizzesServiceImpl implements QuizzesService {
         cacheQuizSession(userId, quizPayload);
 
         return mapStartResponse(quizPayload);
+    }
+
+    @Override
+    public QuizAnswerSubmitResponse submitAnswer(Long userId, Long curriculumId, QuizAnswerSubmitRequest request) {
+        Curriculum curriculum = findCurriculumOrThrow(curriculumId);
+        validateCurriculumOwnership(userId, curriculum);
+
+        String normalizedSelectedAnswer = normalizeAnswer(request.getSelectedAnswer());
+        QuizGenerateAsyncResponse quizSource = findQuizSourceOrThrow(userId, curriculumId);
+        QuizGenerateAsyncResponse.Question sourceQuestion =
+                findSourceQuestionOrThrow(quizSource, curriculumId, request.getQuestionNumber());
+        QuizSessionCachePayload sessionPayload = findQuizSessionOrThrow(userId, curriculumId);
+        QuizSessionCachePayload.Question sessionQuestion =
+                findSessionQuestionOrThrow(sessionPayload, curriculumId, request.getQuestionNumber());
+
+        validateAnswerNotSubmitted(curriculumId, sessionQuestion);
+
+        String normalizedCorrectAnswer = normalizeAnswer(sourceQuestion.getCorrectAnswer());
+        boolean isCorrect = normalizedCorrectAnswer.equals(normalizedSelectedAnswer);
+
+        QuizSessionCachePayload updatedPayload = updateSessionPayload(
+                sessionPayload,
+                request.getQuestionNumber(),
+                sourceQuestion.getCorrectAnswer(),
+                normalizedSelectedAnswer,
+                isCorrect
+        );
+        saveQuizSession(userId, updatedPayload);
+
+        return QuizAnswerSubmitResponse.builder()
+                .questionNumber(request.getQuestionNumber())
+                .isCorrect(isCorrect)
+                .correctAnswer(sourceQuestion.getCorrectAnswer())
+                .selectedAnswer(normalizedSelectedAnswer)
+                .build();
     }
 
     QuizGenerateAsyncResponse requestQuizGeneration(QuizGenerateAsyncRequest request) {
@@ -287,6 +328,150 @@ public class QuizzesServiceImpl implements QuizzesService {
                     e
             );
         }
+    }
+
+    private QuizGenerateAsyncResponse findQuizSourceOrThrow(Long userId, Long curriculumId) {
+        try {
+            String cachedQuizPayload = redisService.get(buildRecommendationQuizKey(userId, curriculumId));
+            if (cachedQuizPayload == null || cachedQuizPayload.isBlank()) {
+                throw new QuizSourceNotFoundException(curriculumId);
+            }
+
+            return objectMapper.readValue(cachedQuizPayload, QuizGenerateAsyncResponse.class);
+        } catch (QuizSourceNotFoundException e) {
+            throw e;
+        } catch (JacksonException e) {
+            throw new QuizPayloadParsingException(
+                    "퀴즈 원본 Redis payload 파싱에 실패했습니다. curriculumId=" + curriculumId,
+                    e
+            );
+        } catch (RuntimeException e) {
+            throw new QuizRedisException("퀴즈 원본 Redis 조회에 실패했습니다. curriculumId=" + curriculumId, e);
+        }
+    }
+
+    private QuizSessionCachePayload findQuizSessionOrThrow(Long userId, Long curriculumId) {
+        try {
+            String cachedSessionPayload = redisService.get(buildQuizSessionKey(userId));
+            if (cachedSessionPayload == null || cachedSessionPayload.isBlank()) {
+                throw new QuizSessionNotFoundException(curriculumId);
+            }
+
+            QuizSessionCachePayload payload =
+                    objectMapper.readValue(cachedSessionPayload, QuizSessionCachePayload.class);
+
+            if (!Objects.equals(payload.getCurriculumId(), curriculumId)) {
+                throw new QuizSessionNotFoundException(curriculumId);
+            }
+
+            return payload;
+        } catch (QuizSessionNotFoundException e) {
+            throw e;
+        } catch (JacksonException e) {
+            throw new QuizPayloadParsingException(
+                    "퀴즈 세션 Redis payload 파싱에 실패했습니다. userId=" + userId,
+                    e
+            );
+        } catch (RuntimeException e) {
+            throw new QuizRedisException("퀴즈 세션 Redis 조회에 실패했습니다. userId=" + userId, e);
+        }
+    }
+
+    private QuizGenerateAsyncResponse.Question findSourceQuestionOrThrow(
+            QuizGenerateAsyncResponse quizSource,
+            Long curriculumId,
+            Integer questionNumber
+    ) {
+        return quizSource.getQuestions().stream()
+                .filter(question -> Objects.equals(question.getQuestionNumber(), questionNumber))
+                .findFirst()
+                .orElseThrow(() -> new QuizQuestionNotFoundException(curriculumId, questionNumber));
+    }
+
+    private QuizSessionCachePayload.Question findSessionQuestionOrThrow(
+            QuizSessionCachePayload sessionPayload,
+            Long curriculumId,
+            Integer questionNumber
+    ) {
+        return sessionPayload.getQuestions().stream()
+                .filter(question -> Objects.equals(question.getQuestionNumber(), questionNumber))
+                .findFirst()
+                .orElseThrow(() -> new QuizQuestionNotFoundException(curriculumId, questionNumber));
+    }
+
+    private void validateAnswerNotSubmitted(Long curriculumId, QuizSessionCachePayload.Question sessionQuestion) {
+        if (sessionQuestion.getSelectedAnswer() != null && !sessionQuestion.getSelectedAnswer().isBlank()) {
+            throw new QuizAnswerConflictException(curriculumId, sessionQuestion.getQuestionNumber());
+        }
+    }
+
+    private QuizSessionCachePayload updateSessionPayload(
+            QuizSessionCachePayload sessionPayload,
+            Integer questionNumber,
+            String correctAnswer,
+            String selectedAnswer,
+            boolean isCorrect
+    ) {
+        return QuizSessionCachePayload.builder()
+                .curriculumId(sessionPayload.getCurriculumId())
+                .totalQuestions(sessionPayload.getTotalQuestions())
+                .title(sessionPayload.getTitle())
+                .description(sessionPayload.getDescription())
+                .expectedMinutes(sessionPayload.getExpectedMinutes())
+                .questions(sessionPayload.getQuestions().stream()
+                        .map(question -> mapUpdatedQuestion(
+                                question,
+                                questionNumber,
+                                correctAnswer,
+                                selectedAnswer,
+                                isCorrect
+                        ))
+                        .toList())
+                .build();
+    }
+
+    private QuizSessionCachePayload.Question mapUpdatedQuestion(
+            QuizSessionCachePayload.Question question,
+            Integer questionNumber,
+            String correctAnswer,
+            String selectedAnswer,
+            boolean isCorrect
+    ) {
+        if (!Objects.equals(question.getQuestionNumber(), questionNumber)) {
+            return question;
+        }
+
+        return QuizSessionCachePayload.Question.builder()
+                .questionNumber(question.getQuestionNumber())
+                .question(question.getQuestion())
+                .quizType(question.getQuizType())
+                .options(question.getOptions())
+                .correctAnswer(correctAnswer)
+                .selectedAnswer(selectedAnswer)
+                .isCorrect(isCorrect)
+                .build();
+    }
+
+    private void saveQuizSession(Long userId, QuizSessionCachePayload payload) {
+        try {
+            redisService.save(
+                    buildQuizSessionKey(userId),
+                    objectMapper.writeValueAsString(payload),
+                    QUIZ_SESSION_TTL_HOURS,
+                    TimeUnit.HOURS
+            );
+        } catch (JacksonException e) {
+            throw new QuizPayloadParsingException(
+                    "퀴즈 세션 Redis 저장 직렬화에 실패했습니다. userId=" + userId,
+                    e
+            );
+        } catch (RuntimeException e) {
+            throw new QuizRedisException("퀴즈 세션 Redis 저장에 실패했습니다. userId=" + userId, e);
+        }
+    }
+
+    private String normalizeAnswer(String answer) {
+        return answer == null ? null : answer.trim();
     }
 
     private QuizSessionStartResponse mapStartResponse(QuizGenerateAsyncResponse quizPayload) {
