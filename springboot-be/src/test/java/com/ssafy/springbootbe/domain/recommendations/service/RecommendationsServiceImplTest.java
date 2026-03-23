@@ -3,12 +3,16 @@ package com.ssafy.springbootbe.domain.recommendations.service;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.domain.recommendations.dto.request.DailyRecommendationGenerateRequest;
+import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListResponse;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
 import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import com.ssafy.springbootbe.persistence.schedule.entity.UserSchedule;
@@ -32,6 +36,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
@@ -44,6 +49,7 @@ import static org.mockito.Mockito.verify;
 class RecommendationsServiceImplTest {
 
     @Mock private CurriculumRepository curriculumRepository;
+    @Mock private CurriculumNodeRepository curriculumNodeRepository;
     @Mock private UserTechStackRepository userTechStackRepository;
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
@@ -60,6 +66,7 @@ class RecommendationsServiceImplTest {
     void setUp() {
         recommendationsService = spy(new RecommendationsServiceImpl(
                 curriculumRepository,
+                curriculumNodeRepository,
                 userTechStackRepository,
                 activityHistoryRepository,
                 activityHistoryTechStackRepository,
@@ -121,6 +128,96 @@ class RecommendationsServiceImplTest {
     }
 
     @Test
+    void findRecommendations_인증된_사용자의_커리큘럼만_반환한다() {
+        // given
+        Curriculum otherUsersCurriculum = Curriculum.builder()
+                .curriculumId(99L)
+                .user(User.builder().userId(2L).email("other@gmail.com").nickname("other").build())
+                .status(CurriculumStatus.ACTIVE)
+                .duration(20)
+                .build();
+
+        CurriculumNode firstNode = CurriculumNode.builder()
+                .curriculumNodeId(1L)
+                .curriculum(curriculum)
+                .title("1일차")
+                .scheduledDate(LocalDate.of(2025, 1, 2))
+                .expectedMinutes(60)
+                .build();
+        CurriculumNode lastNode = CurriculumNode.builder()
+                .curriculumNodeId(2L)
+                .curriculum(curriculum)
+                .title("마지막")
+                .scheduledDate(LocalDate.of(2025, 2, 1))
+                .expectedMinutes(90)
+                .build();
+
+        given(curriculumRepository.findByUserUserIdOrderByCreatedAtDesc(1L)).willReturn(List.of(curriculum));
+        given(curriculumNodeRepository.findByCurriculumCurriculumIdInOrderByCurriculumCurriculumIdAscScheduledDateAsc(List.of(10L)))
+                .willReturn(List.of(firstNode, lastNode));
+        given(userTechStackRepository.findByUserUserId(1L)).willReturn(List.of(
+                UserTechStack.builder()
+                        .user(user)
+                        .techStack(TechStack.builder()
+                                .techStackId(1L)
+                                .techName("Java")
+                                .iconUrl("https://example.com/java.png")
+                                .color("#007396")
+                                .build())
+                        .build()
+        ));
+        given(redisService.hasKey("recommendation:1:10")).willReturn(true);
+
+        // when
+        RecommendationListResponse response = recommendationsService.findRecommendations(1L);
+
+        // then
+        assertThat(otherUsersCurriculum.getCurriculumId()).isEqualTo(99L);
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().getFirst().getCurriculumId()).isEqualTo(10L);
+        assertThat(response.getItems().getFirst().getStartDate()).isEqualTo(LocalDate.of(2025, 1, 2));
+        assertThat(response.getItems().getFirst().getEndDate()).isEqualTo(LocalDate.of(2025, 2, 1));
+        assertThat(response.getItems().getFirst().getHasRecommendation()).isTrue();
+        assertThat(response.getItems().getFirst().getTechStacks()).hasSize(1);
+        assertThat(response.getItems().getFirst().getTechStacks().getFirst().getTechName()).isEqualTo("Java");
+    }
+
+    @Test
+    void findRecommendations_Redis_키가_없으면_hasRecommendation_false를_반환한다() {
+        // given
+        given(curriculumRepository.findByUserUserIdOrderByCreatedAtDesc(1L)).willReturn(List.of(curriculum));
+        given(curriculumNodeRepository.findByCurriculumCurriculumIdInOrderByCurriculumCurriculumIdAscScheduledDateAsc(List.of(10L)))
+                .willReturn(List.of());
+        given(userTechStackRepository.findByUserUserId(1L)).willReturn(List.of());
+        given(redisService.hasKey("recommendation:1:10")).willReturn(false);
+
+        // when
+        RecommendationListResponse response = recommendationsService.findRecommendations(1L);
+
+        // then
+        assertThat(response.getItems()).hasSize(1);
+        assertThat(response.getItems().getFirst().getStartDate()).isNull();
+        assertThat(response.getItems().getFirst().getEndDate()).isNull();
+        assertThat(response.getItems().getFirst().getHasRecommendation()).isFalse();
+    }
+
+    @Test
+    void findRecommendations_Redis_조회_실패시_예외를_던진다() {
+        // given
+        given(curriculumRepository.findByUserUserIdOrderByCreatedAtDesc(1L)).willReturn(List.of(curriculum));
+        given(curriculumNodeRepository.findByCurriculumCurriculumIdInOrderByCurriculumCurriculumIdAscScheduledDateAsc(List.of(10L)))
+                .willReturn(List.of());
+        given(userTechStackRepository.findByUserUserId(1L)).willReturn(List.of());
+        given(redisService.hasKey("recommendation:1:10")).willThrow(new RuntimeException("redis down"));
+
+        // when & then
+        assertThatThrownBy(() -> recommendationsService.findRecommendations(1L))
+                .isInstanceOf(RecommendationRedisLookupException.class)
+                .hasMessageContaining("userId=1")
+                .hasMessageContaining("curriculumId=10");
+    }
+
+    @Test
     void buildDailyGenerateRequest_명세_필드명과_값을_구성한다() throws Exception {
         // given
         TechStack java = TechStack.builder().techStackId(1L).techName("Java").build();
@@ -132,7 +229,7 @@ class RecommendationsServiceImplTest {
                 UserTechStack.builder().user(user).techStack(java).score(80).build()
         ));
         given(activityHistoryTechStackRepository.findIncludedTechStackCountsByUserId(1L))
-                .willReturn(List.of(new Object[]{java, 47L}));
+                .willReturn(List.<Object[]>of(new Object[]{java, 47L}));
 
         ActivityHistory activity = ActivityHistory.builder()
                 .activityHistoryId(100L)

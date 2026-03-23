@@ -11,6 +11,9 @@ public interface CurriculumNodeRepository extends JpaRepository<CurriculumNode, 
     // 커리큘럼 내 전체 노드 조회 (idx_curriculum_node_curriculum)
     List<CurriculumNode> findByCurriculumCurriculumIdOrderByScheduledDate(Long curriculumId);
 
+    List<CurriculumNode> findByCurriculumCurriculumIdInOrderByCurriculumCurriculumIdAscScheduledDateAsc(
+            List<Long> curriculumIds);
+
     // 월별 캘린더 조회 — 기간 내 노드 조회 (idx_curriculum_node_schedule)
     List<CurriculumNode> findByCurriculumCurriculumIdAndScheduledDateBetween(
             Long curriculumId, LocalDate startDate, LocalDate endDate);

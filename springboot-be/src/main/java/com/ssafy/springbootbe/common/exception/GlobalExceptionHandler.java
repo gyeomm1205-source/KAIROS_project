@@ -32,6 +32,9 @@ import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrieva
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingPersistenceException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingUserNotFoundException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationCurriculumRetrievalException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationNodeAggregationException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
@@ -246,6 +249,16 @@ public class GlobalExceptionHandler {
             AnalysisReportPreparationException.class
     })
     public ResponseEntity<Map<String, String>> handleOnboardingInternalException(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            RecommendationCurriculumRetrievalException.class,
+            RecommendationNodeAggregationException.class,
+            RecommendationRedisLookupException.class
+    })
+    public ResponseEntity<Map<String, String>> handleRecommendationInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
     }

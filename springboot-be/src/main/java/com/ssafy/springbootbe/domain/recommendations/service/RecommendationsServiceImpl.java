@@ -1,12 +1,20 @@
 package com.ssafy.springbootbe.domain.recommendations.service;
 
+import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.domain.recommendations.dto.request.DailyRecommendationGenerateRequest;
+import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListItemResponse;
+import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListResponse;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationCurriculumRetrievalException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationNodeAggregationException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
 import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import com.ssafy.springbootbe.persistence.schedule.repository.UserScheduleRepository;
@@ -27,7 +35,9 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -42,6 +52,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     private static final String FAST_API_LEVEL_SENIOR = "SENIOR";
 
     private final CurriculumRepository curriculumRepository;
+    private final CurriculumNodeRepository curriculumNodeRepository;
     private final UserTechStackRepository userTechStackRepository;
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
@@ -55,6 +66,29 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
     @Value("${ai.recommendations-daily-generate-path}")
     private String aiRecommendationsDailyGeneratePath;
+
+    @Override
+    @Transactional(readOnly = true)
+    public RecommendationListResponse findRecommendations(Long userId) {
+        List<Curriculum> curricula = findCurricula(userId);
+        Map<Long, List<CurriculumNode>> nodesByCurriculumId = aggregateCurriculumNodes(userId, curricula);
+        List<TechStackInfo> techStacks = buildRepresentativeTechStacks(userId);
+
+        List<RecommendationListItemResponse> items = curricula.stream()
+                .map(curriculum -> RecommendationListItemResponse.builder()
+                        .curriculumId(curriculum.getCurriculumId())
+                        .status(curriculum.getStatus())
+                        .startDate(findStartDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
+                        .endDate(findEndDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
+                        .techStacks(List.of()) // 테이블이 반영이 안되어 있음 (일단 빈 껍데기 처리)
+                        .hasRecommendation(hasRecommendation(userId, curriculum.getCurriculumId()))
+                        .build())
+                .toList();
+
+        return RecommendationListResponse.builder()
+                .items(items)
+                .build();
+    }
 
     @Override
     @Transactional(readOnly = true)
@@ -221,6 +255,66 @@ public class RecommendationsServiceImpl implements RecommendationsService {
             objectMapper.readTree(payload);
         } catch (JacksonException e) {
             throw new IllegalStateException("추천 응답 JSON 검증에 실패했습니다.", e);
+        }
+    }
+
+    private List<Curriculum> findCurricula(Long userId) {
+        try {
+            return curriculumRepository.findByUserUserIdOrderByCreatedAtDesc(userId);
+        } catch (RuntimeException e) {
+            throw new RecommendationCurriculumRetrievalException(userId, e);
+        }
+    }
+
+    private Map<Long, List<CurriculumNode>> aggregateCurriculumNodes(Long userId, List<Curriculum> curricula) {
+        if (curricula.isEmpty()) {
+            return Map.of();
+        }
+
+        try {
+            List<Long> curriculumIds = curricula.stream()
+                    .map(Curriculum::getCurriculumId)
+                    .toList();
+
+            Map<Long, List<CurriculumNode>> nodesByCurriculumId = new HashMap<>();
+            curriculumNodeRepository
+                    .findByCurriculumCurriculumIdInOrderByCurriculumCurriculumIdAscScheduledDateAsc(curriculumIds)
+                    .forEach(node -> nodesByCurriculumId
+                            .computeIfAbsent(node.getCurriculum().getCurriculumId(), ignored -> new java.util.ArrayList<>())
+                            .add(node));
+            return nodesByCurriculumId;
+        } catch (RuntimeException e) {
+            throw new RecommendationNodeAggregationException(userId, e);
+        }
+    }
+
+    private List<TechStackInfo> buildRepresentativeTechStacks(Long userId) {
+        return userTechStackRepository.findByUserUserId(userId).stream()
+                .map(UserTechStack::getTechStack)
+                .sorted(Comparator.comparing(TechStack::getTechName))
+                .map(TechStackInfo::from)
+                .toList();
+    }
+
+    private LocalDate findStartDate(List<CurriculumNode> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return null;
+        }
+        return nodes.getFirst().getScheduledDate();
+    }
+
+    private LocalDate findEndDate(List<CurriculumNode> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return null;
+        }
+        return nodes.getLast().getScheduledDate();
+    }
+
+    private boolean hasRecommendation(Long userId, Long curriculumId) {
+        try {
+            return redisService.hasKey(buildRecommendationKey(userId, curriculumId));
+        } catch (RuntimeException e) {
+            throw new RecommendationRedisLookupException(userId, curriculumId, e);
         }
     }
 }
