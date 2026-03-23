@@ -174,24 +174,43 @@ export const useCalendarStore = defineStore('calendar', () => {
   const loadAnalysisResult = async (userId) => {
     isLoadingAI.value = true
     try {
-      // 1.5초 로딩 시뮬레이션 후 가짜 데이터 반환
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      analysisResult.value = {
-        recentTechs: ['React', 'TypeScript', 'Next.js', 'TailwindCSS'],
-        skillLevels: [
-          { name: 'JavaScript', level: 78 }, { name: 'React', level: 72 }, { name: 'TypeScript', level: 55 }
-        ],
-        repeatedTechs: [
-          { name: 'React', count: 23 }, { name: 'TypeScript', count: 18 }
-        ],
-        recommendedPositions: [
-          { title: '프론트엔드 개발자', isHighMatch: true }, { title: '풀스택 개발자', isHighMatch: false }
-        ],
-        summary: '최근 3개월간 React와 TypeScript 중심의 프론트엔드 학습을 꾸준히 진행하고 있습니다. 백엔드 관련 활동은 상대적으로 적어, 프론트엔드 전문성 강화를 추천합니다.'
+      const cached = localStorage.getItem('analysisResult')
+      if (cached) {
+        const raw = JSON.parse(cached)
+        analysisResult.value = mapAnalysisData(raw)
+      } else {
+        // localStorage에 데이터 없으면 Mock 폴백
+        analysisResult.value = {
+          recentTechs: ['React', 'TypeScript', 'Next.js', 'TailwindCSS'],
+          skillLevels: [
+            { name: 'JavaScript', level: 78 }, { name: 'React', level: 72 }, { name: 'TypeScript', level: 55 }
+          ],
+          repeatedTechs: [
+            { name: 'React', count: 23 }, { name: 'TypeScript', count: 18 }
+          ],
+          recommendedPositions: [
+            { title: '프론트엔드 개발자', isHighMatch: true }, { title: '풀스택 개발자', isHighMatch: false }
+          ],
+          summary: '최근 3개월간 React와 TypeScript 중심의 프론트엔드 학습을 꾸준히 진행하고 있습니다. 백엔드 관련 활동은 상대적으로 적어, 프론트엔드 전문성 강화를 추천합니다.'
+        }
       }
     } finally {
       isLoadingAI.value = false
+    }
+  }
+
+  function mapAnalysisData(raw) {
+    const techDetails = raw.techDetails || []
+    const positions = raw.recommendedPositions || []
+    return {
+      recentTechs: techDetails.map(t => t.techName),
+      skillLevels: techDetails.map(t => ({ name: t.techName, level: t.proficiencyPercentage || 0 })),
+      repeatedTechs: techDetails.map(t => ({ name: t.techName, count: t.usageCount || 0 })),
+      recommendedPositions: positions.map(p => ({
+        title: p.positionName,
+        isHighMatch: (p.fitLevel || '').toUpperCase() === 'HIGH'
+      })),
+      summary: raw.summary || ''
     }
   }
 
