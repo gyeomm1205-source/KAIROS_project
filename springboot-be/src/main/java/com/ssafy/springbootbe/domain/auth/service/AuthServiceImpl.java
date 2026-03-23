@@ -7,7 +7,6 @@ import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.request.GithubCollectAsyncRequest;
 import com.ssafy.springbootbe.domain.auth.dto.request.LinkGithubRequest;
 import com.ssafy.springbootbe.domain.auth.dto.request.LinkVelogRequest;
-import com.ssafy.springbootbe.domain.auth.dto.request.VelogCollectAsyncRequest;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
@@ -20,7 +19,6 @@ import com.ssafy.springbootbe.domain.auth.dto.response.LinkVelogResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleUserInfoResponse;
-import com.ssafy.springbootbe.domain.auth.dto.response.VelogCollectAsyncResponse;
 import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
@@ -35,7 +33,6 @@ import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
-import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
@@ -136,8 +133,8 @@ public class AuthServiceImpl implements AuthService {
     @Value("${ai.collect-async-path}")
     private String aiCollectAsyncPath;
 
-    @Value("${ai.velog-collect-async-path}")
-    private String aiVelogCollectAsyncPath;
+    @Value("${server.url:http://kairos-server:8080}")
+    private String serverUrl;
 
     @Value("${oauth.github.user-info-url}")
     private String githubUserInfoUrl;
@@ -248,11 +245,11 @@ public class AuthServiceImpl implements AuthService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new InvalidAccessTokenException("access token에 해당하는 사용자가 없습니다."));
 
-        String velogTaskId = triggerVelogCollectAsync(user.getUserId(), velogUsername);
-        log.info("Velog 연동 완료. userId={}, velogUsername={}, taskId={}", user.getUserId(), velogUsername, velogTaskId);
-
         user.updateVelogUsername(velogUsername);
         saveVelogUsername(user);
+
+        String velogTaskId = triggerProfileAnalysis(userId, velogUsername);
+        log.info("Velog 연동 및 AI 분석 트리거 완료. userId={}, velogUsername={}, taskId={}", user.getUserId(), velogUsername, velogTaskId);
 
         return LinkVelogResponse.of(velogUsername, velogTaskId);
     }
@@ -410,29 +407,36 @@ public class AuthServiceImpl implements AuthService {
         return null;
     }
 
-    String triggerVelogCollectAsync(Long userId, String velogUsername) {
-        VelogCollectAsyncRequest request = VelogCollectAsyncRequest.builder()
-                .userId(userId)
-                .velogUsername(velogUsername)
-                .build();
+    private String triggerProfileAnalysis(Long userId, String velogUsername) {
+        String githubTaskId = redisService.get("githubTaskId:" + userId);
+        if (githubTaskId == null) {
+            log.warn("Redis에서 githubTaskId를 찾을 수 없습니다. userId={}", userId);
+            githubTaskId = ""; 
+        }
+
+        java.util.Map<String, Object> requestBody = java.util.Map.of(
+                "userId", userId,
+                "velogUsername", velogUsername == null ? "" : velogUsername,
+                "githubTaskId", githubTaskId,
+                "callbackUrl", serverUrl + "/api/v1/analysis/complete"
+        );
 
         try {
-            VelogCollectAsyncResponse response = aiRestClient.buildAiRestClient()
+            java.util.Map<String, Object> res = aiRestClient.buildAiRestClient()
                     .post()
-                    .uri(aiServerUrl + aiVelogCollectAsyncPath)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(request)
+                    .uri(aiServerUrl + "/api/v1/ai/profile/analyze-async")
+                    .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
+                    .body(requestBody)
                     .retrieve()
-                    .body(VelogCollectAsyncResponse.class);
-
-            if (response == null || response.getTaskId() == null || response.getTaskId().isBlank()) {
-                throw new VelogCollectAsyncFailedException("FastAPI Velog 수집 응답에 taskId가 없습니다.");
+                    .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {});
+            
+            if (res != null && res.containsKey("taskId")) {
+                return (String) res.get("taskId");
             }
-
-            return response.getTaskId();
-        } catch (RestClientException e) {
-            throw new VelogCollectAsyncFailedException("FastAPI Velog 수집 호출에 실패했습니다.", e);
+        } catch (org.springframework.web.client.RestClientException e) {
+            log.warn("FastAPI Profile Analyze 트리거 실패. userId={}", userId, e);
         }
+        return "task_fallback";
     }
 
     private void validateAuthorizationCode(String code) {
