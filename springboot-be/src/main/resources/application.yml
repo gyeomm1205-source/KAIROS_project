@@ -60,6 +60,7 @@ oauth:
 ai:
   server-url: ${AI_SERVER_URL}
   collect-async-path: ${AI_COLECT_ASYNC_PATH}
+  velog-collect-async-path: ${AI_VELOG_COLLECT_ASYNC_PATH}
 app:
   crypto:
     password: ${TEXT_ENCRYPTOR_PASSWORD}

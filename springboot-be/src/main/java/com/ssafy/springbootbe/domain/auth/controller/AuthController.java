@@ -1,23 +1,27 @@
 package com.ssafy.springbootbe.domain.auth.controller;
 
+import com.ssafy.springbootbe.domain.auth.dto.request.LoginWithGoogleRequest;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkGithubRequest;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkVelogRequest;
+import com.ssafy.springbootbe.domain.auth.dto.response.LinkVelogResponse;
 import com.ssafy.springbootbe.domain.auth.exception.AuthCookieProcessingException;
 import com.ssafy.springbootbe.domain.auth.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CookieValue;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Duration;
@@ -32,10 +36,10 @@ public class AuthController {
 
     private final AuthService authService;
 
-    @GetMapping("/login/google")
+    @PostMapping("/login/google")
     public ResponseEntity<GoogleOAuthCallbackResponse> loginWithGoogle(
-            @RequestParam(required = false) String code) {
-        AuthTokenBundle tokenBundle = authService.loginWithGoogle(code);
+            @Valid @RequestBody LoginWithGoogleRequest request) {
+        AuthTokenBundle tokenBundle = authService.loginWithGoogle(request.getCode());
         ResponseEntity.BodyBuilder responseBuilder = ResponseEntity.ok();
 
         if (tokenBundle.hasRefreshToken()) {
@@ -45,15 +49,22 @@ public class AuthController {
         return responseBuilder.body(tokenBundle.getResponse());
     }
 
-    @GetMapping("/link-github")
+    @PostMapping("/link-github")
     public ResponseEntity<GithubOAuthCallbackResponse> linkGithub(
-            @RequestParam(required = false) String code,
-            @RequestParam(required = false) String state) {
-        GithubAuthTokenBundle tokenBundle = authService.linkGithub(code, state);
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Valid @RequestBody LinkGithubRequest request) {
+        GithubAuthTokenBundle tokenBundle = authService.linkGithub(authorizationHeader, request);
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, createRefreshTokenCookie(tokenBundle.getRefreshToken()).toString())
                 .body(tokenBundle.getResponse());
+    }
+
+    @PostMapping("/link-velog")
+    public ResponseEntity<LinkVelogResponse> linkVelog(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorizationHeader,
+            @Valid @RequestBody LinkVelogRequest request) {
+        return ResponseEntity.ok(authService.linkVelog(authorizationHeader, request));
     }
 
     @PostMapping("/reissue")

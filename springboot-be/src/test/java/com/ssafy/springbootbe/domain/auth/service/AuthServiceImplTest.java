@@ -4,11 +4,14 @@ import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkGithubRequest;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkVelogRequest;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubAuthTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.LinkVelogResponse;
 import com.ssafy.springbootbe.domain.auth.exception.AlreadyUsedRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateGithubAccountException;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleTokenResponse;
@@ -27,6 +30,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
+import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
@@ -106,6 +110,7 @@ class AuthServiceImplTest {
         ReflectionTestUtils.setField(authService, "oauthContentType", "application/x-www-form-urlencoded");
         ReflectionTestUtils.setField(authService, "aiServerUrl", "http://localhost:8000");
         ReflectionTestUtils.setField(authService, "aiCollectAsyncPath", "/api/v1/ai/github/collect-async");
+        ReflectionTestUtils.setField(authService, "aiVelogCollectAsyncPath", "/api/v1/ai/velog/collect-async");
     }
 
     @Test
@@ -337,7 +342,7 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
-        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
         given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
                 .willReturn(Optional.empty());
@@ -346,14 +351,20 @@ class AuthServiceImplTest {
         given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
         given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
+        doReturn("task_github_abc").when(authService)
+                .triggerGithubCollectAsync(11L, "github-access-token", "github-login");
 
         // when
-        GithubAuthTokenBundle result = authService.linkGithub("valid-code", "onboarding-token");
+        GithubAuthTokenBundle result = authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        );
 
         // then
         assertThat(result.getResponse().getAccessToken()).isEqualTo("service-access-token");
         assertThat(result.getResponse().getTokenType()).isEqualTo("Bearer");
         assertThat(result.getResponse().getUserId()).isEqualTo(11L);
+        assertThat(result.getResponse().getGithubTaskId()).isEqualTo("task_github_abc");
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
         verify(oAuthAccountRepository).save(org.mockito.ArgumentMatchers.argThat(account ->
                 account.getProvider() == OAuthProvider.GOOGLE
@@ -376,9 +387,12 @@ class AuthServiceImplTest {
     }
 
     @Test
-    void 깃허브_콜백_state_누락_실패() {
+    void 깃허브_콜백_Authorization_헤더_누락_실패() {
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", null))
+        assertThatThrownBy(() -> authService.linkGithub(
+                null,
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(InvalidOnboardingTokenException.class)
                 .hasMessageContaining("Authorization 헤더가 없습니다.");
     }
@@ -386,7 +400,10 @@ class AuthServiceImplTest {
     @Test
     void 깃허브_콜백_인가코드_누락_실패() {
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub(null, "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code(null).build()
+        ))
                 .isInstanceOf(GithubAuthorizationCodeMissingException.class);
     }
 
@@ -401,7 +418,10 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(false);
 
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(InvalidOnboardingTokenException.class)
                 .hasMessageContaining("Redis에 onboarding 정보가 없습니다.");
     }
@@ -418,10 +438,13 @@ class AuthServiceImplTest {
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
         doThrow(new GithubTokenExchangeFailedException("GitHub token 교환에 실패했습니다."))
-                .when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+                .when(authService).exchangeGithubToken("valid-code");
 
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(GithubTokenExchangeFailedException.class);
     }
 
@@ -439,12 +462,15 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
-        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doThrow(new GithubUserInfoFetchFailedException("GitHub 사용자 정보 조회에 실패했습니다."))
                 .when(authService).fetchGithubUserInfo("github-access-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(GithubUserInfoFetchFailedException.class);
     }
 
@@ -472,13 +498,16 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
-        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
         given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
                 .willReturn(Optional.of(githubAccount));
 
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(DuplicateGithubAccountException.class);
     }
 
@@ -507,7 +536,7 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
-        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
         given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
                 .willReturn(Optional.empty());
@@ -518,7 +547,10 @@ class AuthServiceImplTest {
         given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
 
         // when & then
-        assertThatThrownBy(() -> authService.linkGithub("valid-code", "onboarding-token"))
+        assertThatThrownBy(() -> authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        ))
                 .isInstanceOf(AuthTokenGenerationException.class);
     }
 
@@ -547,7 +579,7 @@ class AuthServiceImplTest {
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
                 .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
-        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code", "onboarding-token");
+        doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
         given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
                 .willReturn(Optional.empty());
@@ -560,12 +592,109 @@ class AuthServiceImplTest {
                 .when(authService).triggerGithubCollectAsync(11L, "github-access-token", "github-login");
 
         // when
-        GithubAuthTokenBundle result = authService.linkGithub("valid-code", "onboarding-token");
+        GithubAuthTokenBundle result = authService.linkGithub(
+                "Bearer onboarding-token",
+                LinkGithubRequest.builder().code("valid-code").build()
+        );
 
         // then
         assertThat(result.getResponse().getUserId()).isEqualTo(11L);
+        assertThat(result.getResponse().getGithubTaskId()).isNull();
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
         verify(redisService).delete("onboarding:google-sub");
+    }
+
+    @Test
+    void 벨로그_연동_성공() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User user = User.builder()
+                .userId(1L)
+                .email("user@gmail.com")
+                .nickname("tester")
+                .status(UserStatus.ACTIVE)
+                .build();
+        LinkVelogRequest request = LinkVelogRequest.builder()
+                .velogUsername(" teddynu ")
+                .build();
+
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.saveAndFlush(user)).willReturn(user);
+        doReturn("task_velog_xyz").when(authService).triggerVelogCollectAsync(1L, "teddynu");
+
+        // when
+        LinkVelogResponse response = authService.linkVelog("Bearer valid-access-token", request);
+
+        // then
+        assertThat(response.getVelogUsername()).isEqualTo("teddynu");
+        assertThat(response.getVelogTaskId()).isEqualTo("task_velog_xyz");
+        assertThat(user.getVelogUsername()).isEqualTo("teddynu");
+        verify(userRepository).saveAndFlush(user);
+        verify(authService).triggerVelogCollectAsync(1L, "teddynu");
+    }
+
+    @Test
+    void 벨로그_연동_velogUsername_누락_실패() {
+        // given
+        LinkVelogRequest request = LinkVelogRequest.builder()
+                .velogUsername(" ")
+                .build();
+
+        // when & then
+        assertThatThrownBy(() -> authService.linkVelog("Bearer valid-access-token", request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("velogUsername은 필수입니다.");
+    }
+
+    @Test
+    void 벨로그_연동_인증된_사용자가_없으면_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        LinkVelogRequest request = LinkVelogRequest.builder()
+                .velogUsername("teddynu")
+                .build();
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> authService.linkVelog("Bearer valid-access-token", request))
+                .isInstanceOf(InvalidAccessTokenException.class)
+                .hasMessageContaining("access token에 해당하는 사용자가 없습니다.");
+    }
+
+    @Test
+    void 벨로그_연동_FastAPI_호출_실패() {
+        // given
+        Claims claims = org.mockito.Mockito.mock(Claims.class);
+        User user = User.builder()
+                .userId(1L)
+                .email("user@gmail.com")
+                .nickname("tester")
+                .status(UserStatus.ACTIVE)
+                .build();
+        LinkVelogRequest request = LinkVelogRequest.builder()
+                .velogUsername("teddynu")
+                .build();
+
+        given(jwtUtils.getClaims("valid-access-token")).willReturn(claims);
+        given(claims.getSubject()).willReturn("accessToken");
+        given(claims.get("userId")).willReturn(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(userRepository.saveAndFlush(user)).willReturn(user);
+        doThrow(new VelogCollectAsyncFailedException("FastAPI Velog 수집 호출에 실패했습니다."))
+                .when(authService).triggerVelogCollectAsync(1L, "teddynu");
+
+        // when & then
+        assertThatThrownBy(() -> authService.linkVelog("Bearer valid-access-token", request))
+                .isInstanceOf(VelogCollectAsyncFailedException.class)
+                .hasMessageContaining("FastAPI Velog 수집 호출에 실패했습니다.");
+        assertThat(user.getVelogUsername()).isEqualTo("teddynu");
+        verify(userRepository).saveAndFlush(user);
     }
 
     @Test
