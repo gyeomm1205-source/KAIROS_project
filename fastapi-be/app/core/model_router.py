@@ -51,7 +51,7 @@ _TASK_MODEL_MAP: dict[TaskType, str] = {
     # 생성 (깊은 추론 필요)
     TaskType.RECOMMENDATION_REASON:  "gpt-4o",
     TaskType.QUIZ_GENERATION:        "gpt-4o",
-    TaskType.CURRICULUM_GENERATION:  "gpt-4o",
+    TaskType.CURRICULUM_GENERATION:  "gpt-4o-mini",
     TaskType.QUERY_REWRITING:        "gpt-4o-mini",  # 경량 쿼리 재작성은 mini로 충분
 }
 

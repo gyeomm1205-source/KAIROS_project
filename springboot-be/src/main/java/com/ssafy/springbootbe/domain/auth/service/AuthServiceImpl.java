@@ -5,6 +5,9 @@ import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.auth.dto.request.GithubCollectAsyncRequest;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkGithubRequest;
+import com.ssafy.springbootbe.domain.auth.dto.request.LinkVelogRequest;
+import com.ssafy.springbootbe.domain.auth.dto.request.VelogCollectAsyncRequest;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthReissueTokenBundle;
 import com.ssafy.springbootbe.domain.auth.dto.response.AuthTokenBundle;
@@ -13,9 +16,11 @@ import com.ssafy.springbootbe.domain.auth.dto.response.GithubCollectAsyncRespons
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GithubUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.LinkVelogResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleOAuthCallbackResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleTokenResponse;
 import com.ssafy.springbootbe.domain.auth.dto.response.GoogleUserInfoResponse;
+import com.ssafy.springbootbe.domain.auth.dto.response.VelogCollectAsyncResponse;
 import com.ssafy.springbootbe.domain.auth.exception.AuthPersistenceException;
 import com.ssafy.springbootbe.domain.auth.exception.AuthRedisSaveFailedException;
 import com.ssafy.springbootbe.domain.auth.exception.DuplicateOAuthEmailException;
@@ -30,6 +35,7 @@ import com.ssafy.springbootbe.domain.auth.exception.GoogleUserInfoFetchFailedExc
 import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
+import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
@@ -130,6 +136,9 @@ public class AuthServiceImpl implements AuthService {
     @Value("${ai.collect-async-path}")
     private String aiCollectAsyncPath;
 
+    @Value("${ai.velog-collect-async-path}")
+    private String aiVelogCollectAsyncPath;
+
     @Value("${oauth.github.user-info-url}")
     private String githubUserInfoUrl;
 
@@ -192,13 +201,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public GithubAuthTokenBundle linkGithub(String code, String state) {
-        validateGithubAuthorizationCode(code);
-        Claims claims = validateOnboardingTokenWithState(state);
+    public GithubAuthTokenBundle linkGithub(String authorizationHeader, LinkGithubRequest request) {
+        String code = normalizeGithubAuthorizationCode(request);
+        Claims claims = validateOnboardingToken(authorizationHeader);
         String googleSub = extractGoogleSub(claims);
         OnboardingData onboardingData = findOnboardingData(googleSub);
 
-        GithubTokenResponse githubTokenResponse = exchangeGithubToken(code, state);
+        GithubTokenResponse githubTokenResponse = exchangeGithubToken(code);
         GithubUserInfoResponse githubUserInfoResponse = fetchGithubUserInfo(githubTokenResponse.getAccessToken());
         validateGithubUserInfo(githubUserInfoResponse);
         validateGithubAccountDuplication(githubUserInfoResponse);
@@ -211,8 +220,13 @@ public class AuthServiceImpl implements AuthService {
         String refreshToken = jwtUtils.createRefreshToken(user);
         saveRefreshToken(user.getUserId(), refreshToken);
 
+        String githubTaskId = null;
         try {
-            triggerGithubCollectAsync(user.getUserId(), githubTokenResponse.getAccessToken(), githubUserInfoResponse.getLogin());
+            githubTaskId = triggerGithubCollectAsync(
+                    user.getUserId(),
+                    githubTokenResponse.getAccessToken(),
+                    githubUserInfoResponse.getLogin()
+            );
         } catch (RuntimeException e) {
             log.warn("GitHub collect async 부가 트리거 처리 중 예외가 발생했습니다. userId={}", user.getUserId(), e);
         }
@@ -220,9 +234,27 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("GitHub OAuth callback 완료. userId={}, githubLogin={}", user.getUserId(), githubUserInfoResponse.getLogin());
         return GithubAuthTokenBundle.builder()
-                .response(GithubOAuthCallbackResponse.of(accessToken, user.getUserId()))
+                .response(GithubOAuthCallbackResponse.of(accessToken, user.getUserId(), githubTaskId))
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    @Override
+    public LinkVelogResponse linkVelog(String authorizationHeader, LinkVelogRequest request) {
+        String velogUsername = normalizeVelogUsername(request);
+        String accessToken = extractAccessToken(authorizationHeader);
+        Claims claims = validateAccessToken(accessToken);
+        Long userId = extractUserId(claims);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new InvalidAccessTokenException("access token에 해당하는 사용자가 없습니다."));
+
+        String velogTaskId = triggerVelogCollectAsync(user.getUserId(), velogUsername);
+        log.info("Velog 연동 완료. userId={}, velogUsername={}, taskId={}", user.getUserId(), velogUsername, velogTaskId);
+
+        user.updateVelogUsername(velogUsername);
+        saveVelogUsername(user);
+
+        return LinkVelogResponse.of(velogUsername, velogTaskId);
     }
 
     AuthTokenBundle handleExistingUser(OAuthAccount oAuthAccount, GoogleTokenResponse tokenResponse) {
@@ -300,13 +332,12 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    GithubTokenResponse exchangeGithubToken(String code, String state) {
+    GithubTokenResponse exchangeGithubToken(String code) {
         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
         formData.add("code", code);
         formData.add("client_id", githubClientId);
         formData.add("client_secret", githubClientSecret);
         formData.add("redirect_uri", githubRedirectUri);
-        formData.add("state", state);
 
         try {
             GithubTokenResponse response = RestClient.create()
@@ -350,7 +381,7 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    void triggerGithubCollectAsync(Long userId, String githubAccessToken, String githubUsername) {
+    String triggerGithubCollectAsync(Long userId, String githubAccessToken, String githubUsername) {
         GithubCollectAsyncRequest request = GithubCollectAsyncRequest.builder()
                 .userId(userId)
                 .githubToken(githubAccessToken)
@@ -368,12 +399,39 @@ public class AuthServiceImpl implements AuthService {
 
             if (response != null && response.getTaskId() != null && !response.getTaskId().isBlank()) {
                 log.info("GitHub collect async 트리거 성공. userId={}, taskId={}", userId, response.getTaskId());
-                return;
+                return response.getTaskId();
             }
 
             log.warn("GitHub collect async 응답에 taskId가 없습니다. userId={}", userId);
         } catch (RestClientException e) {
             log.warn("GitHub collect async 트리거 실패. userId={}", userId, e);
+        }
+
+        return null;
+    }
+
+    String triggerVelogCollectAsync(Long userId, String velogUsername) {
+        VelogCollectAsyncRequest request = VelogCollectAsyncRequest.builder()
+                .userId(userId)
+                .velogUsername(velogUsername)
+                .build();
+
+        try {
+            VelogCollectAsyncResponse response = aiRestClient.buildAiRestClient()
+                    .post()
+                    .uri(aiServerUrl + aiVelogCollectAsyncPath)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(request)
+                    .retrieve()
+                    .body(VelogCollectAsyncResponse.class);
+
+            if (response == null || response.getTaskId() == null || response.getTaskId().isBlank()) {
+                throw new VelogCollectAsyncFailedException("FastAPI Velog 수집 응답에 taskId가 없습니다.");
+            }
+
+            return response.getTaskId();
+        } catch (RestClientException e) {
+            throw new VelogCollectAsyncFailedException("FastAPI Velog 수집 호출에 실패했습니다.", e);
         }
     }
 
@@ -387,6 +445,24 @@ public class AuthServiceImpl implements AuthService {
         if (code == null || code.isBlank()) {
             throw new GithubAuthorizationCodeMissingException();
         }
+    }
+
+    private String normalizeGithubAuthorizationCode(LinkGithubRequest request) {
+        if (request == null) {
+            throw new GithubAuthorizationCodeMissingException();
+        }
+
+        String code = request.getCode();
+        validateGithubAuthorizationCode(code);
+        return code.trim();
+    }
+
+    private String normalizeVelogUsername(LinkVelogRequest request) {
+        if (request == null || request.getVelogUsername() == null || request.getVelogUsername().isBlank()) {
+            throw new IllegalArgumentException("velogUsername은 필수입니다.");
+        }
+
+        return request.getVelogUsername().trim();
     }
 
     private Claims validateOnboardingToken(String authorizationHeader) {
@@ -409,14 +485,6 @@ public class AuthServiceImpl implements AuthService {
         } catch (JwtException | IllegalArgumentException e) {
             throw new InvalidAccessTokenException("유효하지 않은 access token 입니다.", e);
         }
-    }
-
-    private Claims validateOnboardingTokenWithState(String state) {
-        if (state == null || state.isBlank()) {
-            throw new InvalidOnboardingTokenException("Authorization 헤더가 없습니다.");
-        }
-        String authorizationHeader = BEARER_PREFIX + state;
-        return validateOnboardingToken(authorizationHeader);
     }
 
     private void validateGoogleUserInfo(GoogleUserInfoResponse userInfoResponse) {
@@ -568,6 +636,14 @@ public class AuthServiceImpl implements AuthService {
             return userRepository.saveAndFlush(user);
         } catch (RuntimeException e) {
             throw new AuthPersistenceException("User 저장에 실패했습니다.", e);
+        }
+    }
+
+    private void saveVelogUsername(User user) {
+        try {
+            userRepository.saveAndFlush(user);
+        } catch (RuntimeException e) {
+            throw new AuthPersistenceException("Velog username 저장에 실패했습니다.", e);
         }
     }
 
