@@ -15,6 +15,12 @@ public interface ActivityHistoryTechStackRepository extends JpaRepository<Activi
 
     void deleteByActivityHistoryActivityHistoryId(Long activityHistoryId);
 
+    @Query("SELECT ahts.techStack, COUNT(ahts) as cnt FROM ActivityHistoryTechStack ahts " +
+           "JOIN ahts.activityHistory ah WHERE ah.user.userId = :userId " +
+           "AND ah.isIncluded = true " +
+           "GROUP BY ahts.techStack ORDER BY cnt DESC")
+    List<Object[]> findIncludedTechStackCountsByUserId(@Param("userId") Long userId);
+
     // 성장 일지 — 전체 기간 기술 스택 등장 횟수 (topTechStacks / techActivityRanking 공용)
     @Query("SELECT ahts.techStack, COUNT(ahts) as cnt FROM ActivityHistoryTechStack ahts " +
            "JOIN ahts.activityHistory ah WHERE ah.user.userId = :userId " +

@@ -5,6 +5,7 @@ import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 public interface CurriculumRepository extends JpaRepository<Curriculum, Long> {
+    List<Curriculum> findByStatusOrderByCreatedAtDesc(CurriculumStatus status);
     // 유저의 전체 커리큘럼 조회 (idx_curriculum_user)
     List<Curriculum> findByUserUserIdOrderByCreatedAtDesc(Long userId);
     // 유저의 특정 상태 커리큘럼 조회 (추천 페이지 목록)

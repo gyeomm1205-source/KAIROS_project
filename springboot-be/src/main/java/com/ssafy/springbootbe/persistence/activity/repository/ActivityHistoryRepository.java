@@ -12,6 +12,8 @@ import java.util.List;
 
 public interface ActivityHistoryRepository extends JpaRepository<ActivityHistory, Long> {
 
+    List<ActivityHistory> findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(Long userId);
+
     // 유저 기준 페이지네이션 조회 (idx_activity_user)
     Page<ActivityHistory> findByUserUserId(Long userId, Pageable pageable);
 
