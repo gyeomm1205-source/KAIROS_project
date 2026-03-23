@@ -45,9 +45,11 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
+import { getTaskStatus } from '@/api/aiApi'
 
 const router = useRouter()
+const route = useRoute()
 const currentStep = ref(0)
 const progressWidth = ref(0)
 
@@ -58,29 +60,74 @@ const steps = [
   { label: '추천 준비 중' },
 ]
 
-let timer
+let pollTimer
 let progressTimer
 
-onMounted(() => {
+function startProgressAnimation() {
   progressTimer = setInterval(() => {
-    if (progressWidth.value < 90) progressWidth.value += 15
-  }, 150)
+    if (progressWidth.value < 90) progressWidth.value += 5
+  }, 300)
+}
 
-  timer = setInterval(() => {
+async function pollTaskStatus(taskId) {
+  try {
+    const { data } = await getTaskStatus(taskId)
+
+    if (data.status === 'pending') {
+      currentStep.value = 0
+    } else if (data.status === 'processing') {
+      if (currentStep.value < 2) currentStep.value++
+      progressWidth.value = 0
+    } else if (data.status === 'completed') {
+      clearInterval(pollTimer)
+      clearInterval(progressTimer)
+      currentStep.value = steps.length - 1
+      progressWidth.value = 100
+
+      if (data.data) {
+        localStorage.setItem('analysisResult', JSON.stringify(data.data))
+      }
+
+      setTimeout(() => router.push('/onboarding/result'), 600)
+    } else if (data.status === 'failed') {
+      clearInterval(pollTimer)
+      clearInterval(progressTimer)
+      console.error('분석 실패:', data.error)
+    }
+  } catch (e) {
+    console.error('상태 조회 실패:', e)
+  }
+}
+
+function startMockTimer() {
+  let mockTimer = setInterval(() => {
     if (currentStep.value < steps.length - 1) {
       currentStep.value++
       progressWidth.value = 0
     } else {
-      clearInterval(timer)
+      clearInterval(mockTimer)
       clearInterval(progressTimer)
       progressWidth.value = 100
       setTimeout(() => router.push('/onboarding/result'), 600)
     }
   }, 1200)
+  return mockTimer
+}
+
+onMounted(() => {
+  startProgressAnimation()
+
+  const taskId = route.query.taskId
+  if (taskId) {
+    pollTimer = setInterval(() => pollTaskStatus(taskId), 2000)
+    pollTaskStatus(taskId)
+  } else {
+    pollTimer = startMockTimer()
+  }
 })
 
 onUnmounted(() => {
-  clearInterval(timer)
+  clearInterval(pollTimer)
   clearInterval(progressTimer)
 })
 

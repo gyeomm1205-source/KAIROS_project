@@ -171,6 +171,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
+import { postProfileFeedback } from '@/api/aiApi'
 
 const router = useRouter()
 const store = useCalendarStore()
@@ -198,14 +199,33 @@ const submitFeedback = async () => {
   if (feedbackText.value.trim()) {
     isSubmitting.value = true
     try {
-      // API call simulation
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      router.push('/curriculum/suggest')
+      const previousAnalysis = {
+        summary: analysisResult.value?.summary || '',
+        techDetails: (analysisResult.value?.skillLevels || []).map(s => ({
+          techName: s.name,
+          proficiencyPercentage: s.level,
+          usageCount: (analysisResult.value?.repeatedTechs || []).find(t => t.name === s.name)?.count || 0
+        })),
+        recommendedPositions: (analysisResult.value?.recommendedPositions || []).map(p => ({
+          positionName: p.title,
+          fitLevel: p.isHighMatch ? 'HIGH' : 'MEDIUM'
+        }))
+      }
+
+      const { data } = await postProfileFeedback({
+        userId: 1,
+        previousAnalysis,
+        userFeedback: feedbackText.value
+      })
+
+      // 응답으로 분석 결과 갱신 + localStorage 덮어쓰기
+      localStorage.setItem('analysisResult', JSON.stringify(data))
+      await store.loadAnalysisResult()
+      closeFeedback()
     } catch (e) {
-      console.error(e)
+      console.error('피드백 제출 실패:', e)
     } finally {
       isSubmitting.value = false
-      closeFeedback()
     }
   }
 }
