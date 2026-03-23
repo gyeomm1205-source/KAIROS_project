@@ -8,24 +8,38 @@ import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizGenerateAsyncResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCachePayload;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCompleteResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizActivityHistoryPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAlreadyCompletedException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizGenerationException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizIncompleteException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizPayloadParsingException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisCleanupException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionPersistenceException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSourceNotFoundException;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationCachePayload;
+import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
+import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
+import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.quiz.entity.QuizQuestion;
+import com.ssafy.springbootbe.persistence.quiz.entity.QuizSession;
 import com.ssafy.springbootbe.persistence.quiz.repository.QuizQuestionRepository;
 import com.ssafy.springbootbe.persistence.quiz.repository.QuizSessionRepository;
+import com.ssafy.springbootbe.persistence.quiz.type.QuizType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
+import com.ssafy.springbootbe.persistence.techstack.repository.TechStackRepository;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
@@ -41,6 +55,8 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
@@ -63,6 +79,9 @@ public class QuizzesServiceImpl implements QuizzesService {
     private final QuizSessionRepository quizSessionRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final UserTechStackRepository userTechStackRepository;
+    private final ActivityHistoryRepository activityHistoryRepository;
+    private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
+    private final TechStackRepository techStackRepository;
     private final RedisService redisService;
     private final AIRestClient aiRestClient;
     private final ObjectMapper objectMapper;
@@ -121,6 +140,43 @@ public class QuizzesServiceImpl implements QuizzesService {
                 .build();
     }
 
+    @Override
+    @Transactional
+    public QuizSessionCompleteResponse completeSession(Long userId, Long curriculumId) {
+        // FastAPI에서 넘어오는 데이터가 객관식이 아닌 것이 있어서, 기능 테스트는 차후 예정
+        // 요청 처리는 정상
+        Curriculum curriculum = findCurriculumOrThrow(curriculumId);
+        validateCurriculumOwnership(userId, curriculum);
+        validateNotCompleted(userId, curriculumId);
+
+        QuizGenerateAsyncResponse quizSource = findQuizSourceOrThrow(userId, curriculumId);
+        QuizSessionCachePayload sessionPayload = findQuizSessionOrThrow(userId, curriculumId);
+        validateAllQuestionsSubmitted(curriculumId, quizSource, sessionPayload);
+
+        List<QuizResultRow> quizResults = buildQuizResults(curriculumId, quizSource, sessionPayload);
+        int totalScore = calculateTotalScore(quizResults, quizSource.getTotalQuestions());
+
+        QuizSession quizSession = saveQuizSessionResult(curriculum, totalScore);
+        saveQuizQuestions(quizSession, quizResults);
+        saveQuizActivityHistory(curriculum, quizResults);
+        cleanupQuizRedisKeys(userId, curriculumId);
+
+        return QuizSessionCompleteResponse.builder()
+                .curriculumId(curriculumId)
+                .totalScore(totalScore)
+                .results(quizResults.stream()
+                        .map(result -> QuizSessionCompleteResponse.Result.builder()
+                                .questionNumber(result.questionNumber())
+                                .question(result.question())
+                                .options(result.options())
+                                .correctAnswer(result.correctAnswer())
+                                .selectedAnswer(result.selectedAnswer())
+                                .isCorrect(result.isCorrect())
+                                .build())
+                        .toList())
+                .build();
+    }
+
     QuizGenerateAsyncResponse requestQuizGeneration(QuizGenerateAsyncRequest request) {
         try {
             QuizGenerateAsyncResponse response = aiRestClient.buildAiRestClient()
@@ -156,6 +212,12 @@ public class QuizzesServiceImpl implements QuizzesService {
     private void validateCurriculumOwnership(Long userId, Curriculum curriculum) {
         if (!Objects.equals(curriculum.getUser().getUserId(), userId)) {
             throw new QuizAccessDeniedException(curriculum.getCurriculumId());
+        }
+    }
+
+    private void validateNotCompleted(Long userId, Long curriculumId) {
+        if (quizSessionRepository.existsByUserUserIdAndCurriculumCurriculumId(userId, curriculumId)) {
+            throw new QuizAlreadyCompletedException(curriculumId);
         }
     }
 
@@ -470,6 +532,195 @@ public class QuizzesServiceImpl implements QuizzesService {
         }
     }
 
+    private void validateAllQuestionsSubmitted(
+            Long curriculumId,
+            QuizGenerateAsyncResponse quizSource,
+            QuizSessionCachePayload sessionPayload
+    ) {
+        int totalQuestions = resolveTotalQuestions(quizSource, sessionPayload);
+        long submittedCount = sessionPayload.getQuestions().stream()
+                .filter(question -> question.getSelectedAnswer() != null && !question.getSelectedAnswer().isBlank())
+                .count();
+
+        if (submittedCount != totalQuestions) {
+            throw new QuizIncompleteException(curriculumId);
+        }
+    }
+
+    private int resolveTotalQuestions(QuizGenerateAsyncResponse quizSource, QuizSessionCachePayload sessionPayload) {
+        if (quizSource.getTotalQuestions() != null) {
+            return quizSource.getTotalQuestions();
+        }
+        if (sessionPayload.getTotalQuestions() != null) {
+            return sessionPayload.getTotalQuestions();
+        }
+        return quizSource.getQuestions().size();
+    }
+
+    private List<QuizResultRow> buildQuizResults(
+            Long curriculumId,
+            QuizGenerateAsyncResponse quizSource,
+            QuizSessionCachePayload sessionPayload
+    ) {
+        return quizSource.getQuestions().stream()
+                .map(sourceQuestion -> {
+                    QuizSessionCachePayload.Question sessionQuestion = findSessionQuestionOrThrow(
+                            sessionPayload,
+                            curriculumId,
+                            sourceQuestion.getQuestionNumber()
+                    );
+
+                    return new QuizResultRow(
+                            sourceQuestion.getQuestionNumber(),
+                            sourceQuestion.getQuestion(),
+                            sourceQuestion.getQuizType(),
+                            sourceQuestion.getOptions(),
+                            sourceQuestion.getCorrectAnswer(),
+                            sessionQuestion.getSelectedAnswer(),
+                            Boolean.TRUE.equals(sessionQuestion.getIsCorrect())
+                    );
+                })
+                .sorted(Comparator.comparing(QuizResultRow::questionNumber))
+                .toList();
+    }
+
+    private int calculateTotalScore(List<QuizResultRow> quizResults, Integer totalQuestions) {
+        long correctCount = quizResults.stream()
+                .filter(QuizResultRow::isCorrect)
+                .count();
+
+        int questionCount = totalQuestions == null || totalQuestions == 0 ? quizResults.size() : totalQuestions;
+        if (questionCount == 0) {
+            return 0;
+        }
+        return (int) ((correctCount * 100) / questionCount);
+    }
+
+    private QuizSession saveQuizSessionResult(Curriculum curriculum, int totalScore) {
+        try {
+            QuizSession quizSession = quizSessionRepository.findByUserUserIdAndCurriculumCurriculumId(
+                            curriculum.getUser().getUserId(),
+                            curriculum.getCurriculumId()
+                    )
+                    .orElseGet(() -> QuizSession.builder()
+                            .user(curriculum.getUser())
+                            .curriculum(curriculum)
+                            .build());
+            quizSession.complete(totalScore);
+            return quizSessionRepository.save(quizSession);
+        } catch (RuntimeException e) {
+            throw new QuizSessionPersistenceException(
+                    "퀴즈 세션 저장에 실패했습니다. curriculumId=" + curriculum.getCurriculumId(),
+                    e
+            );
+        }
+    }
+
+    private void saveQuizQuestions(QuizSession quizSession, List<QuizResultRow> quizResults) {
+        try {
+            List<QuizQuestion> quizQuestions = quizResults.stream()
+                    .map(result -> QuizQuestion.builder()
+                            .quizSession(quizSession)
+                            .question(result.question())
+                            .quizType(parseQuizType(result.quizType()))
+                            .options(result.options())
+                            .correctAnswer(result.correctAnswer())
+                            .selectedAnswer(result.selectedAnswer())
+                            .isCorrect(result.isCorrect())
+                            .build())
+                    .toList();
+            quizQuestionRepository.saveAll(quizQuestions);
+        } catch (RuntimeException e) {
+            throw new QuizSessionPersistenceException(
+                    "퀴즈 문항 저장에 실패했습니다. quizSessionId=" + quizSession.getQuizSessionId(),
+                    e
+            );
+        }
+    }
+
+    private QuizType parseQuizType(String quizType) {
+        if (quizType == null || quizType.isBlank()) {
+            return QuizType.MULTIPLE_CHOICE;
+        }
+
+        try {
+            return QuizType.valueOf(quizType.trim());
+        } catch (IllegalArgumentException e) {
+            throw new QuizSessionPersistenceException("지원하지 않는 quizType입니다. quizType=" + quizType, e);
+        }
+    }
+
+    private void saveQuizActivityHistory(Curriculum curriculum, List<QuizResultRow> quizResults) {
+        List<String> techStackNames = buildQuizRelatedTechStacks(curriculum.getUser().getUserId(), curriculum.getCurriculumId());
+        String techStackLabel = techStackNames.isEmpty() ? "기술 스택 미지정" : String.join(", ", techStackNames);
+        long correctCount = quizResults.stream().filter(QuizResultRow::isCorrect).count();
+
+        try {
+            ActivityHistory activityHistory = activityHistoryRepository.save(ActivityHistory.builder()
+                    .user(curriculum.getUser())
+                    .activityType(ActivityType.QUIZ)
+                    .title("퀴즈 완료 — " + techStackLabel)
+                    .description("정답 " + correctCount + "/" + quizResults.size())
+                    .activityDate(LocalDateTime.now())
+                    .build());
+
+            List<ActivityHistoryTechStack> links = new ArrayList<>();
+            for (String techStackName : techStackNames) {
+                techStackRepository.findByTechName(techStackName)
+                        .ifPresent(techStack -> links.add(ActivityHistoryTechStack.builder()
+                                .activityHistory(activityHistory)
+                                .techStack(techStack)
+                                .build()));
+            }
+
+            if (!links.isEmpty()) {
+                activityHistoryTechStackRepository.saveAll(links);
+            }
+        } catch (RuntimeException e) {
+            throw new QuizActivityHistoryPersistenceException(
+                    "퀴즈 활동 이력 저장에 실패했습니다. curriculumId=" + curriculum.getCurriculumId(),
+                    e
+            );
+        }
+    }
+
+    private List<String> buildQuizRelatedTechStacks(Long userId, Long curriculumId) {
+        LinkedHashSet<String> techStacks = new LinkedHashSet<>();
+        addRecommendationTopSkills(userId, curriculumId, techStacks);
+
+        if (techStacks.isEmpty()) {
+            userTechStackRepository.findTop6ByUserUserIdOrderByScoreDesc(userId).stream()
+                    .map(UserTechStack::getTechStack)
+                    .map(TechStack::getTechName)
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(value -> !value.isBlank())
+                    .forEach(techStacks::add);
+        }
+
+        return techStacks.stream().limit(3).toList();
+    }
+
+    private void cleanupQuizRedisKeys(Long userId, Long curriculumId) {
+        deleteRedisKey(buildQuizSessionKey(userId), "퀴즈 세션 Redis 삭제에 실패했습니다. userId=" + userId);
+        deleteRedisKey(
+                buildRecommendationQuizKey(userId, curriculumId),
+                "퀴즈 원본 Redis 삭제에 실패했습니다. curriculumId=" + curriculumId
+        );
+    }
+
+    private void deleteRedisKey(String key, String message) {
+        try {
+            if (!redisService.delete(key)) {
+                throw new QuizRedisCleanupException(message + ", key=" + key);
+            }
+        } catch (QuizRedisCleanupException e) {
+            throw e;
+        } catch (RuntimeException e) {
+            throw new QuizRedisCleanupException(message + ", key=" + key, e);
+        }
+    }
+
     private String normalizeAnswer(String answer) {
         return answer == null ? null : answer.trim();
     }
@@ -518,5 +769,16 @@ public class QuizzesServiceImpl implements QuizzesService {
 
     private String buildQuizSessionKey(Long userId) {
         return QUIZ_SESSION_KEY_PREFIX + userId;
+    }
+
+    private record QuizResultRow(
+            Integer questionNumber,
+            String question,
+            String quizType,
+            List<String> options,
+            String correctAnswer,
+            String selectedAnswer,
+            boolean isCorrect
+    ) {
     }
 }

@@ -41,11 +41,15 @@ import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationPay
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationQuizGenerationException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizActivityHistoryPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAlreadyCompletedException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizGenerationException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizIncompleteException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizPayloadParsingException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisCleanupException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
@@ -343,6 +347,18 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
     }
 
+    @ExceptionHandler(QuizAlreadyCompletedException.class)
+    public ResponseEntity<Map<String, String>> handleQuizAlreadyCompletedException(QuizAlreadyCompletedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizIncompleteException.class)
+    public ResponseEntity<Map<String, String>> handleQuizIncompleteException(QuizIncompleteException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "INVALID_INPUT", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(QuizGenerationException.class)
     public ResponseEntity<Map<String, String>> handleQuizGenerationException(QuizGenerationException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
@@ -351,8 +367,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             QuizRedisException.class,
+            QuizRedisCleanupException.class,
             QuizPayloadParsingException.class,
-            QuizSessionPersistenceException.class
+            QuizSessionPersistenceException.class,
+            QuizActivityHistoryPersistenceException.class
     })
     public ResponseEntity<Map<String, String>> handleQuizInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

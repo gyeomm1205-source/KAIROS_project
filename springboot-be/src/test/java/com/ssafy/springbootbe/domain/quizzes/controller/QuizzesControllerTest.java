@@ -5,7 +5,9 @@ import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCompleteResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAlreadyCompletedException;
 import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
 import com.ssafy.springbootbe.domain.quizzes.service.QuizzesService;
 import org.junit.jupiter.api.BeforeEach;
@@ -147,6 +149,47 @@ class QuizzesControllerTest {
                                 """))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("ACCESS_DENIED"));
+    }
+
+    @Test
+    void 퀴즈_완료_응답_필드명이_camelCase와_일치한다() throws Exception {
+        // given
+        QuizSessionCompleteResponse response = QuizSessionCompleteResponse.builder()
+                .curriculumId(10L)
+                .totalScore(85)
+                .results(List.of(
+                        QuizSessionCompleteResponse.Result.builder()
+                                .questionNumber(2)
+                                .question("Spring Bean의 기본 스코프는?")
+                                .options(List.of("singleton", "prototype", "request", "session"))
+                                .correctAnswer("singleton")
+                                .selectedAnswer("singleton")
+                                .isCorrect(true)
+                                .build()
+                ))
+                .build();
+        given(quizzesService.completeSession(1L, 10L)).willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/quizzes/sessions/10/complete")
+                        .principal(authenticatedUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.curriculumId").value(10))
+                .andExpect(jsonPath("$.totalScore").value(85))
+                .andExpect(jsonPath("$.results[0].questionNumber").value(2))
+                .andExpect(jsonPath("$.results[0].correctAnswer").value("singleton"))
+                .andExpect(jsonPath("$.results[0].selectedAnswer").value("singleton"))
+                .andExpect(jsonPath("$.results[0].isCorrect").value(true));
+    }
+
+    @Test
+    void 퀴즈_완료시_이미_완료된_퀴즈면_CONFLICT를_반환한다() throws Exception {
+        given(quizzesService.completeSession(1L, 10L)).willThrow(new QuizAlreadyCompletedException(10L));
+
+        mockMvc.perform(post("/quizzes/sessions/10/complete")
+                        .principal(authenticatedUser()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("CONFLICT"));
     }
 
     private UsernamePasswordAuthenticationToken authenticatedUser() {

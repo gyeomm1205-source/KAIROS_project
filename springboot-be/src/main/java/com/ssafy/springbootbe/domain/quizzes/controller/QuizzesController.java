@@ -4,6 +4,7 @@ import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizAnswerSubmitResponse;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionCompleteResponse;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizSessionStartResponse;
 import com.ssafy.springbootbe.domain.quizzes.service.QuizzesService;
 import jakarta.validation.Valid;
@@ -41,5 +42,13 @@ public class QuizzesController {
         return ResponseEntity.ok(
                 quizzesService.submitAnswer(loginUserPrincipal.getUserId(), curriculumId, request)
         );
+    }
+
+    @PostMapping("/sessions/{curriculumId}/complete")
+    public ResponseEntity<QuizSessionCompleteResponse> completeSession(
+            @AuthenticationPrincipal LoginUserPrincipal loginUserPrincipal,
+            @PathVariable Long curriculumId
+    ) {
+        return ResponseEntity.ok(quizzesService.completeSession(loginUserPrincipal.getUserId(), curriculumId));
     }
 }
