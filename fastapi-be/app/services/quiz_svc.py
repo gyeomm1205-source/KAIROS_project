@@ -50,18 +50,24 @@ _CHUNK_CONTENT_MAX_CHARS = 600
 
 # UserLevel → (quiz_type_label, difficulty_label, question_count)
 _LEVEL_CONFIG: dict[UserLevel, tuple[str, str, int]] = {
-    UserLevel.junior: ("복습", "low",  5),
-    UserLevel.mid:    ("복습", "mid",  5),
-    UserLevel.senior: ("심화", "high", 5),
+    UserLevel.junior: ("복습", "low",  10),
+    UserLevel.mid:    ("복습", "mid",  10),
+    UserLevel.senior: ("심화", "high", 10),
 }
 
 # 문항 유형 분배: difficulty → QuestionType 순서 리스트
 _QUESTION_TYPE_MIX: dict[str, list[QuestionType]] = {
     "low":  [QuestionType.multiple_choice, QuestionType.multiple_choice, QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.multiple_choice, QuestionType.short_answer,
              QuestionType.multiple_choice, QuestionType.short_answer],
     "mid":  [QuestionType.multiple_choice, QuestionType.short_answer,   QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.short_answer,
+             QuestionType.multiple_choice, QuestionType.short_answer,   QuestionType.short_answer,
              QuestionType.multiple_choice, QuestionType.short_answer],
     "high": [QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.coding,
+             QuestionType.short_answer,   QuestionType.multiple_choice,
+             QuestionType.short_answer,   QuestionType.short_answer,   QuestionType.coding,
              QuestionType.short_answer,   QuestionType.multiple_choice],
 }
 
@@ -725,9 +731,15 @@ def _assemble_response(
             correct_answer=correct_answer,
         ))
 
+    target_skill = request.target_tech_stacks[0] if request.target_tech_stacks else "개발"
+    quiz_type_label, _, question_count = _LEVEL_CONFIG[request.user_level]
+
     return QuizResponse(
         curriculum_id=request.curriculum_id,
         total_questions=len(quiz_questions),
+        title=f"{target_skill} {quiz_type_label} 퀴즈",
+        description=f"{target_skill} 학습 내용 기반 {quiz_type_label} 퀴즈",
+        expected_minutes=question_count * 2,
         questions=quiz_questions,
     )
 

@@ -305,6 +305,9 @@ class QuizResponse(_CamelModel):
     """POST /api/v1/ai/quizzes/generate-async 응답."""
     curriculum_id: int
     total_questions: int
+    title: str
+    description: str
+    expected_minutes: int
     questions: list[QuizQuestion]
 
 
