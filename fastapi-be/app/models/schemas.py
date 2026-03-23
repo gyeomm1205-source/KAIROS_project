@@ -419,6 +419,31 @@ class GrowthSummaryResponse(_CamelModel):
 
 
 # ---------------------------------------------------------------------------
+# 프로필 피드백 재분석 — POST /api/v1/ai/profile/feedback
+# ---------------------------------------------------------------------------
+
+class PreviousAnalysis(_CamelModel):
+    """브라우저 Cache에 저장된 이전 분석 결과."""
+    summary: str
+    tech_details: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_positions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class ProfileFeedbackRequest(_CamelModel):
+    """POST /api/v1/ai/profile/feedback 요청."""
+    user_id: int
+    previous_analysis: PreviousAnalysis
+    user_feedback: str
+
+
+class ProfileFeedbackResponse(_CamelModel):
+    """POST /api/v1/ai/profile/feedback 응답."""
+    summary: str
+    tech_details: list[dict[str, Any]] = Field(default_factory=list)
+    recommended_positions: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # 폴백 / 에러 봉투
 # ---------------------------------------------------------------------------
 
