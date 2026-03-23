@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.domain.recommendations.controller;
 import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
+import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationDetailResponse;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListItemResponse;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListResponse;
 import com.ssafy.springbootbe.domain.recommendations.service.RecommendationsService;
@@ -83,6 +84,73 @@ class RecommendationControllerTest {
                 .andExpect(jsonPath("$.items[0].techStacks[0].iconUrl").value("https://example.com/java.png"))
                 .andExpect(jsonPath("$.items[0].techStacks[0].color").value("#007396"))
                 .andExpect(jsonPath("$.items[0].hasRecommendation").value(true));
+    }
+
+    @Test
+    void 추천_상세_조회_응답_필드명이_camelCase와_일치하고_correctAnswer를_노출하지_않는다() throws Exception {
+        // given
+        RecommendationDetailResponse response = RecommendationDetailResponse.builder()
+                .curriculumId(10L)
+                .recommendationReason(RecommendationDetailResponse.RecommendationReason.builder()
+                        .summary("Java 기반 추천")
+                        .detail("Spring 심화 자료를 추천합니다.")
+                        .build())
+                .currentStatus(RecommendationDetailResponse.RecommendationCurrentStatus.builder()
+                        .summary("학습 흐름이 좋습니다.")
+                        .detail("Spring과 Java 중심으로 이어지고 있습니다.")
+                        .topSkills(List.of("Spring", "Java"))
+                        .build())
+                .quizzes(List.of(
+                        RecommendationDetailResponse.RecommendationQuiz.builder()
+                                .title("Spring 핵심 개념 점검 퀴즈")
+                                .description("추천 탭에서 바로 풀어볼 수 있는 Spring 중심 사전 생성 퀴즈입니다.")
+                                .expectedMinutes(15)
+                                .totalQuestions(2)
+                                .questions(List.of(
+                                        RecommendationDetailResponse.RecommendationQuizQuestion.builder()
+                                                .questionNumber(1)
+                                                .question("Spring Bean의 기본 스코프는?")
+                                                .quizType("MULTIPLE_CHOICE")
+                                                .options(List.of("singleton", "prototype"))
+                                                .build()
+                                ))
+                                .build()
+                ))
+                .references(List.of(
+                        RecommendationDetailResponse.RecommendationReference.builder()
+                                .title("Spring Boot 공식 문서")
+                                .recommendationReason("공식 문서로 기초를 다지기 좋습니다.")
+                                .referenceType("OFFICIAL_DOCS")
+                                .publishedAt(LocalDate.of(2024, 6, 1))
+                                .url("https://docs.spring.io/")
+                                .build()
+                ))
+                .nextNodes(List.of(
+                        RecommendationDetailResponse.RecommendationNextNode.builder()
+                                .title("Spring Security 심화")
+                                .build()
+                ))
+                .build();
+        given(recommendationsService.findRecommendationDetail(1L, 10L)).willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/recommendations/10").principal(authenticatedUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.curriculumId").value(10))
+                .andExpect(jsonPath("$.recommendationReason.summary").value("Java 기반 추천"))
+                .andExpect(jsonPath("$.recommendationReason.detail").value("Spring 심화 자료를 추천합니다."))
+                .andExpect(jsonPath("$.currentStatus.summary").value("학습 흐름이 좋습니다."))
+                .andExpect(jsonPath("$.currentStatus.detail").value("Spring과 Java 중심으로 이어지고 있습니다."))
+                .andExpect(jsonPath("$.currentStatus.topSkills[0]").value("Spring"))
+                .andExpect(jsonPath("$.quizzes[0].title").value("Spring 핵심 개념 점검 퀴즈"))
+                .andExpect(jsonPath("$.quizzes[0].expectedMinutes").value(15))
+                .andExpect(jsonPath("$.quizzes[0].totalQuestions").value(2))
+                .andExpect(jsonPath("$.quizzes[0].questions[0].questionNumber").value(1))
+                .andExpect(jsonPath("$.quizzes[0].questions[0].question").value("Spring Bean의 기본 스코프는?"))
+                .andExpect(jsonPath("$.quizzes[0].questions[0].quizType").value("MULTIPLE_CHOICE"))
+                .andExpect(jsonPath("$.quizzes[0].questions[0].correctAnswer").doesNotExist())
+                .andExpect(jsonPath("$.references[0].referenceType").value("OFFICIAL_DOCS"))
+                .andExpect(jsonPath("$.nextNodes[0].title").value("Spring Security 심화"));
     }
 
     private UsernamePasswordAuthenticationToken authenticatedUser() {

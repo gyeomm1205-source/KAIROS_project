@@ -33,7 +33,12 @@ import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingPersistenceE
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingUserNotFoundException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationCurriculumRetrievalException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationAccessDeniedException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationCurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationDetailNotFoundException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationNodeAggregationException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationPayloadParsingException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationQuizGenerationException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
@@ -256,11 +261,40 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             RecommendationCurriculumRetrievalException.class,
             RecommendationNodeAggregationException.class,
-            RecommendationRedisLookupException.class
+            RecommendationRedisLookupException.class,
+            RecommendationPayloadParsingException.class
     })
     public ResponseEntity<Map<String, String>> handleRecommendationInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(RecommendationCurriculumNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleRecommendationCurriculumNotFoundException(
+            RecommendationCurriculumNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(RecommendationDetailNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleRecommendationDetailNotFoundException(
+            RecommendationDetailNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(RecommendationAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleRecommendationAccessDeniedException(
+            RecommendationAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(RecommendationQuizGenerationException.class)
+    public ResponseEntity<Map<String, String>> handleRecommendationQuizGenerationException(
+            RecommendationQuizGenerationException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

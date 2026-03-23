@@ -2,8 +2,13 @@ package com.ssafy.springbootbe.domain.recommendations.service;
 
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizGenerateAsyncRequest;
+import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizGenerateAsyncResponse;
 import com.ssafy.springbootbe.domain.recommendations.dto.request.DailyRecommendationGenerateRequest;
+import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationDetailResponse;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationListResponse;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationAccessDeniedException;
+import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationDetailNotFoundException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
@@ -26,6 +31,7 @@ import com.ssafy.springbootbe.persistence.user.type.UserPosition;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -34,6 +40,8 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -42,6 +50,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
@@ -58,12 +67,14 @@ class RecommendationsServiceImplTest {
     @Mock private AIRestClient aiRestClient;
 
     private RecommendationsServiceImpl recommendationsService;
+    private ObjectMapper objectMapper;
 
     private User user;
     private Curriculum curriculum;
 
     @BeforeEach
     void setUp() {
+        objectMapper = new ObjectMapper();
         recommendationsService = spy(new RecommendationsServiceImpl(
                 curriculumRepository,
                 curriculumNodeRepository,
@@ -73,7 +84,7 @@ class RecommendationsServiceImplTest {
                 userScheduleRepository,
                 redisService,
                 aiRestClient,
-                new ObjectMapper()
+                objectMapper
         ));
 
         ReflectionTestUtils.setField(recommendationsService, "aiServerUrl", "http://localhost:8000");
@@ -81,6 +92,11 @@ class RecommendationsServiceImplTest {
                 recommendationsService,
                 "aiRecommendationsDailyGeneratePath",
                 "/api/v1/ai/recommendations/daily-generate"
+        );
+        ReflectionTestUtils.setField(
+                recommendationsService,
+                "aiQuizzesGenerateAsyncPath",
+                "/api/v1/ai/quizzes/generate-async"
         );
 
         user = User.builder()
@@ -123,20 +139,13 @@ class RecommendationsServiceImplTest {
                 "recommendation:1:10",
                 "{\"curriculumId\":10}",
                 RecommendationsServiceImpl.RECOMMENDATION_TTL_HOURS,
-                java.util.concurrent.TimeUnit.HOURS
+                TimeUnit.HOURS
         );
     }
 
     @Test
     void findRecommendations_인증된_사용자의_커리큘럼만_반환한다() {
         // given
-        Curriculum otherUsersCurriculum = Curriculum.builder()
-                .curriculumId(99L)
-                .user(User.builder().userId(2L).email("other@gmail.com").nickname("other").build())
-                .status(CurriculumStatus.ACTIVE)
-                .duration(20)
-                .build();
-
         CurriculumNode firstNode = CurriculumNode.builder()
                 .curriculumNodeId(1L)
                 .curriculum(curriculum)
@@ -172,7 +181,6 @@ class RecommendationsServiceImplTest {
         RecommendationListResponse response = recommendationsService.findRecommendations(1L);
 
         // then
-        assertThat(otherUsersCurriculum.getCurriculumId()).isEqualTo(99L);
         assertThat(response.getItems()).hasSize(1);
         assertThat(response.getItems().getFirst().getCurriculumId()).isEqualTo(10L);
         assertThat(response.getItems().getFirst().getStartDate()).isEqualTo(LocalDate.of(2025, 1, 2));
@@ -214,6 +222,111 @@ class RecommendationsServiceImplTest {
         assertThatThrownBy(() -> recommendationsService.findRecommendations(1L))
                 .isInstanceOf(RecommendationRedisLookupException.class)
                 .hasMessageContaining("userId=1")
+                .hasMessageContaining("curriculumId=10");
+    }
+
+    @Test
+    void findRecommendationDetail_recommendationRedis와_quizRedis가_모두_있으면_정상_응답한다() throws Exception {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(recommendationPayloadJson());
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+
+        // when
+        RecommendationDetailResponse response = recommendationsService.findRecommendationDetail(1L, 10L);
+        String serialized = objectMapper.writeValueAsString(response);
+
+        // then
+        assertThat(response.getCurriculumId()).isEqualTo(10L);
+        assertThat(response.getRecommendationReason().getSummary()).isEqualTo("Java 기반 추천");
+        assertThat(response.getCurrentStatus().getTopSkills()).containsExactly("Spring", "Java");
+        assertThat(response.getReferences()).hasSize(1);
+        assertThat(response.getNextNodes()).hasSize(1);
+        assertThat(response.getQuizzes()).hasSize(1);
+        assertThat(response.getQuizzes().getFirst().getQuestions()).hasSize(2);
+        assertThat(serialized).doesNotContain("correctAnswer");
+        verify(recommendationsService, never()).requestQuizGeneration(any());
+    }
+
+    @Test
+    void findRecommendationDetail_quizRedis가_없으면_FastAPI_호출_후_Redis에_저장한다() throws Exception {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(recommendationPayloadJson());
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(null);
+
+        QuizGenerateAsyncResponse generatedQuiz = objectMapper.readValue(
+                quizPayloadJson(),
+                QuizGenerateAsyncResponse.class
+        );
+        ArgumentCaptor<QuizGenerateAsyncRequest> requestCaptor = ArgumentCaptor.forClass(QuizGenerateAsyncRequest.class);
+        doReturn(generatedQuiz).when(recommendationsService).requestQuizGeneration(requestCaptor.capture());
+        doReturn(12345L).when(recommendationsService).calculateQuizCacheTtlSeconds();
+
+        // when
+        RecommendationDetailResponse response = recommendationsService.findRecommendationDetail(1L, 10L);
+
+        // then
+        assertThat(requestCaptor.getValue().getCurriculumId()).isEqualTo(10L);
+        assertThat(requestCaptor.getValue().getTargetTechStacks()).containsExactly("Spring", "Java");
+        assertThat(requestCaptor.getValue().getUserLevel()).isEqualTo("MID");
+        assertThat(response.getQuizzes().getFirst().getQuestions()).hasSize(2);
+        verify(redisService).save(
+                eq("recommendation:quiz:1:10"),
+                eq(quizPayloadJsonCompact()),
+                eq(12345L),
+                eq(TimeUnit.SECONDS)
+        );
+    }
+
+    @Test
+    void findRecommendationDetail_FastAPI_correctAnswer를_클라이언트에_노출하지_않는다() throws Exception {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(recommendationPayloadJson());
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(null);
+
+        QuizGenerateAsyncResponse generatedQuiz = objectMapper.readValue(
+                quizPayloadJson(),
+                QuizGenerateAsyncResponse.class
+        );
+        doReturn(generatedQuiz).when(recommendationsService).requestQuizGeneration(any());
+
+        // when
+        RecommendationDetailResponse response = recommendationsService.findRecommendationDetail(1L, 10L);
+        String serialized = objectMapper.writeValueAsString(response);
+
+        // then
+        assertThat(serialized).contains("questionNumber");
+        assertThat(serialized).doesNotContain("correctAnswer");
+    }
+
+    @Test
+    void findRecommendationDetail_다른_유저의_커리큘럼이면_ACCESS_DENIED를_던진다() {
+        // given
+        Curriculum otherUsersCurriculum = Curriculum.builder()
+                .curriculumId(10L)
+                .user(User.builder().userId(2L).email("other@gmail.com").nickname("other").build())
+                .status(CurriculumStatus.ACTIVE)
+                .duration(20)
+                .build();
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(otherUsersCurriculum));
+
+        // when & then
+        assertThatThrownBy(() -> recommendationsService.findRecommendationDetail(1L, 10L))
+                .isInstanceOf(RecommendationAccessDeniedException.class)
+                .hasMessageContaining("curriculumId=10");
+    }
+
+    @Test
+    void findRecommendationDetail_recommendationRedis가_없으면_NOT_FOUND를_던진다() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(null);
+
+        // when & then
+        assertThatThrownBy(() -> recommendationsService.findRecommendationDetail(1L, 10L))
+                .isInstanceOf(RecommendationDetailNotFoundException.class)
                 .hasMessageContaining("curriculumId=10");
     }
 
@@ -271,7 +384,7 @@ class RecommendationsServiceImplTest {
 
         // when
         DailyRecommendationGenerateRequest request = recommendationsService.buildDailyGenerateRequest(curriculum);
-        String serialized = new ObjectMapper().writeValueAsString(request);
+        String serialized = objectMapper.writeValueAsString(request);
 
         // then
         assertThat(request.getUserId()).isEqualTo(1L);
@@ -302,6 +415,15 @@ class RecommendationsServiceImplTest {
 
         // then
         assertThat(uri).isEqualTo("http://localhost:8000/api/v1/ai/recommendations/daily-generate");
+    }
+
+    @Test
+    void buildQuizGenerateUri_최신_quiz_generate_async_경로를_사용한다() {
+        // when
+        String uri = recommendationsService.buildQuizGenerateUri();
+
+        // then
+        assertThat(uri).isEqualTo("http://localhost:8000/api/v1/ai/quizzes/generate-async");
     }
 
     @Test
@@ -337,7 +459,69 @@ class RecommendationsServiceImplTest {
                 "recommendation:1:11",
                 "{\"curriculumId\":11}",
                 RecommendationsServiceImpl.RECOMMENDATION_TTL_HOURS,
-                java.util.concurrent.TimeUnit.HOURS
+                TimeUnit.HOURS
         );
+    }
+
+    private String recommendationPayloadJson() {
+        return """
+                {
+                  "userId": 1,
+                  "curriculumId": 10,
+                  "recommendationReason": {
+                    "summary": "Java 기반 추천",
+                    "detail": "Spring 심화 자료를 추천합니다."
+                  },
+                  "currentStatus": {
+                    "summary": "학습 흐름이 좋습니다.",
+                    "detail": "Spring과 Java 중심으로 이어지고 있습니다.",
+                    "topSkills": ["Spring", "Java"]
+                  },
+                  "references": [
+                    {
+                      "title": "Spring Boot 공식 문서",
+                      "recommendationReason": "공식 문서로 기초를 다지기 좋습니다.",
+                      "referenceType": "OFFICIAL_DOCS",
+                      "publishedAt": "2024-06-01",
+                      "url": "https://docs.spring.io/"
+                    }
+                  ],
+                  "nextNodes": [
+                    { "title": "Spring Security 심화" }
+                  ]
+                }
+                """;
+    }
+
+    private String quizPayloadJson() {
+        return """
+                {
+                  "curriculumId": 10,
+                  "totalQuestions": 2,
+                  "title": "Spring 핵심 개념 점검 퀴즈",
+                  "description": "추천 탭에서 바로 풀어볼 수 있는 Spring 중심 사전 생성 퀴즈입니다.",
+                  "expectedMinutes": 15,
+                  "questions": [
+                    {
+                      "questionNumber": 1,
+                      "question": "Spring Bean의 기본 스코프는?",
+                      "quizType": "MULTIPLE_CHOICE",
+                      "options": ["singleton", "prototype", "request", "session"],
+                      "correctAnswer": "singleton"
+                    },
+                    {
+                      "questionNumber": 2,
+                      "question": "DI의 장점을 한 문장으로 설명하세요.",
+                      "quizType": "SHORT_ANSWER",
+                      "options": null,
+                      "correctAnswer": "결합도를 낮춘다."
+                    }
+                  ]
+                }
+                """;
+    }
+
+    private String quizPayloadJsonCompact() throws Exception {
+        return objectMapper.writeValueAsString(objectMapper.readValue(quizPayloadJson(), QuizGenerateAsyncResponse.class));
     }
 }

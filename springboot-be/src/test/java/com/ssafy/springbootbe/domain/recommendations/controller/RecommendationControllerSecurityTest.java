@@ -56,4 +56,11 @@ class RecommendationControllerSecurityTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
     }
+
+    @Test
+    void 인증_없는_추천_상세_요청은_401을_반환한다() throws Exception {
+        mockMvc.perform(get("/recommendations/10"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_TOKEN"));
+    }
 }
