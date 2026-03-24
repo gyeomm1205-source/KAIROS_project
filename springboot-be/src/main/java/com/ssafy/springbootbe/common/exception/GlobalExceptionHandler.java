@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.common.exception;
 
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
+import com.ssafy.springbootbe.domain.activities.exception.ActivitySyncFailedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAlreadyActiveException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
@@ -231,6 +232,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleCurriculumAlreadyActiveException(CurriculumAlreadyActiveException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ActivitySyncFailedException.class)
+    public ResponseEntity<Map<String, String>> handleActivitySyncFailedException(ActivitySyncFailedException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
     }
 
     @ExceptionHandler(ActivityNotFoundException.class)
