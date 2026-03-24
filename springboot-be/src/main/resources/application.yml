@@ -1,69 +1,44 @@
+server:
+  port: 8080
+  forward-headers-strategy: framework
+
 spring:
   application:
     name: springboot-be
-  jackson:
-    default-property-inclusion: non_null
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ${DB_URL}
-    username: ${DB_USER}
-    password: ${DB_PW}
+    url: ${DB_URL:jdbc:h2:mem:app;MODE=PostgreSQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false}
+    driver-class-name: ${DB_DRIVER:org.h2.Driver}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
   jpa:
     open-in-view: false
-    show-sql: true
     hibernate:
-      ddl-auto: update
-  data:
-    redis:
-      host: ${REDIS_HOST}
-      port: ${REDIS_PORT}
-      timeout: 6000
-  jwt:
-    secret: ${JWT_SECRET_KEY}
-server:
-  servlet:
-    context-path: /api/v1
+      ddl-auto: ${JPA_DDL_AUTO:update}
+  h2:
+    console:
+      enabled: true
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui/index.html
+
 management:
   endpoints:
     web:
       exposure:
-        include: health,info,metrics,env,loggers,prometheus
-  endpoint:
-    health:
-      show-details: always
-service:
-  access-token-duration: ${ACCESS_TOKEN_DURATION}
-  refresh-token-duration: ${REFRESH_TOKEN_DURATION}
-oauth:
-  content-type: application/x-www-form-urlencoded
-  grant_type: authorization_code
-  google:
-    client_id: ${GOOGLE_CLIENT_ID}
-    client_secret: ${GOOGLE_CLIENT_SECRET}
-    auth_uri: ${GOOGLE_AUTH_URL}
-    redirect_uri: ${GOOGLE_REDIRECT_URL}
-    token-url: ${GOOGLE_TOKEN_URL}
-    scope: ${GOOGLE_CLIENT_SCOPE}
-    user-info-url: ${GOOGLE_USER_INFO_URL}
-    calendar_api: ${GOOGLE_CALENDAR_API}
-  github:
-    accept-vnd: application/vnd.github+json
-    api-version: 2026-03-10
-    client_id: ${GITHUB_CLIENT_ID}
-    client_secret: ${GITHUB_CLIENT_SECRET}
-    auth_uri: ${GITHUB_AUTH_URL}
-    redirect_uri: ${GITHUB_REDIRECT_URL}
-    token-url: ${GITHUB_TOKEN_URL}
-    scope: ${GITHUB_CLIENT_SCOPE}
-    user-agent: ${GITHUB_USER_AGENT}
-    user-info-url: ${GITHUB_USER_INFO_URL}
-ai:
-  server-url: ${AI_SERVER_URL}
-  collect-async-path: ${AI_COLECT_ASYNC_PATH}
-  velog-collect-async-path: ${AI_VELOG_COLLECT_ASYNC_PATH}
-  recommendations-daily-generate-path: ${AI_RECOMMENDATIONS_DAILY_GENERATE_PATH}
-  curriculum-generate-path: ${AI_CURRICULUM_GENERATE_PATH:/api/v1/ai/curriculum/generate}
+        include: health,info
+
 app:
-  crypto:
-    password: ${TEXT_ENCRYPTOR_PASSWORD}
-    salt: ${TEXT_ENCRYPTOR_SALT}
+  cors:
+    allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://localhost:5173,http://127.0.0.1:5173,https://kairos.cloud-ip.cc,http://kairos.cloud-ip.cc}
+  fastapi:
+    base-url: ${APP_FASTAPI_BASE_URL:http://localhost:8000}
+  security:
+    cognito:
+      enabled: ${APP_SECURITY_COGNITO_ENABLED:false}
+      region: ${APP_SECURITY_COGNITO_REGION:}
+      user-pool-id: ${APP_SECURITY_COGNITO_USER_POOL_ID:}
+      client-id: ${APP_SECURITY_COGNITO_CLIENT_ID:}
+      issuer-uri: ${APP_SECURITY_COGNITO_ISSUER_URI:}
+      token-use: ${APP_SECURITY_COGNITO_TOKEN_USE:access}
+      username-claim: ${APP_SECURITY_COGNITO_USERNAME_CLAIM:cognito:username}

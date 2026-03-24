@@ -1,13 +1,12 @@
 from datetime import datetime, timezone
 
-from fastapi import APIRouter
-from fastapi.concurrency import run_in_threadpool
-from starlette import status
+from fastapi import APIRouter, Depends
 
-from app.core.settings import QDRANT_COLLECTION_NAME
+from app.schemas.auth import CurrentUserResponse
+from app.schemas.common import ErrorResponse
 from app.schemas.ping import PingResponse
-from app.services.errors import AppError
-from app.services.qdrant_client import get_qdrant_client
+from app.services.auth import CognitoUser, get_current_user
+from app.services.spring_client import SpringClient
 
 router = APIRouter(prefix="/api/test", tags=["Test Ping API"])
 
@@ -27,31 +26,44 @@ async def ping() -> PingResponse:
 
 
 @router.get(
-    "/qdrant",
+    "/ping/spring",
     response_model=PingResponse,
-    summary="FastAPI to Qdrant ping",
+    summary="FastAPI to Spring ping",
+    responses={
+        502: {
+            "model": ErrorResponse,
+            "description": "Spring Boot unavailable",
+        }
+    },
 )
-async def ping_qdrant() -> PingResponse:
-    client = get_qdrant_client()
-
-    try:
-        collections_response = await run_in_threadpool(client.get_collections)
-        collection_exists = await run_in_threadpool(client.collection_exists, QDRANT_COLLECTION_NAME)
-        collection_names = [collection.name for collection in collections_response.collections]
-    except Exception as exc:
-        raise AppError(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            code="QDRANT-001",
-            message="Qdrant is unavailable.",
-        ) from exc
-
+async def ping_spring() -> PingResponse:
+    spring_response = await SpringClient().ping()
     return PingResponse(
         source="fastapi-be",
-        message="fastapi-to-qdrant-ok",
+        message="fastapi-to-spring-ok",
         timestamp=datetime.now(timezone.utc),
-        downstream={
-            "configuredCollection": QDRANT_COLLECTION_NAME,
-            "collectionExists": collection_exists,
-            "collections": collection_names,
-        },
+        downstream=spring_response,
+    )
+
+
+@router.get(
+    "/me",
+    response_model=CurrentUserResponse,
+    summary="FastAPI current user",
+    responses={
+        401: {
+            "model": ErrorResponse,
+            "description": "Unauthorized",
+        }
+    },
+)
+async def current_user(current_user: CognitoUser = Depends(get_current_user)) -> CurrentUserResponse:
+    return CurrentUserResponse(
+        source="fastapi-be",
+        subject=current_user.subject,
+        username=current_user.username,
+        email=current_user.email,
+        groups=current_user.groups,
+        token_use=current_user.token_use,
+        client_id=current_user.client_id,
     )

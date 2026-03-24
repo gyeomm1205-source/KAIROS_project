@@ -1,963 +1,284 @@
 <template>
-  <div class="landing-root" ref="scrollContainer" @mousemove="updateCursor">
-    <!-- Custom Cursor (Desktop Only) -->
-    <div class="custom-cursor" :class="{ 'is-hovering': isHovering }" :style="{ transform: `translate3d(${cursor.x}px, ${cursor.y}px, 0)` }"></div>
+  <div class="landing-root">
 
-    <!-- HEADER -->
-    <header class="landing-header" :class="{'is-sticky': isStickyMode}">
-      <div class="landing-logo" @click="scrollToTop">
-        <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
-          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
-          <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
+    <!-- ── 헤더 ── -->
+    <header class="landing-header">
+      <div class="landing-logo">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" fill="url(#kgL)" opacity="0.15"/>
+          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="url(#kgL)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+          <circle cx="14" cy="14" r="2" fill="url(#kgL)"/>
+          <path d="M8 5h12l-4 4H12L8 5z" fill="url(#kgL)" opacity="0.5"/>
+          <defs>
+            <linearGradient id="kgL" x1="6" y1="3" x2="22" y2="25" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#818cf8"/><stop offset="1" stop-color="#38bdf8"/>
+            </linearGradient>
+          </defs>
         </svg>
-        <span>KAIROS</span>
+        <span class="landing-logo-text">KAIROS</span>
       </div>
-
-      <nav class="header-nav" :class="{'nav-visible': isStickyMode}">
-        <a class="nav-anchor" :class="{ active: activeSection === 'features' }" @click.prevent="scrollToSection('features')">FEATURES</a>
-        <a class="nav-anchor" :class="{ active: activeSection === 'workflow' }" @click.prevent="scrollToSection('workflow')">WORKFLOW</a>
-        <a class="nav-anchor" :class="{ active: activeSection === 'integration' }" @click.prevent="scrollToSection('integration')">INTEGRATION</a>
-        <a class="nav-anchor" :class="{ active: activeSection === 'cta' }" @click.prevent="scrollToSection('cta')">JOIN NOW</a>
-      </nav>
-
       <div class="landing-header-actions">
-        <button class="btn-outline" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/login')">
-          LOGIN
+        <button class="btn-theme" @click="themeStore.toggle()">
+          <i :class="themeStore.isDark ? 'fas fa-sun' : 'fas fa-moon'" />
         </button>
-        <button class="btn-solid" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/onboarding/connect')">
-          GET STARTED <span class="btn-arrow">→</span>
-        </button>
+        <button class="btn-login" @click="$router.push('/login')">로그인</button>
+        <button class="btn-signup" @click="$router.push('/signup')">회원가입</button>
       </div>
     </header>
 
-    <!-- MAIN -->
+    <!-- ── 히어로 ── -->
     <main class="landing-main">
-
-      <!-- HERO SECTION -->
-      <section class="hero-section">
-        <div class="hero-video-wrapper">
-          <video
-            ref="heroVideo"
-            class="hero-video"
-            src="/grok-video-3c4d3961-6f79-41fb-90f1-890309aacb86.mp4"
-            muted loop playsinline autoplay
-            @timeupdate="checkVideoTime"
-          ></video>
-          <div class="hero-video-overlay"></div>
-        </div>
-
-        <div class="hero-content">
-          <div class="hero-badge reveal-elem">
-            <span class="badge-dot"></span>
-            AI-POWERED DEVELOPER PLATFORM
-          </div>
-          <div class="hero-typography">
-            <div class="reveal-wrap"><h1 class="reveal-elem">SEIZE YOUR</h1></div>
-            <div class="reveal-wrap"><h1 class="reveal-elem delay-1 hero-accent">DEVELOPMENT</h1></div>
-            <div class="reveal-wrap"><h1 class="reveal-elem delay-2">TIME</h1></div>
-          </div>
-          <p class="hero-desc reveal-elem delay-3">
-            GitHub 활동 자동 연동, AI 맞춤 커리큘럼, 노드 기반 학습 캘린더.<br>
-            개발자 성장을 위한 가장 스마트한 방법.
-          </p>
-          <div class="hero-cta reveal-elem delay-4">
-            <button class="btn-cta-primary" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/onboarding/connect')">
-              <span>무료로 시작하기</span>
-              <span class="btn-cta-arrow">→</span>
-            </button>
-            <button class="btn-cta-ghost" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click.prevent="scrollToSection('features')">
-              더 알아보기
-            </button>
-          </div>
-        </div>
-
-        <div class="scroll-indicator" :class="{ 'is-visible': isScrollIndicatorVisible }">
-          <span class="scroll-text">SCROLL</span>
-          <div class="scroll-line"></div>
-        </div>
-      </section>
-
-      <!-- MARQUEE -->
-      <div class="marquee-wrapper">
-        <div class="marquee-track">
-          <div class="marquee-content">
-            <span>AI CURATION</span>
-            <span class="marquee-dot">✦</span>
-            <span>GITHUB SYNC</span>
-            <span class="marquee-dot">✦</span>
-            <span>NODE CALENDAR</span>
-            <span class="marquee-dot">✦</span>
-            <span>CAREER TRACKING</span>
-            <span class="marquee-dot">✦</span>
-            <span>VELOG SYNC</span>
-            <span class="marquee-dot">✦</span>
-            <span>AI CURATION</span>
-            <span class="marquee-dot">✦</span>
-            <span>GITHUB SYNC</span>
-            <span class="marquee-dot">✦</span>
-            <span>NODE CALENDAR</span>
-            <span class="marquee-dot">✦</span>
-            <span>CAREER TRACKING</span>
-            <span class="marquee-dot">✦</span>
-            <span>VELOG SYNC</span>
-            <span class="marquee-dot">✦</span>
-          </div>
-        </div>
+      <div class="hero-badge">
+        <i class="fas fa-bolt" /> AI 개발자 성장 플랫폼
       </div>
 
-      <!-- SECTION NAV (original position) -->
-      <div class="nav-placeholder" ref="navPlaceholder">
-        <nav class="section-nav" :class="{'is-hidden': isStickyMode}">
-          <a class="nav-anchor" :class="{ active: activeSection === 'features' }" @click.prevent="scrollToSection('features')">FEATURES</a>
-          <a class="nav-anchor" :class="{ active: activeSection === 'workflow' }" @click.prevent="scrollToSection('workflow')">WORKFLOW</a>
-          <a class="nav-anchor" :class="{ active: activeSection === 'integration' }" @click.prevent="scrollToSection('integration')">INTEGRATION</a>
-          <a class="nav-anchor" :class="{ active: activeSection === 'cta' }" @click.prevent="scrollToSection('cta')">JOIN NOW</a>
-        </nav>
+      <h1 class="hero-title">
+        카이로스와 함께<br>
+        <span class="hero-title-gradient">성장하세요</span>
+      </h1>
+      <p class="hero-desc">
+        AI 기반 맞춤형 학습 경로 · GitHub/Velog 연동 · 스마트 캘린더로<br>
+        개발자 커리어를 한 단계 끌어올리세요.
+      </p>
+
+      <div class="hero-cta">
+        <button class="btn-google" @click="$router.push('/signup')">
+          <div class="google-icon">G</div>
+          Google로 시작하기
+        </button>
+        <button class="btn-intro">서비스 소개 보기</button>
       </div>
 
-      <!-- FEATURES SECTION -->
-      <section class="content-section" id="features">
-        <div class="section-label reveal-elem">CORE CAPABILITIES</div>
-        <div class="reveal-wrap"><h2 class="section-title reveal-elem">카이로스만의<br><em>기하학적 성장 도구</em></h2></div>
+      <!-- Feature strip -->
+      <div class="feature-strip">
+        <span><i class="fas fa-code-branch" /> Velog / GitHub 연동</span>
+        <span><i class="fas fa-calendar-alt" /> 캘린더</span>
+        <span><i class="fas fa-lightbulb" /> 학습 추천</span>
+        <span><i class="fas fa-th-large" /> 커리큘럼 작성</span>
+        <span><i class="fas fa-question-circle" /> FAQ</span>
+      </div>
 
-        <div class="features-grid">
-          <div class="feature-card reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div class="fc-number">01</div>
-            <h3>캘린더 기반 학습 관리</h3>
-            <p>학습 일정을 캘린더에서 관리하고 흐름을 한눈에 파악하세요.</p>
-            <div class="fc-arrow">→</div>
-          </div>
-          <div class="feature-card reveal-elem parallax-delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 16v-4M12 8h.01"/></svg>
-            </div>
-            <div class="fc-number">02</div>
-            <h3>맞춤 추천</h3>
-            <p>최근 활동을 분석해 지금 이어서 하기 좋은 학습을 제안합니다.</p>
-            <div class="fc-arrow">→</div>
-          </div>
-          <div class="feature-card reveal-elem parallax-delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
-            </div>
-            <div class="fc-number">03</div>
-            <h3>외부 서비스 연동</h3>
-            <p>GitHub, Velog, Google Calendar 활동을 자동으로 수집합니다.</p>
-            <div class="fc-arrow">→</div>
-          </div>
-          <div class="feature-card reveal-elem parallax-delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="fc-icon">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-            </div>
-            <div class="fc-number">04</div>
-            <h3>성장 추적</h3>
-            <p>학습 히스토리와 성장 일지로 변화를 기록하세요.</p>
-            <div class="fc-arrow">→</div>
-          </div>
+      <!-- Feature cards -->
+      <div class="feature-cards">
+        <div v-for="f in features" :key="f.title" class="feature-card">
+          <div class="feature-icon"><i :class="f.icon" /></div>
+          <h3>{{ f.title }}</h3>
+          <p>{{ f.desc }}</p>
         </div>
-      </section>
-
-      <!-- WORKFLOW SECTION -->
-      <section class="content-section workflow-section" id="workflow">
-        <div class="section-label reveal-elem">HOW IT WORKS</div>
-        <div class="reveal-wrap"><h2 class="section-title reveal-elem">단 3단계로 끝나는<br><em>완벽한 성장 루프</em></h2></div>
-
-        <div class="workflow-list">
-          <div class="workflow-item reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="wf-left">
-              <div class="wf-index">01</div>
-            </div>
-            <div class="wf-content">
-              <h3>연동</h3>
-              <p>GitHub, Velog, Google Calendar를 연결합니다.</p>
-            </div>
-            <div class="wf-arrow">→</div>
-          </div>
-          <div class="workflow-item reveal-elem delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="wf-left">
-              <div class="wf-index">02</div>
-            </div>
-            <div class="wf-content">
-              <h3>분석</h3>
-              <p>최근 학습 활동과 기술 맥락을 분석합니다.</p>
-            </div>
-            <div class="wf-arrow">→</div>
-          </div>
-          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="wf-left">
-              <div class="wf-index">03</div>
-            </div>
-            <div class="wf-content">
-              <h3>추천</h3>
-              <p>맞춤형 커리큘럼과 다음 액션을 제안합니다.</p>
-            </div>
-            <div class="wf-arrow">→</div>
-          </div>
-          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="wf-left">
-              <div class="wf-index">04</div>
-            </div>
-            <div class="wf-content">
-              <h3>캘린더 반영</h3>
-              <p>추천 학습을 캘린더에 자동 등록합니다.</p>
-            </div>
-            <div class="wf-arrow">→</div>
-          </div>
-          <div class="workflow-item reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-            <div class="wf-left">
-              <div class="wf-index">05</div>
-            </div>
-            <div class="wf-content">
-              <h3>성장 추적</h3>
-              <p>학습 기록과 성장 변화를 확인합니다.</p>
-            </div>
-            <div class="wf-arrow">→</div>
-          </div>
-        </div>
-      </section>
-
-      <!-- INTEGRATION STATS -->
-      <section class="section-stats" id="integration">
-        <div class="stat-bl reveal-elem" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-          <div class="stat-val">100<span class="stat-unit">%</span></div>
-          <div class="stat-lbl">DATA SYNC</div>
-          <div class="stat-desc">GitHub, Velog 자동 연동</div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-bl reveal-elem delay-1" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-          <div class="stat-val">ZERO</div>
-          <div class="stat-lbl">MANUAL INPUT</div>
-          <div class="stat-desc">손으로 입력할 필요 없음</div>
-        </div>
-        <div class="stat-divider"></div>
-        <div class="stat-bl reveal-elem delay-2" @mouseenter="isHovering=true" @mouseleave="isHovering=false">
-          <div class="stat-val">24<span class="stat-unit">/7</span></div>
-          <div class="stat-lbl">AI MENTORING</div>
-          <div class="stat-desc">언제나 곁에 있는 AI 코치</div>
-        </div>
-      </section>
-
-      <!-- CTA SECTION -->
-      <section class="section-cta" id="cta">
-        <div class="cta-inner">
-          <div class="reveal-wrap"><h2 class="cta-title reveal-elem">READY TO<br>COMMIT?</h2></div>
-          <p class="cta-desc reveal-elem delay-1">본질인 '개발'과 '학습'에 집중할 시간입니다.</p>
-          <div class="cta-actions reveal-elem delay-2">
-            <button class="btn-cta-giant" @mouseenter="isHovering=true" @mouseleave="isHovering=false" @click="$router.push('/signup')">
-              <span class="btn-giant-text">START YOUR JOURNEY</span>
-              <span class="btn-giant-icon">→</span>
-            </button>
-          </div>
-        </div>
-      </section>
+      </div>
     </main>
 
-    <!-- FOOTER -->
+    <!-- ── 푸터 ── -->
     <footer class="landing-footer">
-      <div class="footer-top">
-        <div class="footer-brand" @click="scrollToTop">
-          <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
-            <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
-            <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
-          </svg>
-          KAIROS
+      <div class="footer-inner">
+        <div>
+          <div class="footer-logo">
+            <svg width="18" height="18" viewBox="0 0 28 28" fill="none">
+              <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="url(#kgF)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+              <circle cx="14" cy="14" r="2" fill="url(#kgF)"/>
+              <defs>
+                <linearGradient id="kgF" x1="6" y1="3" x2="22" y2="25" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#818cf8"/><stop offset="1" stop-color="#38bdf8"/>
+                </linearGradient>
+              </defs>
+            </svg>
+            <span>KAIROS</span>
+          </div>
+          <p class="footer-tagline">개발자 성장을 위한 AI 멘토링 플랫폼</p>
         </div>
-        <div class="footer-links">
-          <span class="footer-link" @click="scrollToSection('features')">FEATURES</span>
-          <span class="footer-link" @click="scrollToSection('workflow')">WORKFLOW</span>
-          <span class="footer-link" @click="scrollToSection('integration')">INTEGRATION</span>
-          <span class="footer-link" @click="scrollToSection('cta')">JOIN NOW</span>
+        <div v-for="col in footerCols" :key="col.title">
+          <h4>{{ col.title }}</h4>
+          <ul>
+            <li v-for="it in col.items" :key="it">{{ it }}</li>
+          </ul>
         </div>
       </div>
-      <div class="footer-bottom">
-        <span>© 2026 KAIROS. ALL RIGHTS RESERVED.</span>
-        <div class="footer-legal">
-          <span class="footer-legal-link">이용약관</span>
-          <span class="footer-legal-link">개인정보처리방침</span>
-          <span class="footer-legal-link">문의하기</span>
-        </div>
-      </div>
+      <div class="footer-copy">© 2026 Kairos. 모든 권리 보유.</div>
     </footer>
+
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { useThemeStore } from '@/stores/useThemeStore'
+const themeStore = useThemeStore()
 
-/* ============================
-   1. CUSTOM CURSOR & MAGNETIC
-============================ */
-const cursor = reactive({ x: -100, y: -100 })
-const isHovering = ref(false)
+const features = [
+  { icon: 'fas fa-code-branch', title: 'Velog / GitHub 연동', desc: '개발 블로그와 GitHub 활동을 연동하여 학습 진도를 자동 추적하세요.' },
+  { icon: 'fas fa-calendar-alt', title: '스마트 캘린더', desc: 'AI가 제안하는 맞춤형 학습 일정으로 체계적으로 관리하세요.' },
+  { icon: 'fas fa-robot', title: 'AI 학습 추천', desc: '현재 레벨과 목표에 맞는 콘텐츠를 실시간 큐레이션합니다.' },
+]
 
-const updateCursor = (e) => {
-  cursor.x = e.clientX
-  cursor.y = e.clientY
-}
-
-const handleMagneticMove = (e) => {
-  const el = e.currentTarget
-  const rect = el.getBoundingClientRect()
-  const x = (e.clientX - rect.left - rect.width / 2) * 0.3
-  const y = (e.clientY - rect.top - rect.height / 2) * 0.3
-  el.style.transform = `translate(${x}px, ${y}px)`
-}
-
-const handleMagneticLeave = (e) => {
-  const el = e.currentTarget
-  el.style.transform = `translate(0px, 0px)`
-  isHovering.value = false
-}
-
-/* ============================
-   2. SCROLL REVEAL & SPY
-============================ */
-let observer = null
-const scrollContainer = ref(null)
-const activeSection = ref('')
-const isStickyMode = ref(false)
-const navPlaceholder = ref(null)
-
-const handleScroll = () => {
-  if (!scrollContainer.value) return
-  const containerTop = scrollContainer.value.getBoundingClientRect().top
-
-  if (navPlaceholder.value) {
-    const rect = navPlaceholder.value.getBoundingClientRect()
-    isStickyMode.value = rect.top - containerTop <= 80
-  }
-
-  const sections = ['features', 'workflow', 'integration', 'cta']
-  const triggerPoint = 200
-  let current = ''
-
-  for (const id of sections) {
-    const el = document.getElementById(id)
-    if (el) {
-      const rect = el.getBoundingClientRect()
-      if (rect.top - containerTop <= triggerPoint) {
-        current = id
-      }
-    }
-  }
-  activeSection.value = current
-}
-
-const scrollToSection = (id) => {
-  const el = document.getElementById(id)
-  if (el && scrollContainer.value) {
-    scrollContainer.value.scrollTo({
-      top: el.offsetTop,
-      behavior: 'smooth'
-    })
-  }
-}
-
-const scrollToTop = () => {
-  if (scrollContainer.value) scrollContainer.value.scrollTo({ top: 0, behavior: 'smooth' })
-}
-
-/* ============================
-   3. VIDEO TIME UPDATE
-============================ */
-const heroVideo = ref(null)
-const isScrollIndicatorVisible = ref(false)
-
-const checkVideoTime = () => {
-  if (heroVideo.value && heroVideo.value.currentTime >= 4.5 && !isScrollIndicatorVisible.value) {
-    isScrollIndicatorVisible.value = true
-  }
-}
-
-/* ============================
-   4. MOUNTED / UNMOUNTED
-============================ */
-onMounted(() => {
-  // Reveal observer
-  observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.classList.add('is-revealed')
-      }
-    })
-  }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' })
-
-  document.querySelectorAll('.reveal-elem').forEach(el => observer.observe(el))
-
-  if (scrollContainer.value) {
-    scrollContainer.value.addEventListener('scroll', handleScroll, { passive: true })
-  }
-
-  // show scroll indicator on fallback
-  setTimeout(() => { isScrollIndicatorVisible.value = true }, 5000)
-})
-
-onUnmounted(() => {
-  if (observer) observer.disconnect()
-  if (scrollContainer.value) {
-    scrollContainer.value.removeEventListener('scroll', handleScroll)
-  }
-})
+const footerCols = [
+  { title: '서비스', items: ['학습 추천', '커리큘럼 작성', '진도 관리'] },
+  { title: '지원',   items: ['FAQ', '문의하기', '이용약관'] },
+]
 </script>
 
 <style scoped>
-/* ──────────────────────────────
-  BASE & ROOT
-────────────────────────────── */
 .landing-root {
-  background: #000;
-  color: #fff;
-  height: 100vh;
-  overflow-x: hidden;
-  overflow-y: auto;
-  font-family: 'Escoredream', 'Helvetica Neue', Arial, sans-serif;
-  position: relative;
-  -webkit-font-smoothing: antialiased;
-  scroll-behavior: auto;
-}
-.landing-root::-webkit-scrollbar { display: none; }
-.landing-root { -ms-overflow-style: none; scrollbar-width: none; }
-
-/* ──────────────────────────────
-  CUSTOM CURSOR
-────────────────────────────── */
-.custom-cursor { display: none; }
-@media (hover: hover) and (pointer: fine) {
-  .landing-root * { cursor: none !important; }
-  .custom-cursor {
-    display: block; position: fixed; top: 0; left: 0;
-    width: 14px; height: 14px; border-radius: 50%; background: #fff;
-    mix-blend-mode: difference; z-index: 99999; pointer-events: none;
-    transform: translate3d(0,0,0);
-    transition: width 0.35s cubic-bezier(0.16,1,0.3,1), height 0.35s cubic-bezier(0.16,1,0.3,1);
-    margin-top: -7px; margin-left: -7px;
-    will-change: transform;
-  }
-  .custom-cursor.is-hovering {
-    width: 56px; height: 56px; margin-top: -28px; margin-left: -28px;
-  }
+  min-height: 100vh; overflow-y: auto; height: 100vh;
+  background: var(--bg-base); color: var(--text-primary);
+  font-family: 'Escoredream', system-ui, sans-serif;
+  display: flex; flex-direction: column;
 }
 
-/* ──────────────────────────────
-  HEADER
-────────────────────────────── */
+/* ── 헤더 ── */
 .landing-header {
-  position: fixed; top: 0; left: 0; width: 100%; height: 72px;
-  padding: 0 40px; display: flex; justify-content: space-between; align-items: center;
-  z-index: 500;
-  background: transparent;
-  border-bottom: 1px solid transparent;
-  transition: background 0.5s ease, border-color 0.5s ease, backdrop-filter 0.5s;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 40px; height: 64px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-surface);
+  position: sticky; top: 0; z-index: 50;
+  flex-shrink: 0;
 }
-.landing-header.is-sticky {
-  background: rgba(0,0,0,0.88);
-  backdrop-filter: blur(16px);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-}
-
 .landing-logo {
   display: flex; align-items: center; gap: 10px;
-  font-size: 18px; font-weight: 900; letter-spacing: 0.16em; color: #fff;
-  cursor: pointer;
-  transition: opacity 0.2s;
 }
-.landing-logo:hover { opacity: 0.7; }
+.landing-logo-text {
+  font-weight: 800; font-size: 17px; letter-spacing: 0.16em;
+  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.landing-header-actions { display: flex; gap: 10px; align-items: center; }
 
-/* Header Nav (sticky) */
-.header-nav {
-  display: flex; align-items: center; gap: 28px;
-  opacity: 0; pointer-events: none; transform: translateY(8px);
-  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+.btn-theme {
+  width: 36px; height: 36px; border-radius: 9px;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
 }
-.header-nav.nav-visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
-@media (max-width: 900px) { .header-nav { display: none; } }
+.btn-theme:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-.nav-anchor {
-  font-size: 11px; font-weight: 800; letter-spacing: 0.18em;
-  color: rgba(255,255,255,0.45); text-decoration: none;
-  padding: 6px 0; position: relative; cursor: pointer;
-  transition: color 0.2s;
+.btn-login {
+  padding: 8px 18px; font-size: 13px; border: 1px solid var(--border);
+  border-radius: 9px; cursor: pointer; background: var(--bg-elevated);
+  color: var(--text-muted); transition: all 0.15s;
+  font-family: 'Escoredream', sans-serif;
 }
-.nav-anchor::after {
-  content: ''; position: absolute; bottom: -2px; left: 0; width: 0; height: 1px;
-  background: #fff; transition: width 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.nav-anchor:hover { color: #fff; }
-.nav-anchor:hover::after { width: 100%; }
-.nav-anchor.active { color: #fff; }
-.nav-anchor.active::after { width: 100%; }
+.btn-login:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-/* Header Actions */
-.landing-header-actions { display: flex; gap: 12px; align-items: center; }
+.btn-signup {
+  padding: 8px 18px; font-size: 13px; border: none; border-radius: 9px;
+  cursor: pointer; font-weight: 600;
+  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  color: #fff; transition: opacity 0.15s;
+  font-family: 'Escoredream', sans-serif;
+}
+.btn-signup:hover { opacity: 0.85; }
 
-.btn-outline {
-  padding: 10px 22px; background: transparent; color: rgba(255,255,255,0.8);
-  border: 1px solid rgba(255,255,255,0.25); border-radius: 40px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.08em;
-  font-family: inherit; transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer;
-}
-.btn-outline:hover {
-  color: #fff; border-color: rgba(255,255,255,0.7);
-  background: rgba(255,255,255,0.06);
-  transform: translateY(-1px);
-}
-
-.btn-solid {
-  padding: 10px 22px; background: #fff; color: #000;
-  border: 1px solid #fff; border-radius: 40px;
-  font-size: 12px; font-weight: 800; letter-spacing: 0.08em;
-  font-family: inherit; display: flex; align-items: center; gap: 6px;
-  transition: all 0.3s cubic-bezier(0.16,1,0.3,1); cursor: pointer;
-}
-.btn-solid:hover {
-  background: transparent; color: #fff;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(255,255,255,0.15);
-}
-.btn-arrow {
-  display: inline-block;
-  transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.btn-solid:hover .btn-arrow { transform: translateX(4px); }
-
-/* ──────────────────────────────
-  HERO SECTION
-────────────────────────────── */
-.hero-section {
-  position: relative; height: 100vh; display: flex; align-items: center; justify-content: center;
-  overflow: hidden; background: #000;
-}
-.hero-video-wrapper {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 380px; height: 680px; overflow: hidden; z-index: 1;
-  border-radius: 2px; border: 1px solid rgba(255,255,255,0.08);
-}
-.hero-video { width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
-.hero-video-overlay {
-  position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.6) 100%);
-}
-@media (max-width: 768px) {
-  .hero-video-wrapper { width: 100vw; height: 100vh; border-radius: 0; border: none; }
-}
-
-.hero-content {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 100%; text-align: center; z-index: 2; pointer-events: none;
-  padding: 0 24px;
+/* ── 히어로 ── */
+.landing-main {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; text-align: center;
+  padding: 80px 24px 60px;
 }
 
 .hero-badge {
-  display: inline-flex; align-items: center; gap: 8px;
-  font-size: 10px; font-weight: 700; letter-spacing: 0.2em;
-  color: rgba(255,255,255,0.55); margin-bottom: 32px;
-  border: 1px solid rgba(255,255,255,0.15); border-radius: 40px;
-  padding: 8px 16px;
-}
-.badge-dot {
-  width: 6px; height: 6px; border-radius: 50%; background: #fff;
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.8); }
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 6px 16px; border-radius: 999px;
+  background: rgba(129,140,248,0.12); border: 1px solid rgba(129,140,248,0.3);
+  color: #818cf8; font-size: 12px; font-weight: 600; margin-bottom: 28px;
 }
 
-.hero-typography {
-  display: flex; flex-direction: column; gap: 4px; margin-bottom: 28px;
-  mix-blend-mode: difference;
+.hero-title {
+  font-size: clamp(34px, 6vw, 60px); font-weight: 800;
+  line-height: 1.1; color: var(--text-primary); margin-bottom: 20px;
+  letter-spacing: -0.02em;
 }
-.hero-typography h1 {
-  font-size: clamp(48px, 7vw, 96px); line-height: 0.95; margin: 0;
-  font-weight: 900; color: #fff; letter-spacing: -0.03em; text-transform: uppercase;
-}
-.hero-accent {
-  -webkit-text-stroke: 1px rgba(255,255,255,0.4);
-  color: transparent !important;
-}
-@media (max-width: 768px) {
-  .hero-typography h1 { font-size: 13vw; }
+.hero-title-gradient {
+  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
 .hero-desc {
-  font-size: 16px; color: rgba(255,255,255,0.6); line-height: 1.75;
-  font-weight: 400; max-width: 540px; margin: 0 auto 36px;
-  mix-blend-mode: normal; pointer-events: auto;
+  color: var(--text-muted); font-size: 16px; line-height: 1.75;
+  max-width: 520px; margin-bottom: 40px;
 }
 
-.hero-cta {
-  display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
-  pointer-events: auto;
-}
+.hero-cta { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; margin-bottom: 56px; }
 
-.btn-cta-primary {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 16px 32px; background: #fff; color: #000;
-  border: none; border-radius: 50px; font-size: 14px; font-weight: 800;
-  letter-spacing: 0.04em; font-family: inherit; cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
-  box-shadow: 0 0 0 0 rgba(255,255,255,0);
+.btn-google {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 28px; border-radius: 12px; border: none; cursor: pointer;
+  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  color: #fff; font-weight: 700; font-size: 15px;
+  box-shadow: 0 8px 32px rgba(129,140,248,0.35);
+  transition: opacity 0.15s; font-family: 'Escoredream', sans-serif;
 }
-.btn-cta-primary:hover {
-  background: transparent; color: #fff;
-  box-shadow: 0 0 0 1px #fff, 0 16px 40px rgba(255,255,255,0.15);
-  transform: translateY(-2px);
+.btn-google:hover { opacity: 0.88; }
+.google-icon {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(255,255,255,0.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800;
 }
-.btn-cta-arrow {
-  display: inline-block;
-  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
+.btn-intro {
+  padding: 14px 24px; border-radius: 12px; cursor: pointer;
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  color: var(--text-muted); font-size: 14px;
+  transition: all 0.15s; font-family: 'Escoredream', sans-serif;
 }
-.btn-cta-primary:hover .btn-cta-arrow { transform: translateX(6px); }
+.btn-intro:hover { background: var(--bg-hover); color: var(--text-primary); }
 
-.btn-cta-ghost {
-  display: inline-flex; align-items: center; gap: 10px;
-  padding: 16px 32px; background: transparent; color: rgba(255,255,255,0.7);
-  border: 1px solid rgba(255,255,255,0.2); border-radius: 50px; font-size: 14px;
-  font-weight: 600; letter-spacing: 0.04em; font-family: inherit; cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.16,1,0.3,1);
+/* Feature strip */
+.feature-strip {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 24px;
+  font-size: 13px; color: var(--text-muted);
+  border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 16px 0; width: 100%; max-width: 800px; margin-bottom: 56px;
 }
-.btn-cta-ghost:hover {
-  color: #fff; border-color: rgba(255,255,255,0.6);
-  background: rgba(255,255,255,0.06); transform: translateY(-2px);
-}
+.feature-strip span { display: flex; align-items: center; gap: 7px; }
+.feature-strip i { color: #818cf8; }
 
-/* Scroll Indicator */
-.scroll-indicator {
-  position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-  z-index: 10; display: flex; flex-direction: column; align-items: center; gap: 12px;
-  opacity: 0; transition: opacity 1.5s cubic-bezier(0.16,1,0.3,1);
-}
-.scroll-indicator.is-visible { opacity: 1; }
-.scroll-text { font-size: 9px; font-weight: 800; letter-spacing: 0.25em; color: rgba(255,255,255,0.4); }
-.scroll-line { width: 1px; height: 48px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
-.scroll-line::after {
-  content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #fff;
-  animation: scrollDown 2s infinite cubic-bezier(0.16,1,0.3,1);
-}
-@keyframes scrollDown {
-  0% { transform: scaleY(0) translateY(0); transform-origin: top; }
-  50% { transform: scaleY(1) translateY(0); transform-origin: top; }
-  51% { transform-origin: bottom; }
-  100% { transform: scaleY(0); transform-origin: bottom; }
-}
-
-/* ──────────────────────────────
-  MARQUEE
-────────────────────────────── */
-.marquee-wrapper {
-  overflow: hidden; white-space: nowrap;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  padding: 18px 0; background: rgba(255,255,255,0.02);
-}
-.marquee-track { display: flex; width: max-content; animation: marquee-scroll 30s linear infinite; }
-.marquee-content {
-  display: inline-flex; align-items: center; gap: 32px;
-  font-size: 12px; font-weight: 700; letter-spacing: 0.18em; color: rgba(255,255,255,0.4);
-  padding-right: 32px;
-}
-.marquee-content span { white-space: nowrap; }
-.marquee-dot { color: rgba(255,255,255,0.2); font-size: 10px; }
-@keyframes marquee-scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
-
-/* ──────────────────────────────
-  SECTION NAV (original position)
-────────────────────────────── */
-.nav-placeholder {
-  width: 100%; display: flex; align-items: center; justify-content: center;
-  padding: 28px 0; border-bottom: 1px solid rgba(255,255,255,0.08);
-}
-.section-nav {
-  display: flex; align-items: center; gap: 36px;
-  transition: opacity 0.3s ease;
-}
-.section-nav.is-hidden { opacity: 0; pointer-events: none; }
-@media (max-width: 768px) { .nav-placeholder { padding: 20px 0; } }
-
-/* ──────────────────────────────
-  REVEAL ANIMATIONS
-────────────────────────────── */
-.reveal-wrap { overflow: hidden; display: block; }
-.reveal-elem {
-  opacity: 0; transform: translateY(60px);
-  transition: transform 1s cubic-bezier(0.16,1,0.3,1), opacity 0.9s ease;
-  will-change: transform, opacity;
-}
-.reveal-elem.is-revealed { opacity: 1; transform: translateY(0); }
-.delay-1 { transition-delay: 0.12s; }
-.delay-2 { transition-delay: 0.24s; }
-.delay-3 { transition-delay: 0.36s; }
-.delay-4 { transition-delay: 0.48s; }
-.parallax-delay-1 { transition-delay: 0.1s; }
-.parallax-delay-2 { transition-delay: 0.2s; }
-
-/* ──────────────────────────────
-  SECTION LAYOUT BASICS
-────────────────────────────── */
-.content-section { padding: 90px 40px; max-width: 1360px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; justify-content: center; box-sizing: border-box; }
-@media (max-width: 768px) { .content-section { padding: 80px 24px; min-height: 100vh; } }
-
-.section-label {
-  font-size: 11px; font-weight: 800; letter-spacing: 0.22em;
-  color: rgba(255,255,255,0.35); margin-bottom: 24px; text-transform: uppercase;
-}
-.section-title {
-  font-size: clamp(36px, 4.5vw, 60px); font-weight: 900;
-  letter-spacing: -0.025em; line-height: 1.1; margin: 0 0 72px;
-}
-.section-title em { font-style: normal; -webkit-text-stroke: 1px rgba(255,255,255,0.5); color: transparent; }
-
-/* ──────────────────────────────
-  FEATURES GRID
-────────────────────────────── */
-.features-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr);
-  border: 1px solid rgba(255,255,255,0.12); gap: 0;
+/* Feature cards */
+.feature-cards {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px; max-width: 880px; width: 100%;
 }
 .feature-card {
-  background: #000; padding: 56px 40px;
-  display: flex; flex-direction: column; gap: 20px;
-  border-right: 1px solid rgba(255,255,255,0.12);
-  position: relative; overflow: hidden;
-  transition: background 0.4s cubic-bezier(0.16,1,0.3,1);
-  cursor: default;
+  padding: 28px 24px; border-radius: 16px; text-align: left;
+  background: var(--bg-surface); border: 1px solid var(--border);
+  transition: border-color 0.2s, transform 0.2s;
 }
-.feature-card:last-child { border-right: none; }
+.feature-card:hover { border-color: rgba(129,140,248,0.5); transform: translateY(-2px); }
+.feature-icon {
+  width: 44px; height: 44px; border-radius: 12px; margin-bottom: 18px;
+  background: rgba(129,140,248,0.12);
+  display: flex; align-items: center; justify-content: center;
+  color: #818cf8; font-size: 18px;
+}
+.feature-card h3 { font-weight: 700; font-size: 15px; color: var(--text-primary); margin-bottom: 8px; }
+.feature-card p  { color: var(--text-muted); font-size: 13px; line-height: 1.65; }
 
-/* Hover top-line sweep effect */
-.feature-card::before {
-  content: ''; position: absolute; top: 0; left: 0;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent);
-  transform: translateX(-100%);
-  transition: transform 0.6s cubic-bezier(0.16,1,0.3,1);
-}
-.feature-card:hover::before { transform: translateX(100%); }
-.feature-card:hover { background: rgba(255,255,255,0.03); }
-
-.fc-icon {
-  width: 40px; height: 40px; color: rgba(255,255,255,0.4);
-  transition: color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.feature-card:hover .fc-icon { color: rgba(255,255,255,0.85); transform: translateY(-2px); }
-
-.fc-number {
-  font-size: 12px; font-family: monospace; color: rgba(255,255,255,0.2);
-  letter-spacing: 0.1em;
-}
-.feature-card h3 {
-  font-size: 20px; font-weight: 800; letter-spacing: 0.03em; line-height: 1.3; margin: 0;
-}
-.feature-card p { font-size: 14px; color: rgba(255,255,255,0.5); line-height: 1.7; margin: 0; }
-
-.fc-arrow {
-  font-size: 18px; color: rgba(255,255,255,0.2); margin-top: auto;
-  transition: color 0.3s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.feature-card:hover .fc-arrow { color: rgba(255,255,255,0.7); transform: translateX(6px); }
-
-@media (max-width: 900px) {
-  .features-grid { grid-template-columns: 1fr; }
-  .feature-card { border-right: none; border-bottom: 1px solid rgba(255,255,255,0.12); }
-  .feature-card:last-child { border-bottom: none; }
-}
-
-.footer-legal {
-  display: flex; gap: 24px; align-items: center;
-}
-.footer-legal-link {
-  font-size: 11px; color: rgba(255,255,255,0.35); cursor: pointer;
-  transition: color 0.2s;
-}
-.footer-legal-link:hover { color: rgba(255,255,255,0.7); }
-
-/* ──────────────────────────────
-  WORKFLOW SECTION
-────────────────────────────── */
-.workflow-section { background: transparent; }
-.workflow-list {
-  display: flex; flex-direction: column;
-  border-top: 1px solid rgba(255,255,255,0.1);
-}
-.workflow-item {
-  display: flex; gap: 48px; padding: 56px 0;
-  border-bottom: 1px solid rgba(255,255,255,0.1); align-items: center;
-  cursor: default;
-  transition: padding-left 0.5s cubic-bezier(0.16,1,0.3,1);
-  position: relative; overflow: hidden;
-}
-/* Subtle left-fill on hover */
-.workflow-item::before {
-  content: ''; position: absolute; left: 0; top: 0;
-  width: 3px; height: 0; background: #fff;
-  transition: height 0.5s cubic-bezier(0.16,1,0.3,1);
-}
-.workflow-item:hover::before { height: 100%; }
-.workflow-item:hover { padding-left: 20px; }
-
-.wf-left { flex-shrink: 0; }
-.wf-index {
-  font-size: 56px; font-weight: 900; letter-spacing: -0.04em;
-  color: rgba(255,255,255,0.08); line-height: 1;
-  transition: color 0.4s;
-}
-.workflow-item:hover .wf-index { color: rgba(255,255,255,0.18); }
-
-.wf-content { flex: 1; }
-.wf-content h3 {
-  font-size: 28px; font-weight: 900; margin: 0 0 12px; letter-spacing: -0.01em;
-  transition: letter-spacing 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.workflow-item:hover .wf-content h3 { letter-spacing: 0.02em; }
-.wf-content p { font-size: 16px; color: rgba(255,255,255,0.5); line-height: 1.65; margin: 0; max-width: 560px; }
-
-.wf-arrow {
-  font-size: 24px; color: rgba(255,255,255,0.15); flex-shrink: 0;
-  transition: color 0.4s, transform 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.workflow-item:hover .wf-arrow { color: rgba(255,255,255,0.6); transform: translateX(8px); }
-
-@media (max-width: 768px) {
-  .workflow-item { flex-direction: column; gap: 16px; padding: 40px 0; align-items: flex-start; }
-  .wf-index { font-size: 36px; }
-  .wf-content h3 { font-size: 22px; }
-  .wf-arrow { display: none; }
-}
-
-/* ──────────────────────────────
-  STATS SECTION
-────────────────────────────── */
-.section-stats {
-  display: grid; grid-template-columns: 1fr auto 1fr auto 1fr;
-  padding: 80px 80px; align-items: center;
-  min-height: 100vh;
-  border-top: 1px solid rgba(255,255,255,0.1);
-  border-bottom: 1px solid rgba(255,255,255,0.1);
-  background: #000;
-}
-.stat-divider { width: 1px; height: 80px; background: rgba(255,255,255,0.1); }
-
-.stat-bl {
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  padding: 20px 40px; cursor: default;
-  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.stat-bl:hover { transform: translateY(-8px); }
-
-.stat-val {
-  font-size: clamp(40px, 6vw, 72px); line-height: 1; font-weight: 900; letter-spacing: -0.04em;
-  transition: opacity 0.3s;
-}
-.stat-bl:hover .stat-val { opacity: 0.75; }
-.stat-unit { font-size: 0.5em; font-weight: 400; opacity: 0.5; vertical-align: super; }
-
-.stat-lbl {
-  font-size: 11px; font-weight: 800; letter-spacing: 0.2em;
-  color: rgba(255,255,255,0.35); margin-top: 16px; text-transform: uppercase;
-}
-.stat-desc {
-  font-size: 13px; color: rgba(255,255,255,0.25); margin-top: 8px;
-  transition: color 0.3s;
-}
-.stat-bl:hover .stat-desc { color: rgba(255,255,255,0.45); }
-
-@media (max-width: 768px) {
-  .section-stats {
-    grid-template-columns: 1fr; gap: 48px; padding: 80px 24px;
-  }
-  .stat-divider { width: 80px; height: 1px; }
-}
-
-/* ──────────────────────────────
-  CTA SECTION
-────────────────────────────── */
-.section-cta {
-  padding: 90px 40px; text-align: center;
-  min-height: 100vh;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  position: relative; overflow: hidden;
-}
-/* animated radial background */
-.section-cta::before {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse 60% 60% at 50% 100%, rgba(255,255,255,0.04) 0%, transparent 70%);
-  pointer-events: none;
-}
-
-.cta-inner { position: relative; z-index: 1; }
-.cta-title {
-  font-size: clamp(48px, 8vw, 96px); font-weight: 900; letter-spacing: -0.03em;
-  margin: 0 0 28px; line-height: 1;
-}
-.cta-desc {
-  font-size: 18px; color: rgba(255,255,255,0.5); margin-bottom: 56px; line-height: 1.6;
-}
-.cta-actions { display: flex; justify-content: center; }
-
-.btn-cta-giant {
-  display: inline-flex; align-items: center; gap: 16px;
-  padding: 22px 52px; background: #fff; color: #000;
-  border: none; border-radius: 80px; font-size: 15px; font-weight: 800;
-  letter-spacing: 0.06em; font-family: inherit; cursor: pointer;
-  transition: all 0.5s cubic-bezier(0.16,1,0.3,1);
-  box-shadow: 0 0 0 0 rgba(255,255,255,0.3);
-}
-.btn-cta-giant:hover {
-  background: transparent; color: #fff;
-  box-shadow: 0 0 0 1px #fff, 0 24px 60px rgba(255,255,255,0.1);
-  transform: translateY(-4px) scale(1.02);
-}
-.btn-giant-text { transition: letter-spacing 0.4s cubic-bezier(0.16,1,0.3,1); }
-.btn-cta-giant:hover .btn-giant-text { letter-spacing: 0.1em; }
-.btn-giant-icon {
-  display: inline-block; font-size: 20px;
-  transition: transform 0.4s cubic-bezier(0.16,1,0.3,1);
-}
-.btn-cta-giant:hover .btn-giant-icon { transform: translateX(10px); }
-
-/* ──────────────────────────────
-  FOOTER
-────────────────────────────── */
+/* ── 푸터 ── */
 .landing-footer {
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding: 56px 40px 36px; background: #000;
+  background: #0f0f14; color: #6b7280;
+  padding: 48px 40px 28px; flex-shrink: 0;
 }
-.footer-top {
-  display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 80px;
+.footer-inner {
+  max-width: 880px; margin: 0 auto;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 40px;
+  margin-bottom: 32px;
 }
-.footer-brand {
-  display: flex; align-items: center; gap: 8px;
-  font-size: 16px; font-weight: 900; letter-spacing: 0.18em;
-  cursor: pointer; opacity: 0.8; transition: opacity 0.3s;
+.footer-logo {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px;
+  font-weight: 800; letter-spacing: 0.12em;
+  background: linear-gradient(135deg, #818cf8, #38bdf8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text; font-size: 14px;
 }
-.footer-brand:hover { opacity: 1; }
-
-.footer-links { display: flex; gap: 36px; align-items: center; }
-.footer-link {
-  font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
-  color: rgba(255,255,255,0.35); cursor: pointer;
-  transition: color 0.3s; position: relative;
-}
-.footer-link::after {
-  content: ''; position: absolute; bottom: -3px; left: 0;
-  width: 0; height: 1px; background: rgba(255,255,255,0.6);
-  transition: width 0.3s cubic-bezier(0.16,1,0.3,1);
-}
-.footer-link:hover { color: rgba(255,255,255,0.8); }
-.footer-link:hover::after { width: 100%; }
-
-.footer-bottom {
-  display: flex; justify-content: space-between;
-  border-top: 1px solid rgba(255,255,255,0.08); padding-top: 28px;
-  font-size: 11px; color: rgba(255,255,255,0.25); font-weight: 600; letter-spacing: 0.06em;
-}
-
-@media (max-width: 768px) {
-  .footer-top { flex-direction: column; gap: 32px; margin-bottom: 48px; }
-  .footer-links { flex-wrap: wrap; gap: 20px; }
-  .footer-bottom { flex-direction: column; gap: 12px; }
+.footer-tagline { font-size: 12px; line-height: 1.7; }
+.footer-inner h4 { color: #e5e7eb; font-weight: 700; margin-bottom: 14px; font-size: 13px; }
+.footer-inner ul { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.footer-inner li { font-size: 12px; cursor: pointer; transition: color 0.15s; }
+.footer-inner li:hover { color: #9ca3af; }
+.footer-copy {
+  max-width: 880px; margin: 0 auto;
+  padding-top: 24px; border-top: 1px solid #1f2937;
+  text-align: center; font-size: 11px;
 }
 </style>
