@@ -118,6 +118,7 @@ class AuthServiceImplTest {
         // given
         GoogleTokenResponse tokenResponse = GoogleTokenResponse.builder()
                 .accessToken("google-access-token")
+                .refreshToken("google-at-for-storage")
                 .build();
         GoogleUserInfoResponse userInfoResponse = GoogleUserInfoResponse.builder()
                 .sub("google-sub")
@@ -141,7 +142,8 @@ class AuthServiceImplTest {
         assertThat(result.getResponse().getEmail()).isEqualTo("new-user@gmail.com");
         verify(redisService).save(
                 org.mockito.ArgumentMatchers.eq("onboarding:google-sub"),
-                anyString(),
+                org.mockito.ArgumentMatchers.argThat(payload ->
+                        payload.contains("googleAccessToken") && payload.contains("google-at-for-storage")),
                 org.mockito.ArgumentMatchers.eq(1800L),
                 org.mockito.ArgumentMatchers.eq(TimeUnit.SECONDS)
         );
@@ -179,6 +181,7 @@ class AuthServiceImplTest {
                 .willReturn(Optional.of(oAuthAccount));
         given(jwtUtils.createAccessToken(user)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(user)).willReturn("service-refresh-token");
+        given(oAuthTokenCryptoService.encrypt("new-provider-refresh")).willReturn("encrypted-new-provider-refresh");
 
         // when
         AuthTokenBundle result = authService.loginWithGoogle("valid-code");
@@ -187,7 +190,7 @@ class AuthServiceImplTest {
         assertThat(result.getResponse().getIsNewUser()).isFalse();
         assertThat(result.getResponse().getAccessToken()).isEqualTo("service-access-token");
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
-        assertThat(oAuthAccount.getRefreshToken()).isEqualTo("new-provider-refresh");
+        assertThat(oAuthAccount.getRefreshToken()).isEqualTo("encrypted-new-provider-refresh");
         verify(redisService).save(
                 org.mockito.ArgumentMatchers.eq("refreshToken:1"),
                 anyString(),
@@ -341,7 +344,7 @@ class AuthServiceImplTest {
         given(claims.get("googleSub", String.class)).willReturn("google-sub");
         given(redisService.hasKey("onboarding:google-sub")).willReturn(true);
         given(redisService.get("onboarding:google-sub"))
-                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\"}");
+                .willReturn("{\"email\":\"new-user@gmail.com\",\"profileImageUrl\":\"https://image.example/profile.png\",\"googleSub\":\"google-sub\",\"googleAccessToken\":\"google-at-for-storage\"}");
         doReturn(githubTokenResponse).when(authService).exchangeGithubToken("valid-code");
         doReturn(githubUserInfoResponse).when(authService).fetchGithubUserInfo("github-access-token");
         given(oAuthAccountRepository.findByProviderAndProviderAccountId(OAuthProvider.GITHUB, "321"))
@@ -350,7 +353,8 @@ class AuthServiceImplTest {
         given(userRepository.saveAndFlush(org.mockito.ArgumentMatchers.any(User.class))).willReturn(savedUser);
         given(jwtUtils.createAccessToken(savedUser)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(savedUser)).willReturn("service-refresh-token");
-        given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("github-access-token");
+        given(oAuthTokenCryptoService.encrypt("github-access-token")).willReturn("encrypted-github-access-token");
+        given(oAuthTokenCryptoService.encrypt("google-at-for-storage")).willReturn("encrypted-google-at");
         doReturn("task_github_abc").when(authService)
                 .triggerGithubCollectAsync(11L, "github-access-token", "github-login");
 
@@ -369,12 +373,12 @@ class AuthServiceImplTest {
         verify(oAuthAccountRepository).save(org.mockito.ArgumentMatchers.argThat(account ->
                 account.getProvider() == OAuthProvider.GOOGLE
                         && "google-sub".equals(account.getProviderAccountId())
-                        && account.getRefreshToken() == null
+                        && "encrypted-google-at".equals(account.getRefreshToken())
         ));
         verify(oAuthAccountRepository).save(org.mockito.ArgumentMatchers.argThat(account ->
                 account.getProvider() == OAuthProvider.GITHUB
                         && "321".equals(account.getProviderAccountId())
-                        && "github-access-token".equals(account.getRefreshToken())
+                        && "encrypted-github-access-token".equals(account.getRefreshToken())
         ));
         verify(redisService).save(
                 org.mockito.ArgumentMatchers.eq("refreshToken:11"),
