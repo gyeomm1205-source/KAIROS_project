@@ -148,7 +148,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { postCurriculumGenerate, postCurriculaConfirm } from '@/api/aiApi'
+import { postCurriculumGenerate, postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const router = useRouter()
@@ -204,11 +204,29 @@ function formatDate(dateStr) {
 
 onMounted(async () => {
   try {
-    const { data } = await postCurriculumGenerate({
-      userId: 1,
-      curriculumType: 'ONBOARDING',
-      considerPersonalSchedule: false
-    })
+    const analysisRaw = localStorage.getItem('analysisResult')
+    const analysisData = analysisRaw ? JSON.parse(analysisRaw) : {
+      summary: '',
+      techDetails: [],
+      recommendedPositions: []
+    }
+
+    let data
+    try {
+      const res = await postCurriculumPreview({ analysisData })
+      data = res.data
+      if (data.curriculumPreviewKey) {
+        store.curriculumPreviewKey = data.curriculumPreviewKey
+      }
+    } catch (previewErr) {
+      console.error('curricula/preview 실패, FastAPI 직접 호출 폴백:', previewErr)
+      const res = await postCurriculumGenerate({
+        userId: 1,
+        curriculumType: 'ONBOARDING',
+        considerPersonalSchedule: false
+      })
+      data = res.data
+    }
 
     if (data.nodes && data.nodes.length > 0) {
       store.curriculumResult = data
@@ -232,7 +250,7 @@ onMounted(async () => {
       }]
     }
   } catch (e) {
-    console.error('curriculum/generate 호출 실패:', e)
+    console.error('커리큘럼 생성 실패:', e)
   } finally {
     isLoading.value = false
   }
@@ -247,7 +265,7 @@ const confirmAndGoCalendar = async () => {
 
   try {
     if (store.curriculumResult) {
-      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+      await postCurriculaConfirm({ curriculumPreviewKey: store.curriculumPreviewKey || 'curriculumPreview:1:temp' })
     }
   } catch (e) {
     console.error('curricula/confirm 호출 실패 (BE 미구현):', e)

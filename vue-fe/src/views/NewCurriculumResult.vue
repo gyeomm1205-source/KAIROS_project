@@ -177,7 +177,7 @@ onMounted(() => {
 const confirmAndGoCalendar = async () => {
   try {
     if (store.curriculumResult) {
-      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+      await postCurriculaConfirm({ curriculumPreviewKey: store.curriculumPreviewKey || 'curriculumPreview:1:temp' })
     }
   } catch (e) {
     console.error('curricula/confirm 호출 실패 (BE 미구현):', e)

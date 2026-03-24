@@ -10,14 +10,12 @@
       <div class="content-inner max-w-xl mx-auto">
         <!-- Profile Summary -->
         <div class="base-panel p-lg mb-md shadow-normal flex-align gap-lg">
-          <div class="avatar-circle">JK</div>
+          <div class="avatar-circle">{{ profile.initials }}</div>
           <div class="flex-col min-w-0">
-            <h2 class="profile-name">김정현</h2>
-            <p class="profile-email">jung@email.com</p>
+            <h2 class="profile-name">{{ profile.nickname }}</h2>
+            <p class="profile-email">{{ profile.email }}</p>
             <div class="flex-align gap-md mt-sm">
-              <span class="profile-meta">가입일 2026.01.15</span>
-              <span class="profile-meta dot">·</span>
-              <span class="profile-meta">주니어 개발자</span>
+              <span class="profile-meta">{{ profile.position }}</span>
             </div>
           </div>
         </div>
@@ -64,11 +62,36 @@
 </template>
 
 <script setup>
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { getUserProfile } from '@/api/aiApi'
 
 const router = useRouter()
+const themeStore = useThemeStore()
+
+const profile = reactive({
+  nickname: '사용자',
+  email: '',
+  position: '',
+  initials: 'U',
+})
+
+onMounted(async () => {
+  try {
+    const { data } = await getUserProfile()
+    profile.nickname = data.nickname || '사용자'
+    profile.email = data.email || ''
+    profile.position = data.position || ''
+    profile.initials = (data.nickname || 'U').slice(0, 2).toUpperCase()
+    if (data.darkModeEnabled !== undefined) {
+      themeStore.setFromServer(data.darkModeEnabled)
+    }
+  } catch (e) {
+    console.error('프로필 조회 실패 (Mock 유지):', e)
+  }
+})
 </script>
 
 <style scoped>
