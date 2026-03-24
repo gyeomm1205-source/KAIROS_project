@@ -215,45 +215,4 @@ export const exportCalendar = () => {
 export const importCalendar = () => {
   return springApi.post('/api/v1/calendar/sync/import')
 }
-
-/**
- * Google 로그인 (Spring Boot)
- * POST /api/v1/auth/login/google
- */
-export const postLoginGoogle = (data) => {
-  return springApi.post('/api/v1/auth/login/google', data)
-}
-
-/**
- * GitHub 계정 연동 (Spring Boot)
- * POST /api/v1/auth/link-github
- */
-export const postLinkGithub = (data, onboardingToken) => {
-  return springApi.post('/api/v1/auth/link-github', data, {
-    headers: { Authorization: `Bearer ${onboardingToken}` }
-  })
-}
-
-/**
- * Velog 계정 연동 + 분석 트리거 (Spring Boot)
- * POST /api/v1/auth/link-velog
- */
-export const postLinkVelog = (data) => {
-  return springApi.post('/api/v1/auth/link-velog', data)
-}
-
-/**
- * 온보딩 메타데이터 조회 (Spring Boot)
- * GET /api/v1/onboarding/meta
- */
-export const getOnboardingMeta = () => {
-  return springApi.get('/api/v1/onboarding/meta')
-}
-
-/**
- * 사전 설문조사 제출 (Spring Boot)
- * POST /api/v1/onboarding/survey
- */
-export const postOnboardingSurvey = (data) => {
-  return springApi.post('/api/v1/onboarding/survey', data)
-}
+// Auth/Onboarding API는 authApi.js, onboardingApi.js에서 관리
