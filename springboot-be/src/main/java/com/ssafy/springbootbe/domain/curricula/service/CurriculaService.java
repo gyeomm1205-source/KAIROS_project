@@ -1,6 +1,7 @@
 package com.ssafy.springbootbe.domain.curricula.service;
 
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumConfirmRequest;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumNodeUpdateRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumConfirmResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
@@ -16,4 +17,6 @@ public interface CurriculaService {
     CurriculumReasonResponse getReason(Long userId, Long curriculumId);
 
     CurriculumNodeResponse getNode(Long userId, Long curriculumNodeId);
+
+    CurriculumNodeResponse updateNode(Long userId, Long nodeId, CurriculumNodeUpdateRequest request);
 }

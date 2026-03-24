@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.curricula.controller;
 
 import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumConfirmRequest;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumNodeUpdateRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumConfirmResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
@@ -35,6 +36,14 @@ public class CurriculaController {
             @Valid @RequestBody CurriculumConfirmRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(curriculaService.confirm(principal.getUserId(), request));
+    }
+
+    @PatchMapping("/nodes/{nodeId}")
+    public ResponseEntity<CurriculumNodeResponse> updateNode(
+            @AuthenticationPrincipal LoginUserPrincipal principal,
+            @PathVariable Long nodeId,
+            @RequestBody CurriculumNodeUpdateRequest request) {
+        return ResponseEntity.ok(curriculaService.updateNode(principal.getUserId(), nodeId, request));
     }
 
     @GetMapping("/{curriculumId}/reason")
