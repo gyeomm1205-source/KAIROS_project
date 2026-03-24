@@ -22,6 +22,8 @@ import AccountManagement from '../views/AccountManagement.vue'
 const routes = [
   { path: '/', name: 'Landing', component: LandingPage },
   { path: '/login', name: 'Login', component: LoginPage },
+  { path: '/google/redirect', name: 'GoogleRedirect', component: () => import('../views/GoogleRedirect.vue') },
+  { path: '/github/redirect', name: 'GithubRedirect', component: () => import('../views/GithubRedirect.vue') },
 
   // 온보딩
   { path: '/onboarding/connect', name: 'OnboardingConnect', component: OnboardingConnect },

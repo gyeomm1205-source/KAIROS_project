@@ -1,6 +1,6 @@
 import { ref } from 'vue';
 
-const STORAGE_KEY = 's14p21a506.cognito.access_token';
+const STORAGE_KEY = 'access_token';
 const browserAvailable = typeof window !== 'undefined';
 const authToken = ref(browserAvailable ? window.localStorage.getItem(STORAGE_KEY) ?? '' : '');
 
