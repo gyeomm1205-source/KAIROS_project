@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface UserScheduleRepository extends JpaRepository<UserSchedule, Long> {
 
+    List<UserSchedule> findTop20ByUserUserIdAndEndDateGreaterThanEqualOrderByStartDateAsc(Long userId, LocalDate date);
+
     // 월별 캘린더 조회 — 기간 내 개인 일정 조회 (idx_user_schedule_user)
     List<UserSchedule> findByUserUserIdAndStartDateLessThanEqualAndEndDateGreaterThanEqual(
             Long userId, LocalDate endDate, LocalDate startDate);
