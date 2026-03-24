@@ -97,7 +97,6 @@ public class QuizzesServiceImpl implements QuizzesService {
     public QuizSessionStartResponse startSession(Long userId, QuizSessionStartRequest request) {
         Curriculum curriculum = findCurriculumOrThrow(request.getCurriculumId());
         validateCurriculumOwnership(userId, curriculum);
-        validateNoInProgressSession(userId);
 
         QuizGenerateAsyncResponse quizPayload = findOrGenerateQuizPayload(userId, curriculum);
         cacheQuizSession(userId, quizPayload);
@@ -218,22 +217,6 @@ public class QuizzesServiceImpl implements QuizzesService {
     private void validateNotCompleted(Long userId, Long curriculumId) {
         if (quizSessionRepository.existsByUserUserIdAndCurriculumCurriculumId(userId, curriculumId)) {
             throw new QuizAlreadyCompletedException(curriculumId);
-        }
-    }
-
-    private void validateNoInProgressSession(Long userId) {
-        try {
-            if (redisService.hasKey(buildQuizSessionKey(userId))) {
-                throw new QuizSessionConflictException(userId);
-            }
-
-            if (quizQuestionRepository.existsByQuizSessionUserUserIdAndSelectedAnswerIsNull(userId)) {
-                throw new QuizSessionConflictException(userId);
-            }
-        } catch (QuizSessionConflictException e) {
-            throw e;
-        } catch (RuntimeException e) {
-            throw new QuizSessionPersistenceException("진행 중 퀴즈 세션 조회에 실패했습니다. userId=" + userId, e);
         }
     }
 
