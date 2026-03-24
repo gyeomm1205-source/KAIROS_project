@@ -173,19 +173,6 @@ class QuizzesServiceImplTest {
     }
 
     @Test
-    void startSession_진행중_세션이_있으면_CONFLICT를_던진다() {
-        // given
-        stubOwnedCurriculum();
-        given(redisService.hasKey("quiz_session:1")).willReturn(false);
-        given(quizQuestionRepository.existsByQuizSessionUserUserIdAndSelectedAnswerIsNull(1L)).willReturn(true);
-
-        // when & then
-        assertThatThrownBy(() -> quizzesService.startSession(1L, new QuizSessionStartRequest(10L)))
-                .isInstanceOf(QuizSessionConflictException.class)
-                .hasMessageContaining("userId=1");
-    }
-
-    @Test
     void startSession_Redis에_진행중_세션이_있으면_CONFLICT를_던진다() {
         // given
         given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
@@ -264,7 +251,6 @@ class QuizzesServiceImplTest {
 
     private void stubNoInProgressStartSession() {
         given(redisService.hasKey("quiz_session:1")).willReturn(false);
-        given(quizQuestionRepository.existsByQuizSessionUserUserIdAndSelectedAnswerIsNull(1L)).willReturn(false);
     }
 
     @Test

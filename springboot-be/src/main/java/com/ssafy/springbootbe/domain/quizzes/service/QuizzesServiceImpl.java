@@ -97,6 +97,7 @@ public class QuizzesServiceImpl implements QuizzesService {
     public QuizSessionStartResponse startSession(Long userId, QuizSessionStartRequest request) {
         Curriculum curriculum = findCurriculumOrThrow(request.getCurriculumId());
         validateCurriculumOwnership(userId, curriculum);
+        validateNoInProgressSession(userId);
 
         QuizGenerateAsyncResponse quizPayload = findOrGenerateQuizPayload(userId, curriculum);
         cacheQuizSession(userId, quizPayload);
@@ -211,6 +212,12 @@ public class QuizzesServiceImpl implements QuizzesService {
     private void validateCurriculumOwnership(Long userId, Curriculum curriculum) {
         if (!Objects.equals(curriculum.getUser().getUserId(), userId)) {
             throw new QuizAccessDeniedException(curriculum.getCurriculumId());
+        }
+    }
+
+    private void validateNoInProgressSession(Long userId) {
+        if (redisService.hasKey(buildQuizSessionKey(userId))) {
+            throw new QuizSessionConflictException(userId);
         }
     }
 
