@@ -8,15 +8,20 @@ import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.calendar.service.GoogleCalendarClientService;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumConfirmRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumGenerateRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.GoogleCalendarEventDto;
 import com.ssafy.springbootbe.domain.curricula.dto.request.SkillStatDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CalendarSyncDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.ConfirmNodeDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumConfirmResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumGenerateResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewReasonDto;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAlreadyActiveException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
@@ -26,7 +31,9 @@ import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechSta
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNodeCalendarSync;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumRecommendationReason;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeCalendarSyncRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRecommendationReasonRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
@@ -48,6 +55,7 @@ import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -61,6 +69,7 @@ public class CurriculaServiceImpl implements CurriculaService {
 
     private final CurriculumRepository curriculumRepository;
     private final CurriculumNodeRepository curriculumNodeRepository;
+    private final CurriculumNodeCalendarSyncRepository curriculumNodeCalendarSyncRepository;
     private final CurriculumRecommendationReasonRepository curriculumRecommendationReasonRepository;
     private final UserRepository userRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
@@ -80,10 +89,6 @@ public class CurriculaServiceImpl implements CurriculaService {
     @Override
     @Transactional(readOnly = true)
     public CurriculumPreviewResponse preview(Long userId, CurriculumPreviewRequest request) {
-        if (curriculumRepository.existsByUserUserIdAndStatus(userId, CurriculumStatus.ACTIVE)) {
-            throw new CurriculumAlreadyActiveException(userId);
-        }
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. userId=" + userId));
 
@@ -122,6 +127,106 @@ public class CurriculaServiceImpl implements CurriculaService {
     }
 
     @Override
+    @Transactional
+    public CurriculumConfirmResponse confirm(Long userId, CurriculumConfirmRequest request) {
+        String previewKey = request.getCurriculumPreviewKey();
+
+        String json = redisService.get(previewKey);
+        if (json == null) {
+            throw new IllegalArgumentException("만료되었거나 존재하지 않는 미리보기 키입니다. key=" + previewKey);
+        }
+
+        CurriculumGenerateResponse aiResponse;
+        try {
+            aiResponse = objectMapper.readValue(json, CurriculumGenerateResponse.class);
+        } catch (JacksonException e) {
+            throw new IllegalStateException("커리큘럼 미리보기 데이터 역직렬화 실패", e);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. userId=" + userId));
+
+        int duration = calculateDuration(aiResponse.getNodes());
+
+        Curriculum curriculum = Curriculum.builder()
+                .user(user)
+                .status(CurriculumStatus.ACTIVE)
+                .duration(duration)
+                .build();
+        curriculumRepository.save(curriculum);
+
+        PreviewReasonDto reason = aiResponse.getRecommendationReason();
+        if (reason != null) {
+            curriculumRecommendationReasonRepository.save(CurriculumRecommendationReason.builder()
+                    .curriculum(curriculum)
+                    .summaryLine(reason.getSummaryLine())
+                    .userContext(reason.getUserContext())
+                    .aiInterpretation(reason.getAiInterpretation())
+                    .curriculumRationale(reason.getCurriculumRationale())
+                    .build());
+        }
+
+        Calendar calendarClient = buildGoogleCalendarClientOrNull(userId);
+
+        List<ConfirmNodeDto> confirmNodes = new ArrayList<>();
+        for (PreviewNodeDto nodeDto : aiResponse.getNodes()) {
+            CurriculumNode node = CurriculumNode.builder()
+                    .curriculum(curriculum)
+                    .title(nodeDto.getTitle())
+                    .description(nodeDto.getDescription())
+                    .scheduledDate(nodeDto.getScheduledDate())
+                    .expectedMinutes(nodeDto.getExpectedMinutes() != null ? nodeDto.getExpectedMinutes() : 0)
+                    .build();
+            curriculumNodeRepository.save(node);
+
+            CurriculumNodeCalendarSync sync = CurriculumNodeCalendarSync.builder()
+                    .curriculumNode(node)
+                    .build();
+
+            if (calendarClient != null) {
+                try {
+                    Event event = googleCalendarClientService.createAllDayEvent(
+                            calendarClient,
+                            node.getTitle(),
+                            node.getDescription(),
+                            node.getScheduledDate()
+                    );
+                    sync.synced("primary", event.getId(), event.getEtag());
+                } catch (IOException e) {
+                    log.warn("커리큘럼 노드 Google Calendar 이벤트 생성 실패. nodeId={}", node.getCurriculumNodeId(), e);
+                    sync.syncFailed();
+                }
+            }
+
+            curriculumNodeCalendarSyncRepository.save(sync);
+
+            confirmNodes.add(ConfirmNodeDto.builder()
+                    .curriculumNodeId(node.getCurriculumNodeId())
+                    .title(node.getTitle())
+                    .scheduledDate(node.getScheduledDate())
+                    .expectedMinutes(node.getExpectedMinutes())
+                    .progressStatus(node.getProgressStatus())
+                    .calendarSync(CalendarSyncDto.builder()
+                            .syncStatus(sync.getSyncStatus())
+                            .googleEventId(sync.getGoogleEventId())
+                            .build())
+                    .build());
+        }
+
+        redisService.delete(previewKey);
+        invalidateCalendarCacheForNodes(userId, aiResponse.getNodes());
+
+        log.info("커리큘럼 확정 저장 완료. userId={}, curriculumId={}", userId, curriculum.getCurriculumId());
+
+        return CurriculumConfirmResponse.builder()
+                .curriculumId(curriculum.getCurriculumId())
+                .status(curriculum.getStatus())
+                .createdAt(curriculum.getCreatedAt())
+                .nodes(confirmNodes)
+                .build();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public CurriculumReasonResponse getReason(Long userId, Long curriculumId) {
         Curriculum curriculum = curriculumRepository.findById(curriculumId)
@@ -153,6 +258,34 @@ public class CurriculaServiceImpl implements CurriculaService {
         log.info("커리큘럼 노드 상세 조회. userId={}, curriculumNodeId={}", userId, curriculumNodeId);
 
         return CurriculumNodeResponse.from(node);
+    }
+
+    private Calendar buildGoogleCalendarClientOrNull(Long userId) {
+        try {
+            OAuthAccount oAuthAccount = oAuthAccountRepository
+                    .findByUserUserIdAndProvider(userId, OAuthProvider.GOOGLE)
+                    .orElse(null);
+            if (oAuthAccount == null || oAuthAccount.getRefreshToken() == null) {
+                return null;
+            }
+            String refreshToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
+            return googleCalendarClientService.buildCalendarClient(refreshToken);
+        } catch (Exception e) {
+            log.warn("Google Calendar 클라이언트 생성 실패, 캘린더 연동 없이 진행. userId={}", userId, e);
+            return null;
+        }
+    }
+
+    private void invalidateCalendarCacheForNodes(Long userId, List<PreviewNodeDto> nodes) {
+        if (nodes == null || nodes.isEmpty()) {
+            return;
+        }
+        nodes.stream()
+                .map(PreviewNodeDto::getScheduledDate)
+                .map(YearMonth::from)
+                .distinct()
+                .forEach(ym -> redisService.delete(
+                        "calendar:" + userId + ":" + ym.getYear() + ":" + ym.getMonthValue()));
     }
 
     private List<GoogleCalendarEventDto> fetchGoogleCalendarEvents(Long userId) {
