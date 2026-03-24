@@ -49,8 +49,8 @@ public class SecurityConfig {
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(authenticationFailureHandler))
                 .addFilterBefore(verificationFilter, UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/auth/**").permitAll()
-                        .requestMatchers("/api/v1/analysis/complete").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/analysis/complete").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }
