@@ -715,8 +715,10 @@ async function handleDeleteSchedule(id) { if (!confirm('이 일정을 삭제하�
 function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; selectedSchedules.value.forEach(id => store.deleteSchedule(id)); selectedSchedules.value = [] }
 
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
-onMounted(() => { 
-  store.fetchHolidaysForYear(currentYear.value); 
+watch([currentYear, currentMonth], ([y, m]) => store.fetchCalendar(y, m))
+onMounted(() => {
+  store.fetchHolidaysForYear(currentYear.value);
+  store.fetchCalendar(currentYear.value, currentMonth.value);
   nextTick(() => {
     // 🚀 Ensure we start at current month
     const now = new Date();
