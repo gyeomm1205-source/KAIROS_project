@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { getRecommendations, getRecommendationDetail } from '@/api/aiApi'
 
 export const useRecommendStore = defineStore('recommend', () => {
+  const isLoading = ref(false)
+
   const recentActivities = ref([
     {
       id: "rsc",
@@ -118,11 +121,69 @@ export const useRecommendStore = defineStore('recommend', () => {
     },
   ])
 
+  const loadRecommendations = async () => {
+    isLoading.value = true
+    try {
+      const { data } = await getRecommendations()
+      if (data.items && data.items.length > 0) {
+        recentActivities.value = data.items.map(item => ({
+          id: item.curriculumId,
+          title: item.techStacks?.map(t => t.techName).join(', ') || '커리큘럼',
+          type: 'study',
+          date: item.startDate || '',
+          status: item.status === 'ACTIVE' ? 'in-progress' : 'done',
+          tags: item.techStacks?.map(t => t.techName) || [],
+          hasRecommendation: item.hasRecommendation
+        }))
+      }
+    } catch (e) {
+      console.error('recommendations 조회 실패 (Mock 유지):', e)
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const loadRecommendationDetail = async (curriculumId) => {
+    isLoading.value = true
+    try {
+      const { data } = await getRecommendationDetail(curriculumId)
+
+      if (data.quizzes && data.quizzes.length > 0) {
+        const quiz = data.quizzes[0]
+        quizQuestions.value = (quiz.questions || []).map(q => ({
+          question: q.question,
+          options: q.options || [],
+          correct: 0,
+          quizType: q.quizType
+        }))
+      }
+
+      if (data.references && data.references.length > 0) {
+        references.value = data.references.map(r => ({
+          title: r.title,
+          reason: r.recommendationReason,
+          type: r.referenceType,
+          freshness: r.publishedAt || ''
+        }))
+      }
+
+      return data
+    } catch (e) {
+      console.error('recommendation detail 조회 실패 (Mock 유지):', e)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
+    isLoading,
     recentActivities,
     recentFlow,
     missions,
     references,
     quizQuestions,
+    loadRecommendations,
+    loadRecommendationDetail,
   }
 })
