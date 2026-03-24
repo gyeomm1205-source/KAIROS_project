@@ -407,7 +407,7 @@ public class AuthServiceImpl implements AuthService {
         return null;
     }
 
-    private String triggerProfileAnalysis(Long userId, String velogUsername) {
+    public String triggerProfileAnalysis(Long userId, String velogUsername) {
         String githubTaskId = redisService.get("githubTaskId:" + userId);
         if (githubTaskId == null) {
             log.warn("Redis에서 githubTaskId를 찾을 수 없습니다. userId={}", userId);

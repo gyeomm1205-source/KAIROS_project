@@ -1,5 +1,6 @@
 package com.ssafy.springbootbe.domain.auth.service;
 
+import org.junit.jupiter.api.Disabled;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
@@ -623,7 +624,7 @@ class AuthServiceImplTest {
         given(claims.get("userId")).willReturn(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(userRepository.saveAndFlush(user)).willReturn(user);
-        doReturn("task_velog_xyz").when(authService).triggerVelogCollectAsync(1L, "teddynu");
+        doReturn("task_velog_xyz").when(authService).triggerProfileAnalysis(1L, "teddynu");
 
         // when
         LinkVelogResponse response = authService.linkVelog("Bearer valid-access-token", request);
@@ -633,7 +634,7 @@ class AuthServiceImplTest {
         assertThat(response.getVelogTaskId()).isEqualTo("task_velog_xyz");
         assertThat(user.getVelogUsername()).isEqualTo("teddynu");
         verify(userRepository).saveAndFlush(user);
-        verify(authService).triggerVelogCollectAsync(1L, "teddynu");
+        verify(authService).triggerProfileAnalysis(1L, "teddynu");
     }
 
     @Test
@@ -687,7 +688,7 @@ class AuthServiceImplTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
         given(userRepository.saveAndFlush(user)).willReturn(user);
         doThrow(new VelogCollectAsyncFailedException("FastAPI Velog 수집 호출에 실패했습니다."))
-                .when(authService).triggerVelogCollectAsync(1L, "teddynu");
+                .when(authService).triggerProfileAnalysis(1L, "teddynu");
 
         // when & then
         assertThatThrownBy(() -> authService.linkVelog("Bearer valid-access-token", request))
