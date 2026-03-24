@@ -16,14 +16,6 @@ const CATEGORY_MAP = {
   EMPLOYMENT: 'career',
 }
 
-const RECORD_KIND_MAP = {
-  QUIZ: 'quiz',
-  GITHUB_COMMIT: 'learning',
-  GITHUB_PR: 'learning',
-  VELOG_POST: 'learning',
-  REFERENCE: 'recommendation',
-}
-
 function formatDate(isoDate) {
   if (!isoDate) return ''
   const d = new Date(isoDate)
@@ -43,17 +35,16 @@ function mapActivityToItem(activity) {
     summary: activity.description || '',
     tags: (activity.techStacks || []).map(t => t.techName),
     excluded: !activity.isIncluded,
-    recordKind: RECORD_KIND_MAP[activity.activityType] || 'learning',
   }
 }
 
 export const useHistoryStore = defineStore('history', () => {
   const mockItems = [
-    { id: 1, date: "2026.03.09", title: "React 상태관리 복습 퀴즈", type: "review", category: "study", recordKind: "quiz", summary: "Zustand, Jotai 핵심 개념 퀴즈 결과와 취약 포인트 요약", tags: ["React", "상태관리"], excluded: false },
-    { id: 2, date: "2026.03.07", title: "SSR vs CSR 블로그 정리", type: "blog", category: "study", recordKind: "learning", summary: "Velog 글 작성 내용을 반영해 렌더링 전략 심화 커리큘럼 추천", tags: ["SSR", "Next.js"], excluded: false },
-    { id: 4, date: "2026.03.05", title: "Next.js 마이그레이션 기록", type: "dev", category: "dev", recordKind: "learning", summary: "Pages Router에서 App Router로 전환한 작업 흐름 요약", tags: ["Next.js", "React"], excluded: false },
-    { id: 5, date: "2026.03.03", title: "Docker 학습 추천 재배치", type: "dev", category: "dev", recordKind: "recommendation", summary: "최근 배포 경험과 학습 로그를 기반으로 Docker 재입문 커리큘럼 추천", tags: ["Docker", "배포"], excluded: false },
-    { id: 6, date: "2026.02.28", title: "TypeScript 제네릭 퀴즈", type: "review", category: "study", recordKind: "quiz", summary: "유틸리티 타입과 제네릭 추론 관련 퀴즈 결과", tags: ["TypeScript"], excluded: false },
+    { id: 1, date: "2026.03.09", title: "React 상태관리 복습 퀴즈", type: "review", category: "study", summary: "Zustand, Jotai 핵심 개념 퀴즈 결과와 취약 포인트 요약", tags: ["React", "상태관리"], excluded: false },
+    { id: 2, date: "2026.03.07", title: "SSR vs CSR 블로그 정리", type: "blog", category: "study", summary: "Velog 글 작성 내용을 반영해 렌더링 전략 심화 커리큘럼 추천", tags: ["SSR", "Next.js"], excluded: false },
+    { id: 4, date: "2026.03.05", title: "Next.js 마이그레이션 기록", type: "dev", category: "dev", summary: "Pages Router에서 App Router로 전환한 작업 흐름 요약", tags: ["Next.js", "React"], excluded: false },
+    { id: 5, date: "2026.03.03", title: "Docker 학습 추천 재배치", type: "dev", category: "dev", summary: "최근 배포 경험과 학습 로그를 기반으로 Docker 재입문 커리큘럼 추천", tags: ["Docker", "배포"], excluded: false },
+    { id: 6, date: "2026.02.28", title: "TypeScript 제네릭 퀴즈", type: "review", category: "study", summary: "유틸리티 타입과 제네릭 추론 관련 퀴즈 결과", tags: ["TypeScript"], excluded: false },
   ]
 
   const items = ref([...mockItems])
