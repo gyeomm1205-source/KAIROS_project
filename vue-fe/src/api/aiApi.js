@@ -97,6 +97,14 @@ export const getCurriculumNode = (nodeId) => {
 }
 
 /**
+ * 커리큘럼 노드 수정 (Spring Boot)
+ * PATCH /api/v1/curricula/nodes/{nodeId}
+ */
+export const patchCurriculumNode = (nodeId, data) => {
+  return springApi.patch(`/api/v1/curricula/nodes/${nodeId}`, data)
+}
+
+/**
  * 사용자 프로필 조회 (Spring Boot)
  * GET /api/v1/users/me
  */
