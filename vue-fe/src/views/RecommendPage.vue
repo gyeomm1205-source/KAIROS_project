@@ -20,7 +20,7 @@
               v-for="activity in store.recentActivities"
               :key="activity.id"
               class="base-panel activity-card"
-              @click="selectedActivity = activity.id"
+              @click="selectActivity(activity.id)"
             >
               <div class="activity-top">
                 <div class="activity-icon-wrap" :class="'type-' + activity.type">
@@ -299,13 +299,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecommendStore } from '@/stores/useRecommendStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 const router = useRouter()
 const store = useRecommendStore()
+
+onMounted(() => {
+  store.loadRecommendations()
+})
 
 const activityTypeConfig = {
   study: { icon: "fas fa-book-open" },
@@ -323,6 +327,11 @@ const quizStep = ref("intro") // 'intro' | 'question' | 'result'
 const currentQuizIndex = ref(0)
 const selectedOption = ref(null)
 const quizAnswers = ref([])
+
+const selectActivity = async (activityId) => {
+  selectedActivity.value = activityId
+  await store.loadRecommendationDetail(activityId)
+}
 
 const handleBack = () => {
   selectedActivity.value = null
