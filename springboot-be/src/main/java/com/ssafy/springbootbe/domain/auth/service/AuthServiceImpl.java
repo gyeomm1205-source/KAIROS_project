@@ -252,7 +252,7 @@ public class AuthServiceImpl implements AuthService {
         user.updateVelogUsername(velogUsername);
         saveVelogUsername(user);
 
-        String velogTaskId = triggerProfileAnalysis(userId, velogUsername);
+        String velogTaskId = triggerVelogCollectAsync(userId, velogUsername);
         log.info("Velog 연동 및 AI 분석 트리거 완료. userId={}, velogUsername={}, taskId={}", user.getUserId(), velogUsername, velogTaskId);
 
         return LinkVelogResponse.of(velogUsername, velogTaskId);
@@ -441,6 +441,10 @@ public class AuthServiceImpl implements AuthService {
             log.warn("FastAPI Profile Analyze 트리거 실패. userId={}", userId, e);
         }
         return "task_fallback";
+    }
+
+    String triggerVelogCollectAsync(Long userId, String velogUsername) {
+        return triggerProfileAnalysis(userId, velogUsername);
     }
 
     private void validateAuthorizationCode(String code) {

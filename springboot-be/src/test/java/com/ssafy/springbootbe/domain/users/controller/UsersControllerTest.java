@@ -5,8 +5,12 @@ import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.common.exception.GlobalExceptionHandler;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
+import com.ssafy.springbootbe.domain.users.dto.response.ExternalAccountsResponse;
+import com.ssafy.springbootbe.domain.users.dto.response.GithubExternalAccountResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
+import com.ssafy.springbootbe.domain.users.dto.response.VelogExternalAccountResponse;
+import com.ssafy.springbootbe.domain.users.exception.GithubExternalAccountNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
 import com.ssafy.springbootbe.domain.users.service.UsersService;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
@@ -29,6 +33,8 @@ import org.springframework.web.method.support.ModelAndViewContainer;
 
 import java.util.List;
 import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -98,6 +104,57 @@ class UsersControllerTest {
     }
 
     // ===== PATCH /users/me/profile =====
+
+    @Test
+    void 외부계정_조회_성공() throws Exception {
+        // given
+        ExternalAccountsResponse response = ExternalAccountsResponse.builder()
+                .github(GithubExternalAccountResponse.builder()
+                        .username("junghyun-dev")
+                        .lastSyncedAt(LocalDateTime.of(2026, 3, 9, 14, 23))
+                        .recentCommits(24)
+                        .recentPrs(6)
+                        .totalRepos(3)
+                        .build())
+                .velog(VelogExternalAccountResponse.builder()
+                        .username("junghyun")
+                        .lastSyncedAt(LocalDateTime.of(2026, 3, 9, 12, 10))
+                        .totalPosts(8)
+                        .latestPostDate(LocalDate.of(2026, 3, 7))
+                        .totalViews(1247L)
+                        .build())
+                .build();
+
+        given(usersService.findExternalAccounts(USER_ID)).willReturn(response);
+
+        // when & then
+        mockMvc.perform(get("/users/me/external-accounts")
+                        .principal(authenticatedUser()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.github.username").value("junghyun-dev"))
+                .andExpect(jsonPath("$.github.lastSyncedAt").value("2026-03-09T14:23:00"))
+                .andExpect(jsonPath("$.github.recentCommits").value(24))
+                .andExpect(jsonPath("$.github.recentPrs").value(6))
+                .andExpect(jsonPath("$.github.totalRepos").value(3))
+                .andExpect(jsonPath("$.velog.username").value("junghyun"))
+                .andExpect(jsonPath("$.velog.lastSyncedAt").value("2026-03-09T12:10:00"))
+                .andExpect(jsonPath("$.velog.totalPosts").value(8))
+                .andExpect(jsonPath("$.velog.latestPostDate").value("2026-03-07"))
+                .andExpect(jsonPath("$.velog.totalViews").value(1247));
+    }
+
+    @Test
+    void 외부계정_조회_실패_깃허브_연동없음() throws Exception {
+        // given
+        given(usersService.findExternalAccounts(USER_ID))
+                .willThrow(new GithubExternalAccountNotFoundException(USER_ID));
+
+        // when & then
+        mockMvc.perform(get("/users/me/external-accounts")
+                        .principal(authenticatedUser()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("NOT_FOUND"));
+    }
 
     @Test
     void 프로필_수정_성공() throws Exception {
