@@ -64,7 +64,7 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class UsersServiceImpl implements UsersService {
 
-    private static final long PROFILE_CACHE_TTL_HOURS = 128L;
+    private static final long PROFILE_CACHE_TTL_HOURS = 168L;
     private static final long EXTERNAL_ACCOUNT_CACHE_TTL_HOURS = 1L;
     private static final int RECENT_GITHUB_DAYS = 30;
     private static final String GITHUB_CACHE_KEY_PREFIX = "external-account:";
