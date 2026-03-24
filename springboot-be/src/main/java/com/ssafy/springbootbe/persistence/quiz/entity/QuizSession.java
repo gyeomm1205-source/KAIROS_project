@@ -1,5 +1,6 @@
 package com.ssafy.springbootbe.persistence.quiz.entity;
 
+import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,10 @@ public class QuizSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "curriculum_id", nullable = false)
+    private Curriculum curriculum;
 
     @Column(name = "total_score")
     @Builder.Default

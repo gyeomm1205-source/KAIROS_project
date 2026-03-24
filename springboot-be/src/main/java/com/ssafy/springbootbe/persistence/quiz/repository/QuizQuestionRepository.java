@@ -12,4 +12,7 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
 
     // 세션 내 미제출 문제 존재 여부 확인 (complete 전 검증)
     boolean existsByQuizSessionQuizSessionIdAndSelectedAnswerIsNull(Long quizSessionId);
+
+    // 유저의 진행 중 세션 존재 여부 확인
+    boolean existsByQuizSessionUserUserIdAndSelectedAnswerIsNull(Long userId);
 }

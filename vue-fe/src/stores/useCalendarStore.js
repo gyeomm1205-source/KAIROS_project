@@ -60,6 +60,8 @@ export const useCalendarStore = defineStore('calendar', () => {
   // ----------------------------------------------------------------
   const analysisResult = ref(null)
   const alternativeCurriculum = ref([])
+  const curriculumResult = ref(null)
+  const curriculumPreviewKey = ref(null)
   const isLoadingAI = ref(false)
 
   // ----------------------------------------------------------------
@@ -248,7 +250,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     createSchedule, updateSchedule, deleteSchedule, updateConnectionsForSchedule,
     // [신규 반환값]
     showConnections, lowIntensityLines,
-    analysisResult, alternativeCurriculum, isLoadingAI,
+    analysisResult, alternativeCurriculum, curriculumResult, curriculumPreviewKey, isLoadingAI,
     loadAnalysisResult, loadAlternativeCurriculum, addAiGeneratedSchedule
   }
 })

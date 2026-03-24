@@ -55,6 +55,10 @@ public class CurriculumNodeCalendarSync {
         this.syncStatus = SyncStatus.SYNC_FAILED;
     }
 
+    public void markNotSynced() {
+        this.syncStatus = SyncStatus.NOT_SYNCED;
+    }
+
     public void updateEtag(String googleEtag) {
         this.googleEtag = googleEtag;
         this.lastGoogleUpdatedAt = LocalDateTime.now();

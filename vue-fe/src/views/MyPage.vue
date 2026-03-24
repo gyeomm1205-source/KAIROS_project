@@ -65,6 +65,7 @@
 </template>
 
 <script setup>
+import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useThemeStore } from '@/stores/useThemeStore'

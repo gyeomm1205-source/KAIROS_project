@@ -164,7 +164,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { postGrowthSummary } from '@/api/aiApi'
+import { getGrowthReport, postGrowthSummary } from '@/api/aiApi'
 
 const growthSummary = ref('성장 요약을 불러오는 중...')
 
@@ -222,19 +222,35 @@ const getPolygonPoints = (ratio) => {
 }
 
 onMounted(async () => {
+  // 1. Spring Boot에서 성장 통계 조회 시도
+  let stats = {
+    topTechStacks: topSkills.map(s => s.name),
+    totalActivityCount: 36,
+    recentGrowthTech: 'SSR/SSG',
+    maxStreakDays: 10,
+    techScoreSnapshot: {},
+    monthlyActivityCounts: {},
+    techActivityRanking: topSkills.map(s => s.name)
+  }
+
   try {
-    const { data } = await postGrowthSummary({
-      userId: 1,
-      stats: {
-        topTechStacks: topSkills.map(s => s.name),
-        totalActivityCount: 36,
-        recentGrowthTech: 'SSR/SSG',
-        maxStreakDays: 10,
-        techScoreSnapshot: {},
-        monthlyActivityCounts: {},
-        techActivityRanking: topSkills.map(s => s.name)
-      }
-    })
+    const { data: report } = await getGrowthReport()
+    stats = {
+      topTechStacks: (report.topTechStacks || []).map(t => t.techName),
+      totalActivityCount: report.totalActivityCount || 0,
+      recentGrowthTech: report.recentGrowthTech?.techName || null,
+      maxStreakDays: report.maxStreakDays || 0,
+      techScoreSnapshot: report.techScoreSnapshot || {},
+      monthlyActivityCounts: report.monthlyActivityCounts || {},
+      techActivityRanking: (report.techActivityRanking || []).map(t => t.techName)
+    }
+  } catch (e) {
+    console.error('growth-report 조회 실패 (Mock 유지):', e)
+  }
+
+  // 2. FastAPI에서 성장 요약문 생성
+  try {
+    const { data } = await postGrowthSummary({ userId: 1, stats })
     growthSummary.value = data.summary
   } catch (e) {
     growthSummary.value = '성장 요약을 불러오지 못했습니다.'

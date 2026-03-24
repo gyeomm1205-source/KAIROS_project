@@ -54,6 +54,7 @@ services:
     environment:
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - SPRING_SERVER_URL=http://j14a506.p.ssafy.io:8080/api/v1
     depends_on:
       qdrant:
         condition: service_started

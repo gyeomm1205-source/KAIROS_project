@@ -123,7 +123,7 @@
           <!-- Actions -->
           <div class="flex-align gap-md mt-md">
             <button class="btn-outline flex-1" @click="$router.push('/mypage')">취소</button>
-            <button class="btn-primary flex-1" @click="$router.push('/mypage')">저장</button>
+            <button class="btn-primary flex-1" @click="saveProfile" :disabled="isSaving">{{ isSaving ? '저장 중...' : '저장' }}</button>
           </div>
         </div>
       </div>
@@ -132,11 +132,13 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { getUserProfile, updateUserProfile } from '@/api/aiApi'
 
 const router = useRouter()
+const isSaving = ref(false)
 
 const initialTechStacks = ["React", "TypeScript", "Next.js", "JavaScript", "Docker"]
 const jobOptions = ["학생", "취업 준비생", "주니어 개발자", "시니어 개발자", "비전공 전환자", "기타"]
@@ -179,6 +181,36 @@ const togglePosition = (value) => {
     positions.value = positions.value.filter((item) => item !== value)
   } else {
     positions.value.push(value)
+  }
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await getUserProfile()
+    if (data.position) job.value = data.position
+    if (data.desiredPositions) positions.value = data.desiredPositions.map(p => p.name || p.positionName || p)
+    if (data.techStacks) techStacks.value = data.techStacks.map(t => t.name || t.techName || t)
+    if (data.considerPersonalSchedule !== undefined) scheduleInclusion.value = data.considerPersonalSchedule ? 'yes' : 'no'
+  } catch (e) {
+    console.error('프로필 조회 실패 (Mock 유지):', e)
+  }
+})
+
+const saveProfile = async () => {
+  isSaving.value = true
+  try {
+    await updateUserProfile({
+      position: job.value,
+      desiredPositionIds: positions.value,
+      techStackIds: techStacks.value,
+      considerPersonalSchedule: scheduleInclusion.value === 'yes'
+    })
+    router.push('/mypage')
+  } catch (e) {
+    console.error('프로필 수정 실패:', e)
+    router.push('/mypage')
+  } finally {
+    isSaving.value = false
   }
 }
 </script>

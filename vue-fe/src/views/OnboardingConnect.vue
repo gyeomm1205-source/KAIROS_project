@@ -73,6 +73,20 @@
       >
         NEXT STEP
       </button>
+
+      <!-- ===== DEV TEST ONLY — 배포 전 반드시 제거 ===== -->
+      <div class="dev-test-box">
+        <div class="dev-test-label">🛠 DEV TEST — 파이프라인 전체 테스트</div>
+        <div class="dev-test-note">
+          ⚠ 먼저 DB에 userId=1 유저를 INSERT 하세요!<br>
+          Host: 127.0.0.1 / DB: kairos_db / PW: kairosdb!!
+        </div>
+        <div v-if="devStatus" class="dev-status">{{ devStatus }}</div>
+        <button class="dev-btn" :disabled="devLoading" @click="runDevTest">
+          {{ devLoading ? '⏳ 실행 중...' : '▶ 전체 파이프라인 실행 (userId=1)' }}
+        </button>
+      </div>
+      <!-- ===== DEV TEST END ===== -->
     </div>
   </div>
 </template>
@@ -202,4 +216,13 @@ async function handleVelogConnect() {
 .btn-primary { width: 100%; padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; margin-top: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
 .btn-primary:disabled { background: transparent; border-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
 .btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
+
+/* DEV TEST */
+.dev-test-box { margin-top: 24px; border: 1px dashed #f59e0b; padding: 16px; background: rgba(245,158,11,0.05); }
+.dev-test-label { font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: #f59e0b; margin-bottom: 8px; }
+.dev-test-note { font-size: 11px; color: #92400e; margin-bottom: 12px; line-height: 1.6; }
+.dev-status { font-size: 11px; color: #d97706; margin-bottom: 10px; white-space: pre-wrap; border: 1px solid #f59e0b22; padding: 8px; background: rgba(245,158,11,0.08); }
+.dev-btn { width: 100%; padding: 10px; border: 1px solid #f59e0b; background: transparent; color: #f59e0b; font-weight: 800; font-size: 12px; letter-spacing: 0.08em; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.dev-btn:hover:not(:disabled) { background: #f59e0b; color: #000; }
+.dev-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
