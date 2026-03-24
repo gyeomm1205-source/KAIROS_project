@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { getAuthToken } from './authToken';
 
-const springBaseURL = import.meta.env.VITE_SPRING_BASE_URL || 'http://localhost:8080';
-const fastApiBaseURL = import.meta.env.VITE_FASTAPI_BASE_URL || 'http://localhost:8000';
+const springBaseURL = import.meta.env.VITE_SPRING_BASE_URL || '';
+const fastApiBaseURL = import.meta.env.VITE_FASTAPI_BASE_URL || '';
 
 export const springApi = axios.create({
   baseURL: springBaseURL,
