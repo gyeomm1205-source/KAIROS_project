@@ -10,6 +10,7 @@ import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageRespons
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.domain.activities.service.ActivitiesService;
+import com.ssafy.springbootbe.domain.activities.service.ActivitySyncService;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -45,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ActivitiesControllerTest {
 
     @Mock private ActivitiesService activitiesService;
+    @Mock private ActivitySyncService activitySyncService;
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -54,7 +56,7 @@ class ActivitiesControllerTest {
     @BeforeEach
     void setUp() {
         objectMapper = new ObjectMapper();
-        mockMvc = MockMvcBuilders.standaloneSetup(new ActivitiesController(activitiesService))
+        mockMvc = MockMvcBuilders.standaloneSetup(new ActivitiesController(activitiesService, activitySyncService))
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setCustomArgumentResolvers(new LoginUserPrincipalArgumentResolver())
                 .build();

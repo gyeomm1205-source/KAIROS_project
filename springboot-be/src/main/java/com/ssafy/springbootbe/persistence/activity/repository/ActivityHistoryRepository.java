@@ -1,6 +1,7 @@
 package com.ssafy.springbootbe.persistence.activity.repository;
 
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
+import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -9,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ActivityHistoryRepository extends JpaRepository<ActivityHistory, Long> {
 
@@ -47,4 +49,23 @@ public interface ActivityHistoryRepository extends JpaRepository<ActivityHistory
            "GROUP BY YEAR(a.activityDate), MONTH(a.activityDate), a.activityType " +
            "ORDER BY YEAR(a.activityDate) ASC, MONTH(a.activityDate) ASC")
     List<Object[]> findMonthlyActivityCountsByUserId(@Param("userId") Long userId);
+
+    // 동기화 — 특정 activityType의 최신 activityDate 조회 (마지막 동기화 시점)
+    @Query("SELECT MAX(a.activityDate) FROM ActivityHistory a WHERE a.user.userId = :userId AND a.activityType = :activityType")
+    Optional<LocalDateTime> findLatestActivityDateByUserIdAndActivityType(
+            @Param("userId") Long userId,
+            @Param("activityType") ActivityType activityType);
+
+    // 동기화 — 최근 N일 특정 activityType 건수 조회
+    @Query("SELECT COUNT(a) FROM ActivityHistory a WHERE a.user.userId = :userId AND a.activityType = :activityType AND a.activityDate >= :since")
+    long countByUserIdAndActivityTypeSince(
+            @Param("userId") Long userId,
+            @Param("activityType") ActivityType activityType,
+            @Param("since") LocalDateTime since);
+
+    // 동기화 — 특정 activityType 전체 건수 조회
+    @Query("SELECT COUNT(a) FROM ActivityHistory a WHERE a.user.userId = :userId AND a.activityType = :activityType")
+    long countByUserIdAndActivityType(
+            @Param("userId") Long userId,
+            @Param("activityType") ActivityType activityType);
 }
