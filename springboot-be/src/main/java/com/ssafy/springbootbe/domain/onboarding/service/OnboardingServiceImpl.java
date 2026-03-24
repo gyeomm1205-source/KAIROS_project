@@ -93,16 +93,14 @@ public class OnboardingServiceImpl implements OnboardingService {
         replaceTechStacks(user, techStacks);
         replaceCurriculumCategories(user, curriculumCategories);
 
-        AnalysisReport analysisReport = createPendingAnalysisReport(user);
+        createPendingAnalysisReport(user);
 
-        log.info("온보딩 설문 저장 완료. userId={}, analysisReportId={}", userId, analysisReport.getAnalysisReportId());
+        log.info("온보딩 설문 저장 완료. userId={}", userId);
 
         return OnboardingSurveyResponse.builder()
                 .userId(user.getUserId())
                 .status(user.getStatus())
                 .considerPersonalSchedule(user.getConsiderPersonalSchedule())
-                .analysisReportId(analysisReport.getAnalysisReportId())
-                .analysisStatus(analysisReport.getStatus())
                 .build();
     }
 

@@ -161,8 +161,6 @@ class OnboardingServiceImplTest {
         assertThat(response.getUserId()).isEqualTo(1L);
         assertThat(response.getStatus()).isEqualTo(UserStatus.SURVEYED);
         assertThat(response.getConsiderPersonalSchedule()).isTrue();
-        assertThat(response.getAnalysisReportId()).isEqualTo(42L);
-        assertThat(response.getAnalysisStatus()).isEqualTo(AnalysisStatus.PENDING);
         assertThat(guestUser.getPosition()).isEqualTo(UserPosition.STUDENT);
         assertThat(guestUser.getStatus()).isEqualTo(UserStatus.SURVEYED);
         assertThat(guestUser.getConsiderPersonalSchedule()).isTrue();
