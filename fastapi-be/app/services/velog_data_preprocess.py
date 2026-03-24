@@ -93,6 +93,9 @@ def convert_velog_to_markdown(posts, velog_username: str):
 async def main(velog_username: str):
     start_time = time.time()
     
+    # @zhy2on 처럼 @ 기호 포함해서 입력해도 자동으로 처리
+    velog_username = velog_username.lstrip('@').strip()
+    
     async with aiohttp.ClientSession() as session:
         posts = await fetch_velog_posts(session, velog_username)
         
