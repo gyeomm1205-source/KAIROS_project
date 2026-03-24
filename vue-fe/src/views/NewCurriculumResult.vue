@@ -117,7 +117,7 @@
           </div>
           <div class="flex-align gap-md flex-wrap">
             <button class="btn-outline" @click="$router.push('/recommend')">돌아가기</button>
-            <button class="btn-primary" @click="$router.push('/calendar')">
+            <button class="btn-primary" @click="confirmAndGoCalendar">
               <i class="fas fa-calendar-plus" /> 캘린더에 추가하기
             </button>
           </div>
@@ -130,9 +130,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { postCurriculaConfirm } from '@/api/aiApi'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 
 const router = useRouter()
+const store = useCalendarStore()
 
 const missions = ref([
   { day: "1일차", title: "Docker 핵심 개념 이해", desc: "컨테이너, 이미지, Dockerfile의 기본 개념을 학습합니다", time: "40분", tag: "개념" },
@@ -157,25 +160,30 @@ const tips = ref([
 const tags = ['개념', '실습', '심화', '실전', '정리']
 
 onMounted(() => {
-  const cached = localStorage.getItem('curriculumResult')
-  if (!cached) return
+  const data = store.curriculumResult
+  if (!data) return
 
-  try {
-    const data = JSON.parse(cached)
-
-    if (data.nodes && data.nodes.length > 0) {
-      missions.value = data.nodes.map((n, i) => ({
-        day: `${i + 1}일차`,
-        title: n.title,
-        desc: n.description || '',
-        time: `${n.expectedMinutes}분`,
-        tag: tags[i % tags.length]
-      }))
-    }
-  } catch (e) {
-    console.error('커리큘럼 결과 로드 실패:', e)
+  if (data.nodes && data.nodes.length > 0) {
+    missions.value = data.nodes.map((n, i) => ({
+      day: `${i + 1}일차`,
+      title: n.title,
+      desc: n.description || '',
+      time: `${n.expectedMinutes}분`,
+      tag: tags[i % tags.length]
+    }))
   }
 })
+
+const confirmAndGoCalendar = async () => {
+  try {
+    if (store.curriculumResult) {
+      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+    }
+  } catch (e) {
+    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+  }
+  router.push('/calendar')
+}
 </script>
 
 <style scoped>

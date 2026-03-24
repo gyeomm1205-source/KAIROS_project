@@ -23,7 +23,13 @@
         <p>분석 결과를 기반으로 최적의 학습 계획을 구성했습니다.<br>확인 후 캘린더에 반영해보세요.</p>
       </div>
 
-      <div class="curriculum-body">
+      <!-- LOADING STATE -->
+      <div v-if="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">AI가 맞춤 커리큘럼을 생성 중입니다...</p>
+      </div>
+
+      <div v-else class="curriculum-body">
         <!-- Timeline Section -->
         <section class="base-panel p-lg mb-lg">
           <div class="panel-header mb-md">
@@ -142,9 +148,11 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { postCurriculumGenerate } from '@/api/aiApi'
+import { postCurriculumGenerate, postCurriculaConfirm } from '@/api/aiApi'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const router = useRouter()
+const store = useCalendarStore()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
 const isLoading = ref(true)
@@ -203,7 +211,7 @@ onMounted(async () => {
     })
 
     if (data.nodes && data.nodes.length > 0) {
-      localStorage.setItem('curriculumResult', JSON.stringify(data))
+      store.curriculumResult = data
       scheduleItems.value = data.nodes.map(n => ({
         date: formatDate(n.scheduledDate),
         title: n.title,
@@ -233,14 +241,22 @@ onMounted(async () => {
 const openCoachmark = () => { showCoachmark.value = true }
 const closeCoachmark = () => { showCoachmark.value = false }
 
-const confirmAndGoCalendar = () => {
+const confirmAndGoCalendar = async () => {
   showCoachmark.value = false
   isAnimating.value = true
-  
+
+  try {
+    if (store.curriculumResult) {
+      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+    }
+  } catch (e) {
+    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+  }
+
   setTimeout(() => {
     sessionStorage.setItem('playCalendarEntryAnim', 'true')
     router.push('/calendar')
-  }, 600) 
+  }, 600)
 }
 </script>
 
@@ -368,4 +384,9 @@ const confirmAndGoCalendar = () => {
   .action-buttons { flex-direction: column; }
   .btn-outline, .btn-primary { width: 100%; }
 }
+
+.loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 </style>
