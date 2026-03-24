@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.common.exception;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
+import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAlreadyActiveException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
@@ -209,6 +210,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleCurriculumNodeAccessDeniedException(CurriculumNodeAccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(CurriculumAlreadyActiveException.class)
+    public ResponseEntity<Map<String, String>> handleCurriculumAlreadyActiveException(CurriculumAlreadyActiveException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
     }
 
     @ExceptionHandler(ActivityNotFoundException.class)

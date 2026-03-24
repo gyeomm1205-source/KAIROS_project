@@ -1,9 +1,12 @@
 package com.ssafy.springbootbe.domain.curricula.controller;
 
 import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeResponse;
+import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
 import com.ssafy.springbootbe.domain.curricula.service.CurriculaService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -15,6 +18,13 @@ import org.springframework.web.bind.annotation.*;
 public class CurriculaController {
 
     private final CurriculaService curriculaService;
+
+    @PostMapping("/preview")
+    public ResponseEntity<CurriculumPreviewResponse> preview(
+            @AuthenticationPrincipal LoginUserPrincipal principal,
+            @Valid @RequestBody CurriculumPreviewRequest request) {
+        return ResponseEntity.ok(curriculaService.preview(principal.getUserId(), request));
+    }
 
     @GetMapping("/{curriculumId}/reason")
     public ResponseEntity<CurriculumReasonResponse> getReason(
