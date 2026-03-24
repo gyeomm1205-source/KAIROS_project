@@ -7,6 +7,10 @@ const fastApiBaseURL = import.meta.env.VITE_FASTAPI_BASE_URL || 'http://localhos
 export const springApi = axios.create({
   baseURL: springBaseURL,
   timeout: 5000,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 export const fastApi = axios.create({

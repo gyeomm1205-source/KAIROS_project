@@ -10,14 +10,15 @@
       <div class="content-inner max-w-xl mx-auto">
         <!-- Profile Summary -->
         <div class="base-panel p-lg mb-md shadow-normal flex-align gap-lg">
-          <div class="avatar-circle">JK</div>
+          <div class="avatar-circle" :style="authStore.displayProfileImage ? 'border:none; background:transparent;' : ''">
+            <img v-if="authStore.displayProfileImage" :src="authStore.displayProfileImage" alt="avatar" class="mypage-avatar-img"/>
+            <span v-else>{{ authStore.displayName ? authStore.displayName.substring(0, 2).toUpperCase() : 'U' }}</span>
+          </div>
           <div class="flex-col min-w-0">
-            <h2 class="profile-name">김정현</h2>
-            <p class="profile-email">jung@email.com</p>
-            <div class="flex-align gap-md mt-sm">
-              <span class="profile-meta">가입일 2026.01.15</span>
-              <span class="profile-meta dot">·</span>
-              <span class="profile-meta">주니어 개발자</span>
+            <h2 class="profile-name">{{ authStore.displayName || '사용자' }}</h2>
+            <p class="profile-email">{{ authStore.displayEmail || '이메일 정보 없음' }}</p>
+            <div class="flex-align gap-md mt-sm" v-if="authStore.profile?.position">
+              <span class="profile-meta">{{ authStore.profile.position }}</span>
             </div>
           </div>
         </div>
@@ -67,8 +68,10 @@
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 </script>
 
 <style scoped>
@@ -116,7 +119,8 @@ const router = useRouter()
 .shadow-none { box-shadow: none; }
 
 /* Profile Area */
-.avatar-circle { width: 64px; height: 64px; border: 2px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; background: var(--bg-base); color: var(--text-primary); }
+.avatar-circle { width: 64px; height: 64px; border: 2px solid var(--text-primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 900; background: var(--bg-base); color: var(--text-primary); overflow: hidden; }
+.mypage-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .profile-name { font-size: 20px; font-weight: 900; margin: 0 0 4px 0; color: var(--text-primary); }
 .profile-email { font-size: 13px; font-weight: 700; margin: 0; color: var(--text-muted); }
 .profile-meta { font-size: 12px; font-weight: 800; color: var(--text-muted); }

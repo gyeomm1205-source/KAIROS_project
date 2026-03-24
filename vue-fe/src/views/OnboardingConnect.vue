@@ -23,18 +23,12 @@
       </div>
 
       <div class="auth-section">
-        <button 
-          class="link-btn" 
-          :class="{ 'is-connected': isGoogleConnected }"
-          @click="isGoogleConnected = true"
-        >
+        <button class="link-btn is-connected" disabled>
           <div class="link-btn-left">
             <div class="link-icon"><i class="fab fa-google" /></div>
-            <span v-if="!isGoogleConnected">Google 계정으로 시작하기</span>
-            <span v-else class="text-blue-600">user@gmail.com 연동됨</span>
+            <span class="text-blue-600">{{ userEmail }} 연동됨</span>
           </div>
-          <i v-if="!isGoogleConnected" class="fas fa-arrow-right" />
-          <i v-else class="fas fa-check" />
+          <i class="fas fa-check" />
         </button>
       </div>
 
@@ -44,13 +38,13 @@
         <button 
           class="link-btn"
           :class="{ 'is-connected': isGithubConnected }"
-          :disabled="!isGoogleConnected"
-          @click="isGithubConnected = true"
+          :disabled="isGithubConnected"
+          @click="handleGithubConnect"
         >
           <div class="link-btn-left">
             <div class="link-icon"><i class="fab fa-github" /></div>
             <span v-if="!isGithubConnected">GitHub 연동하기</span>
-            <span v-else class="text-blue-600">GitHub 연동 완료</span>
+            <span v-else class="text-blue-600">{{ githubNickname }} 연동됨</span>
           </div>
           <i v-if="!isGithubConnected" class="fas fa-arrow-right" />
           <i v-else class="fas fa-check" />
@@ -59,13 +53,13 @@
         <button 
           class="link-btn"
           :class="{ 'is-connected': isVelogConnected }"
-          :disabled="!isGoogleConnected"
-          @click="isVelogConnected = true"
+          :disabled="!isGithubConnected"
+          @click="handleVelogConnect"
         >
           <div class="link-btn-left">
             <div class="link-icon"><i class="fas fa-v" /></div>
             <span v-if="!isVelogConnected">Velog 연동하기</span>
-            <span v-else class="text-blue-600">Velog 연동 완료</span>
+            <span v-else class="text-blue-600">{{ velogUsername }} 연동됨</span>
           </div>
           <i v-if="!isVelogConnected" class="fas fa-arrow-right" />
           <i v-else class="fas fa-check" />
@@ -85,12 +79,69 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { linkVelog } from '@/api/authApi'
 
-const isGoogleConnected = ref(false)
-const isGithubConnected = ref(false)
-const isVelogConnected = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
 
-const canProceed = computed(() => isGoogleConnected.value && isGithubConnected.value && isVelogConnected.value)
+// Velog 연동 상태 (Velog는 AT 획득 후 가능하므로 isAuthenticated 체크)
+const isVelogConnected = computed(() => !!authStore.profile?.velogUsername || !!velogUsername.value)
+const velogUsername = ref('')
+
+// Google 정보 (보통 pendingEmail이나 profile.email에 있음)
+const userEmail = computed(() => authStore.profile?.email || authStore.pendingEmail || 'Google 계정')
+
+// GitHub 연동 상태: accessToken을 획득했다면 연동이 완료된 것임
+const isGithubConnected = computed(() => authStore.isAuthenticated)
+const githubNickname = computed(() => authStore.profile?.nickname || 'GitHub 계정')
+
+// 진행 가능 여부: 필수 연동 완료 시 활성화
+const canProceed = computed(() => isGithubConnected.value)
+
+function handleGithubConnect() {
+  if (isGithubConnected.value) return
+
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID
+  const redirectUri = window.location.origin + '/github/redirect'
+  
+  if (!clientId || clientId === 'undefined') {
+    alert('GitHub Client ID 연동 설정이 필요합니다.')
+    return
+  }
+
+  // GitHub OAuth 시 state에 onboardingToken을 실어 보냄
+  const state = authStore.onboardingToken
+  const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=read:user public_repo&state=${state}`
+  
+  window.location.href = url
+}
+
+async function handleVelogConnect() {
+  if (isVelogConnected.value) return
+  if (!authStore.isAuthenticated) {
+    alert('먼저 GitHub 연동을 완료해 주세요.')
+    return
+  }
+
+  const username = prompt('Velog 사용자명을 입력해주세요 (예: @username)')
+  if (username) {
+    try {
+      const { data } = await linkVelog(username)
+      velogUsername.value = username
+      if (data.velogTaskId) {
+        authStore.setVelogTaskId(data.velogTaskId)
+      }
+      // 프로필 동기화
+      await authStore.fetchMe()
+      alert('Velog 연동 및 데이터 분석이 시작되었습니다.')
+    } catch (err) {
+      console.error('Velog 연동 실패:', err)
+      alert('Velog 연동 중 오류가 발생했습니다.')
+    }
+  }
+}
 </script>
 
 <style scoped>
