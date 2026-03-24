@@ -111,7 +111,6 @@ class AuthServiceImplTest {
         ReflectionTestUtils.setField(authService, "oauthContentType", "application/x-www-form-urlencoded");
         ReflectionTestUtils.setField(authService, "aiServerUrl", "http://localhost:8000");
         ReflectionTestUtils.setField(authService, "aiCollectAsyncPath", "/api/v1/ai/github/collect-async");
-        ReflectionTestUtils.setField(authService, "aiVelogCollectAsyncPath", "/api/v1/ai/velog/collect-async");
     }
 
     @Test
