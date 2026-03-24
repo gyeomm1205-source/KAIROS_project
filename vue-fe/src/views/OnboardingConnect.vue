@@ -79,6 +79,20 @@
       >
         NEXT STEP
       </button>
+
+      <!-- ===== DEV TEST ONLY — 배포 전 반드시 제거 ===== -->
+      <div class="dev-test-box">
+        <div class="dev-test-label">🛠 DEV TEST — 파이프라인 전체 테스트</div>
+        <div class="dev-test-note">
+          ⚠ 먼저 DB에 userId=1 유저를 INSERT 하세요!<br>
+          Host: 127.0.0.1 / DB: kairos_db / PW: kairosdb!!
+        </div>
+        <div v-if="devStatus" class="dev-status">{{ devStatus }}</div>
+        <button class="dev-btn" :disabled="devLoading" @click="runDevTest">
+          {{ devLoading ? '⏳ 실행 중...' : '▶ 전체 파이프라인 실행 (userId=1)' }}
+        </button>
+      </div>
+      <!-- ===== DEV TEST END ===== -->
     </div>
   </div>
 </template>
@@ -91,6 +105,65 @@ const isGithubConnected = ref(false)
 const isVelogConnected = ref(false)
 
 const canProceed = computed(() => isGoogleConnected.value && isGithubConnected.value && isVelogConnected.value)
+
+// ===== DEV TEST =====
+const FASTAPI_URL = 'http://j14a506.p.ssafy.io:8000'
+// ⬇ 여기에 본인 토큰/아이디 입력
+const DEV_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || 'ghp_여기에_토큰_입력'
+const DEV_GITHUB_USERNAME = import.meta.env.VITE_GITHUB_USERNAME || '여기에_깃헙_아이디'
+const DEV_VELOG_USERNAME = import.meta.env.VITE_VELOG_USERNAME || '여기에_벨로그_아이디'
+const DEV_USER_ID = 1
+
+const devLoading = ref(false)
+const devStatus = ref('')
+
+async function runDevTest() {
+  devLoading.value = true
+  devStatus.value = '1️⃣ GitHub 수집 시작...'
+  try {
+    // STEP 1: GitHub 수집 트리거
+    const githubRes = await fetch(`${FASTAPI_URL}/api/v1/ai/github/collect-async`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: DEV_USER_ID, githubToken: DEV_GITHUB_TOKEN, githubUsername: DEV_GITHUB_USERNAME })
+    })
+    const githubData = await githubRes.json()
+    const githubTaskId = githubData.taskId
+    devStatus.value = `✅ GitHub 수집 시작됨 (taskId: ${githubTaskId})\n2️⃣ Velog+분석 트리거 중...`
+
+    // STEP 2: 분석 트리거
+    const analyzeRes = await fetch(`${FASTAPI_URL}/api/v1/ai/profile/analyze-async`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: DEV_USER_ID, velogUsername: DEV_VELOG_USERNAME, githubTaskId })
+    })
+    const analyzeData = await analyzeRes.json()
+    const analysisTaskId = analyzeData.taskId
+    devStatus.value = `✅ 분석 시작됨 (taskId: ${analysisTaskId})\n3️⃣ 완료될 때까지 폴링 중... (1~2분 소요)`
+
+    // STEP 3: 완료될 때까지 폴링
+    let statusResult = null
+    for (let i = 0; i < 60; i++) {
+      await new Promise(r => setTimeout(r, 5000))
+      const statusRes = await fetch(`${FASTAPI_URL}/api/v1/ai/status/stream/${analysisTaskId}`)
+      statusResult = await statusRes.json()
+      devStatus.value = `⏳ 분석 폴링 중... (${(i + 1) * 5}초) 상태: ${statusResult.status}`
+      if (statusResult.status === 'completed') {
+        devStatus.value = `🎉 완료! Spring Boot에 콜백 전송됨.\nDB activity_history 확인하세요!`
+        break
+      }
+      if (statusResult.status === 'failed') {
+        devStatus.value = `❌ 분석 실패: ${statusResult.error}`
+        break
+      }
+    }
+  } catch (e) {
+    devStatus.value = `❌ 오류: ${e.message}`
+  } finally {
+    devLoading.value = false
+  }
+}
+// ===== DEV TEST END =====
 </script>
 
 <style scoped>
@@ -151,4 +224,13 @@ const canProceed = computed(() => isGoogleConnected.value && isGithubConnected.v
 .btn-primary { width: 100%; padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; margin-top: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
 .btn-primary:disabled { background: transparent; border-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
 .btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
+
+/* DEV TEST */
+.dev-test-box { margin-top: 24px; border: 1px dashed #f59e0b; padding: 16px; background: rgba(245,158,11,0.05); }
+.dev-test-label { font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: #f59e0b; margin-bottom: 8px; }
+.dev-test-note { font-size: 11px; color: #92400e; margin-bottom: 12px; line-height: 1.6; }
+.dev-status { font-size: 11px; color: #d97706; margin-bottom: 10px; white-space: pre-wrap; border: 1px solid #f59e0b22; padding: 8px; background: rgba(245,158,11,0.08); }
+.dev-btn { width: 100%; padding: 10px; border: 1px solid #f59e0b; background: transparent; color: #f59e0b; font-weight: 800; font-size: 12px; letter-spacing: 0.08em; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+.dev-btn:hover:not(:disabled) { background: #f59e0b; color: #000; }
+.dev-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 </style>
