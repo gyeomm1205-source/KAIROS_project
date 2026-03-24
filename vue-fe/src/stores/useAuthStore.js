@@ -64,8 +64,13 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const { data } = await getMe()
       profile.value = data
+      // 기존 유저 로그인 시 백엔드가 userId를 응답에 포함하지 않는 경우
+      // fetchMe 응답의 userId로 보완
+      if (!userId.value && data.userId) {
+        userId.value = data.userId
+        localStorage.setItem(USER_ID_KEY, data.userId)
+      }
     } catch (err) {
-      // 백엔드 미구현(404) 또는 일시 오류 → 프로필 없이 계속 진행
       console.warn('[useAuthStore] fetchMe 실패 (무시):', err.response?.status, err.message)
     }
   }

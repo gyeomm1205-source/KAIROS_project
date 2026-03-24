@@ -107,12 +107,25 @@ const velogUsername = ref('')
 // Google 정보 (보통 pendingEmail이나 profile.email에 있음)
 const userEmail = computed(() => authStore.profile?.email || authStore.pendingEmail || 'Google 계정')
 
-// GitHub 연동 상태: accessToken을 획득했다면 연동이 완료된 것임
-const isGithubConnected = computed(() => authStore.isAuthenticated)
+// GitHub 연동 상태:
+// GithubRedirect에서 completeOnboarding() 호출 시 onboardingToken이 삭제됨
+// → AT가 있고 onboardingToken이 없으면 GitHub 연동 완료로 판단
+// (신규 유저가 Google 로그인만 한 상태: AT 없음 + onboardingToken 있음)
+// (GitHub 연동 완료 상태: AT 있음 + onboardingToken 없음)
+const isGithubConnected = computed(() =>
+  authStore.isAuthenticated && !authStore.onboardingToken
+)
 const githubNickname = computed(() => authStore.profile?.nickname || 'GitHub 계정')
 
 // 진행 가능 여부: 필수 연동 완료 시 활성화
 const canProceed = computed(() => isGithubConnected.value)
+
+// DEV TEST 전용 변수 — 템플릿에서 참조하므로 반드시 선언
+const devStatus = ref('')
+const devLoading = ref(false)
+async function runDevTest() {
+  devStatus.value = '⚠ DEV TEST 미구현 — 삭제 예정'
+}
 
 function handleGithubConnect() {
   if (isGithubConnected.value) return

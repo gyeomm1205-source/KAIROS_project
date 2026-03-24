@@ -106,9 +106,11 @@ onMounted(async () => {
       }, 1800)
     } else {
       // 기존 유저 → 환영 모달 → calendar
+      // 백엔드 GoogleOAuthCallbackResponse는 @JsonProperty로 snake_case 반환
+      // forExistingUser()는 userId를 포함하지 않으므로 JWT에서 파싱하거나 fetchMe 이후 획득
       authStore.setTokens({
         accessToken: data.access_token,
-        userId: data.user_id,
+        userId: data.user_id ?? null,
       })
       await authStore.fetchMe()
 

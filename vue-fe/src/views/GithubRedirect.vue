@@ -52,15 +52,17 @@ onMounted(async () => {
     return
   }
 
-  if (!state) {
+  // state가 없으면 onboardingToken 없이 진행 불가 → store에서 꺼내서 fallback
+  const onboardingToken = state || authStore.onboardingToken
+
+  if (!onboardingToken) {
     errorMsg.value = '온보딩 세션 정보가 없습니다. 다시 로그인해 주세요.'
     setTimeout(() => router.push('/login'), 2000)
     return
   }
 
   try {
-    // GET /api/v1/auth/link-github?code=xxx&state=onboardingToken
-    const { data } = await linkGithub(code, state)
+    const { data } = await linkGithub(code, onboardingToken)
     console.log('[GithubRedirect] 응답:', data)
 
     // completeOnboarding: onboardingToken 삭제 + 정식 AT/userId 저장

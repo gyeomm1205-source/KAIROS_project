@@ -1,4 +1,4 @@
-import { springApi } from '@/services/api'
+import { springApi, springApiSlow } from '@/services/api'
 
 /**
  * 1. Auth API
@@ -33,18 +33,18 @@ export function loginWithGoogle(code) {
 }
 
 /**
- * [GET] /auth/link-github
- * GitHub 계정 연동 — code와 state(=onboardingToken)를 query param으로 전달
- *
- * 백엔드가 GitHub으로부터 redirect된 code + state를 query param으로 받음
+ * [POST] /auth/link-github
+ * GitHub 계정 연동 — User 생성 (GUEST)
+ * 백엔드가 FastAPI GitHub 수집 트리거까지 포함하여 응답이 느릴 수 있으므로
+ * timeout이 넉넉한 springApiSlow 사용
  *
  * @param {string} code - GitHub OAuth2 authorization code
- * @param {string} state - onboardingToken (GitHub OAuth 요청 시 state로 전달했던 값)
- * @returns {Promise<{accessToken: string, tokenType: string, userId: number}>}
+ * @param {string} onboardingToken - Google 로그인 후 발급된 임시 토큰
+ * @returns {Promise<{accessToken: string, tokenType: string, userId: number, githubTaskId: string}>}
  */
 export function linkGithub(code, onboardingToken) {
-  return springApi.post('/api/v1/auth/link-github', 
-    { code }, 
+  return springApiSlow.post('/api/v1/auth/link-github',
+    { code },
     { headers: { Authorization: `Bearer ${onboardingToken}` } }
   )
 }
