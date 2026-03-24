@@ -360,7 +360,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .toList();
     }
 
-    private CurriculumGenerateResponse callFastApi(CurriculumGenerateRequest request) {
+    CurriculumGenerateResponse callFastApi(CurriculumGenerateRequest request) {
         try {
             CurriculumGenerateResponse response = aiRestClient.buildAiRestClient()
                     .post()
