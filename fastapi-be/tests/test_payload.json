@@ -1,0 +1,43 @@
+{
+  "request_id": "rec_mock_001",
+  "trace_id": "trace-mock-aaa",
+  "policy_version": "policy_v1",
+  "user": {
+    "user_id": 101,
+    "job_role": "\ucde8\uc900\uc0dd",
+    "target_positions": ["backend"],
+    "survey_context": {
+      "job_role": "\ucde8\uc900\uc0dd",
+      "target_positions": ["backend"],
+      "tech_stacks": ["Spring Boot", "Java", "MySQL"],
+      "persona": "default"
+    }
+  },
+  "learning_states": [
+    {"skill": "Spring Security", "raw_score": 1.8, "relative_rank": "mid", "percentile": 42},
+    {"skill": "JWT",             "raw_score": 1.2, "relative_rank": "low", "percentile": 28},
+    {"skill": "Spring Boot",     "raw_score": 2.6, "relative_rank": "high","percentile": 65},
+    {"skill": "MySQL",           "raw_score": 1.5, "relative_rank": "mid", "percentile": 38}
+  ],
+  "recent_activities": [
+    {
+      "source": "velog",
+      "category": "\ud559\uc2b5",
+      "tech_stacks": ["Spring Security", "OAuth"],
+      "summary": "OAuth \ub85c\uadf8\uc778 \ud750\ub984\uacfc Spring Security \ud544\ud130 \uccb4\uc778\uc744 \uc815\ub9ac\ud55c \uae00",
+      "activity_date": "2026-03-10T14:00:00Z"
+    },
+    {
+      "source": "github",
+      "category": "\uac1c\ubc1c",
+      "tech_stacks": ["Spring Boot", "JWT"],
+      "summary": "JWT \uae30\ubc18 \uc778\uc99d \ud544\ud130 \ud074\ub798\uc2a4 \ucd94\uac00 \ubc0f \ud1a0\ud070 \ubc1c\uae09 \uc5d4\ub4dc\ud3ec\uc778\ud2b8 \uad6c\ud604",
+      "activity_date": "2026-03-09T11:30:00Z"
+    }
+  ],
+  "history_exclusions": ["ref_oauth2_old_001"],
+  "calendar_constraints": [
+    {"date": "2026-03-17", "busy_slots": ["19:00-22:00"]}
+  ],
+  "request_type": "reference"
+}

@@ -10,11 +10,22 @@ vue-fe/dist/
 __pycache__/
 *.pyc
 fastapi-be/.venv/
-
+fastapi-be/venv/
 # Java/Gradle
 springboot-be/.gradle/
 springboot-be/build/
+springboot-be/.env
+infra/env/*
+!infra/env/.gitkeep
 
 # IDE
 .idea/
 .vscode/
+
+
+# AI
+.env
+
+#documents
+ai.md
+알고리즘 기술 설계서.md

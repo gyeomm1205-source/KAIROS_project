@@ -3,10 +3,21 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: app-ingress
+  {{- if and .Values.ingress.tls.enabled .Values.ingress.tls.clusterIssuer }}
+  annotations:
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.clusterIssuer | quote }}
+  {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - secretName: {{ .Values.ingress.tls.secretName }}
+      hosts:
+        - kairos.{{ .Values.baseDomain }}
+        - spring.{{ .Values.baseDomain }}
+  {{- end }}
   rules:
-    - host: app.{{ .Values.baseDomain }}
+    - host: kairos.{{ .Values.baseDomain }}
       http:
         paths:
           - path: /
@@ -26,14 +37,4 @@ spec:
                 name: springboot-be
                 port:
                   number: 8080
-    - host: fastapi.{{ .Values.baseDomain }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: fastapi-be
-                port:
-                  number: 8000
 {{- end }}

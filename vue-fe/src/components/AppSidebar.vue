@@ -1,242 +1,261 @@
 <template>
-  <aside class="sidebar">
-    <RouterLink to="/" class="sidebar-brand">
-      <div class="brand-logo">
-        <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" fill="url(#kg)" opacity="0.15"/>
-          <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="url(#kg)" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
-          <circle cx="14" cy="14" r="2" fill="url(#kg)"/>
-          <path d="M8 5h12l-4 4H12L8 5z" fill="url(#kg)" opacity="0.5"/>
-          <defs>
-            <linearGradient id="kg" x1="6" y1="3" x2="22" y2="25" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#818cf8"/><stop offset="1" stop-color="#38bdf8"/>
-            </linearGradient>
-          </defs>
-        </svg>
-      </div>
-      <div class="brand-text">
-        <span class="brand-name">KAIROS</span>
-        <span class="brand-sub">시간의 기회를 잡다</span>
-      </div>
-    </RouterLink>
+  <aside class="app-sidebar">
+    <div class="sidebar-header" @click="$router.push('/calendar')">
+      <svg width="24" height="24" viewBox="0 0 28 28" fill="none">
+        <path d="M6 3h16v5l-6 6 6 6v5H6v-5l6-6-6-6V3z" stroke="currentColor" stroke-width="2" fill="none" stroke-linejoin="round"/>
+        <rect x="12" y="12" width="4" height="4" fill="currentColor"/>
+      </svg>
+      <span class="logo-text">KAIROS</span>
+    </div>
 
     <nav class="sidebar-nav">
-      <div class="nav-section-label">메인</div>
-
-      <template v-for="item in NAV_ITEMS" :key="item.to ?? item.id">
-
-        <div v-if="item.sub" ref="calWrapRef" class="nav-item-wrap">
-          <button
-            class="nav-item nav-item--has-sub"
-            :class="{ 'nav-item--active': isCalActive, 'nav-item--open': calOpen }"
-            @click.stop="toggleCal"
-          >
-            <i :class="item.icon" />
-            <span>{{ item.label }}</span>
-            <i class="fas fa-chevron-right nav-sub-arrow" :class="{ 'nav-sub-arrow--open': calOpen }" />
-          </button>
-
-          <Transition name="sub-expand">
-            <div v-if="calOpen" class="sub-menu">
-              <RouterLink
-                v-for="s in item.sub" :key="s.to"
-                :to="s.to"
-                class="sub-item"
-                :class="{ 'sub-item--active': route.path === s.to }"
-                @click="calOpen = false"
-              >
-                <div class="sub-item-left">
-                  <div class="sub-dot" :class="{ 'sub-dot--active': route.path === s.to }" />
-                  <div class="sub-info">
-                    <span class="sub-label">{{ s.label }}</span>
-                    <span class="sub-desc">{{ s.desc }}</span>
-                  </div>
-                </div>
-                <i v-if="route.path === s.to" class="fas fa-check sub-check" />
-              </RouterLink>
-            </div>
-          </Transition>
-        </div>
-
-        <RouterLink
-          v-else
-          :to="item.to"
-          class="nav-item"
-          active-class="nav-item--active"
-        >
-          <i :class="item.icon" />
-          <span>{{ item.label }}</span>
-        </RouterLink>
-
-      </template>
+      <router-link to="/calendar" class="nav-item" active-class="active">
+        <i class="fas fa-calendar-alt" /> CALENDAR
+      </router-link>
+      <router-link to="/recommend" class="nav-item" active-class="active">
+        <i class="fas fa-compass" /> RECOMMEND
+      </router-link>
+      <router-link to="/history" class="nav-item" active-class="active">
+        <i class="fas fa-history" /> HISTORY
+      </router-link>
+      <router-link to="/mypage" class="nav-item" active-class="active">
+        <i class="fas fa-user-circle" /> MY PAGE
+      </router-link>
     </nav>
 
+    <div class="sync-section">
+      <div class="sync-title">MANUAL SYNC</div>
+      
+      <button class="btn-sync" :disabled="isGithubSyncing" @click="handleSync('github')">
+        <i v-if="!isGithubSyncing" class="fab fa-github" />
+        <i v-else class="fas fa-spinner fa-spin" />
+        GITHUB SYNC
+      </button>
+      
+      <button class="btn-sync" :disabled="isVelogSyncing" @click="handleSync('velog')">
+        <i v-if="!isVelogSyncing" class="fas fa-v" />
+        <i v-else class="fas fa-spinner fa-spin" />
+        VELOG SYNC
+      </button>
+    </div>
+
     <div class="sidebar-footer">
-      <div class="theme-toggle" @click="themeStore.toggle()">
-        <div class="theme-track" :class="{ 'theme-track--light': !themeStore.isDark }">
-          <div class="theme-thumb">
-            <i :class="themeStore.isDark ? 'fas fa-moon' : 'fas fa-sun'" />
+      <div class="user-profile" @click="router.push('/mypage')">
+        <div class="user-avatar">
+          <i class="fas fa-user-circle" />
+        </div>
+        <div class="user-details">
+          <span class="user-name">이카이로스</span>
+          <span class="user-email">kairos@ssafy.kr</span>
+        </div>
+      </div>
+      <button class="btn-logout" @click.stop="showLogoutModal = true" title="LOGOUT">
+        <i class="fas fa-power-off" />
+      </button>
+    </div>
+
+    <!-- LOGOUT MODAL -->
+    <Transition name="fade">
+      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+        <div class="modal-content base-panel">
+          <div class="modal-header" style="margin-bottom: 32px;">
+            <div class="flex-column">
+              <h3 class="modal-title">로그아웃 하시겠습니까?</h3>
+            </div>
+            <button @click="showLogoutModal = false" class="btn-close-modal">
+               <i class="fas fa-times"></i>
+            </button>
+          </div>
+          <div class="modal-actions">
+            <button class="btn-outline-small" @click="showLogoutModal = false">취소</button>
+            <button class="btn-primary-small btn-danger" @click="handleLogout">로그아웃</button>
           </div>
         </div>
-        <span class="theme-label">{{ themeStore.isDark ? '다크' : '라이트' }} 모드</span>
       </div>
+    </Transition>
 
-      <RouterLink to="/mypage" class="user-info user-info--link">
-        <div class="user-avatar"><i class="fab fa-github" /></div>
-        <div class="user-detail">
-          <div class="user-name">김싸피</div>
-          <div class="user-sub">GitHub 연동됨</div>
-        </div>
-        <i class="fas fa-chevron-right user-arrow" />
-      </RouterLink>
-    </div>
+    <Transition name="toast">
+      <div v-if="showToast" class="sync-toast">
+        <i class="fas fa-check-circle" /> {{ toastMsg }}
+      </div>
+    </Transition>
   </aside>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRoute } from 'vue-router'
-import { useThemeStore } from '@/stores/useThemeStore'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 
-const themeStore = useThemeStore()
-const route      = useRoute()
-const calOpen    = ref(false)
-const calWrapRef = ref(null)
+const router = useRouter()
 
-function toggleCal() { calOpen.value = !calOpen.value }
+const isGithubSyncing = ref(false)
+const isVelogSyncing = ref(false)
+const showToast = ref(false)
+const showLogoutModal = ref(false)
+const toastMsg = ref('')
 
-function onDocClick(e) {
-  const el = Array.isArray(calWrapRef.value) ? calWrapRef.value[0] : calWrapRef.value
-  if (el && !el.contains(e.target)) calOpen.value = false
+const handleSync = (type) => {
+  if (type === 'github') isGithubSyncing.value = true
+  else isVelogSyncing.value = true
+
+  // 1.5초 후 동기화 완료 시뮬레이션
+  setTimeout(() => {
+    if (type === 'github') isGithubSyncing.value = false
+    else isVelogSyncing.value = false
+    
+    toastMsg.value = `${type === 'github' ? 'GitHub' : 'Velog'} 데이터가 동기화되었습니다.`
+    showToast.value = true
+    setTimeout(() => showToast.value = false, 3000)
+  }, 1500)
 }
 
-onMounted(()  => document.addEventListener('click', onDocClick))
-onUnmounted(() => document.removeEventListener('click', onDocClick))
-
-const isCalActive = computed(() =>
-  route.path === '/calendar' || route.path === '/study-calendar'
-)
-
-// ★ 요쳥하신 4개 항목을 모두 제거했습니다.
-const NAV_ITEMS = [
-  {
-    id: 'cal',
-    to: '/calendar',
-    icon: 'fas fa-calendar-alt',
-    label: '캘린더',
-    sub: [
-      { to: '/calendar',       label: '캘린더 플로우',  desc: '브랜치 기반 학습 캘린더'     },
-      { to: '/study-calendar', label: '학습 캘린더',    desc: '일별 학습 관리 & 구글 연동'  },
-      { to: '/prompt',         label: 'AI 어시스턴트',  desc: '프롬프트 및 블로그 내역'     }, // ★ 추가됨
-    ],
-  },
-  { to: '/recommend', icon: 'fas fa-lightbulb',       label: '추천'         },
-  { to: '/history',   icon: 'fas fa-history',         label: '히스토리'     },
-]
+const handleLogout = () => {
+  showLogoutModal.value = false
+  router.push('/')
+}
 </script>
 
 <style scoped>
-.sidebar {
-  width: 210px; background: var(--bg-surface); border-right: 1px solid var(--border);
-  display: flex; flex-direction: column; flex-shrink: 0; z-index: 40;
-  transition: background 0.3s, border-color 0.3s;
+.app-sidebar { 
+  width: 260px; height: 100vh; 
+  background: var(--bg-base); 
+  border-right: 1px solid var(--border); 
+  display: flex; flex-direction: column; flex-shrink: 0; 
+  font-family: 'Escoredream', sans-serif; 
+  position: relative; z-index: 100; 
 }
+.sidebar-header { 
+  height: 64px; padding: 0 24px; 
+  display: flex; align-items: center; gap: 12px; 
+  color: var(--text-primary); 
+  border-bottom: 1px solid var(--border); 
+  cursor: pointer; transition: background 0.3s; 
+}
+.sidebar-header:hover { background: var(--bg-hover); }
+.logo-text { font-size: 20px; font-weight: 900; letter-spacing: 0.15em; }
 
-.sidebar-brand {
-  height: 64px; display: flex; align-items: center; justify-content: center;
-  padding: 0 16px; gap: 8px; border-bottom: 1px solid var(--border);
-  text-decoration: none; cursor: pointer; transition: background 0.15s; flex-shrink: 0;
+.sidebar-nav { 
+  flex: 1; padding: 32px 16px; 
+  display: flex; flex-direction: column; gap: 4px; 
+  overflow-y: auto; -ms-overflow-style: none; scrollbar-width: none; 
 }
-.sidebar-brand:hover { background: var(--bg-hover); }
-.brand-logo { flex-shrink: 0; filter: drop-shadow(0 0 10px rgba(129,140,248,0.3)); }
-.brand-text { display: flex; flex-direction: column; gap: 2px; }
-.brand-name {
-  font-family: 'Escoredream', serif; font-weight: 800; font-size: 16px; letter-spacing: 0.18em;
-  background: linear-gradient(135deg, #818cf8, #38bdf8);
-  -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; line-height: 1;
-}
-.brand-sub { font-size: 8px; color: var(--text-faint); letter-spacing: 0.08em; }
+.sidebar-nav::-webkit-scrollbar { display: none; }
 
-.sidebar-nav {
-  padding: 20px 10px; display: flex; flex-direction: column; gap: 2px;
-  flex: 1; overflow-y: auto; overflow-x: hidden;
+.nav-item { 
+  display: flex; align-items: center; gap: 16px; 
+  padding: 16px; 
+  font-size: 13px; font-weight: 700; color: var(--text-muted); 
+  text-decoration: none; border: 1px solid transparent; 
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); 
+  letter-spacing: 0.1em; cursor: pointer; background: transparent; 
+  width: 100%; text-align: left; font-family: inherit; border-radius: 8px;
 }
-.nav-section-label {
-  font-size: 10px; font-weight: 700; color: var(--text-faint);
-  letter-spacing: 0.1em; text-transform: uppercase; padding: 0 10px; margin-bottom: 6px;
-}
+.nav-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+.nav-item.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--border); }
+.nav-item i { font-size: 16px; width: 20px; text-align: center; }
 
-.nav-item {
-  display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px;
-  font-size: 13px; font-weight: 600; text-decoration: none; color: var(--text-muted);
-  transition: all 0.15s; width: 100%; background: none; border: none; cursor: pointer;
-  font-family: 'Escoredream', system-ui, sans-serif; text-align: left;
-}
-.nav-item i { width: 16px; text-align: center; font-size: 14px; flex-shrink: 0; }
-.nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
-.nav-item--active { background: rgba(59,130,246,0.12); color: #60a5fa; font-weight: 700; }
-.theme-dark  .nav-item--active { color: #60a5fa; }
-.theme-light .nav-item--active { color: #2563eb; }
-.nav-item--open { background: var(--bg-hover); color: var(--text-primary); }
+.nav-toggle { justify-content: space-between; }
+.nav-toggle-left { display: flex; align-items: center; gap: 16px; }
 
-.nav-item-wrap { display: flex; flex-direction: column; }
-.nav-item--has-sub { width: 100%; }
-.nav-sub-arrow {
-  margin-left: auto; font-size: 10px; color: var(--text-faint);
-  transition: transform 0.22s cubic-bezier(0.34,1.3,0.64,1);
+.nav-sub-menu { 
+  display: flex; flex-direction: column; gap: 4px; 
+  padding-left: 16px; margin: 4px 0 12px 24px; 
+  border-left: 1px dashed var(--border-mid); 
+  animation: slideDown 0.2s ease-out; 
 }
-.nav-sub-arrow--open { transform: rotate(90deg); color: #818cf8; }
+@keyframes slideDown { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
 
-.sub-menu {
-  margin: 4px 0 4px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 6px;
-  display: flex; flex-direction: column; gap: 2px;
+.nav-sub-item { 
+  display: flex; align-items: center; gap: 12px; 
+  padding: 12px; font-size: 12px; font-weight: 700; 
+  color: var(--text-faint); text-decoration: none; 
+  transition: all 0.2s; letter-spacing: 0.05em; border-radius: 6px;
+}
+.nav-sub-item .bullet { width: 4px; height: 4px; border-radius: 50%; background: var(--border-mid); transition: all 0.2s; }
+.nav-sub-item:hover { color: var(--text-primary); background: var(--bg-hover); }
+.nav-sub-item:hover .bullet { background: var(--text-primary); }
+.nav-sub-item.active { color: var(--text-primary); background: var(--bg-hover); }
+.nav-sub-item.active .bullet { background: var(--text-primary); box-shadow: 0 0 4px var(--text-primary); }
+
+/* 수동 동기화 섹션 */
+.sync-section { 
+  padding: 24px 16px; 
+  border-top: 1px solid var(--border); 
+  background: var(--bg-base); 
+  display: flex; flex-direction: column; gap: 12px; 
+}
+.sync-title { font-size: 10px; font-weight: 900; color: var(--text-faint); letter-spacing: 0.15em; margin-bottom: 4px; padding-left: 4px; }
+.btn-sync { 
+  display: flex; align-items: center; gap: 12px; 
+  padding: 14px; background: transparent; 
+  border: 1px solid var(--border); border-radius: 40px;
+  color: var(--text-muted); font-size: 12px; font-weight: 700; 
+  cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
+  font-family: inherit; letter-spacing: 0.1em; 
+}
+.btn-sync:hover:not(:disabled) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.btn-sync:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* 푸터 & 유저 섹션 */
+.sidebar-footer { 
+  padding: 16px; 
+  border-top: 1px solid var(--border); 
+  display: flex; align-items: center; gap: 8px; 
+  background: var(--bg-surface);
+}
+.user-profile { 
+  flex: 1; display: flex; align-items: center; gap: 12px; 
+  padding: 8px 12px; border: 1px solid var(--border); border-radius: 40px;
+  background: var(--bg-base); cursor: pointer; transition: all 0.2s;
   overflow: hidden;
 }
-.sub-item {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 9px 12px; border-radius: 8px;
-  text-decoration: none; transition: background 0.13s;
+.user-profile:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+.user-avatar { font-size: 20px; color: var(--text-muted); display: flex; align-items: center; }
+.user-details { display: flex; flex-direction: column; overflow: hidden; }
+.user-name { font-size: 11px; font-weight: 800; color: var(--text-primary); white-space: nowrap; text-overflow: ellipsis; }
+.user-email { font-size: 9px; color: var(--text-faint); white-space: nowrap; text-overflow: ellipsis; }
+
+.btn-logout { 
+  width: 40px; height: 40px; border-radius: 50%; 
+  display: flex; align-items: center; justify-content: center; 
+  border: 1px solid var(--border); background: var(--bg-base); 
+  color: var(--text-muted); cursor: pointer; transition: all 0.2s; 
 }
-.sub-item:hover { background: var(--bg-hover); }
-.sub-item--active { background: rgba(129,140,248,0.12); }
+.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
 
-.sub-item-left { display: flex; align-items: center; gap: 10px; }
-.sub-dot {
-  width: 7px; height: 7px; border-radius: 50%;
-  background: var(--border-mid); flex-shrink: 0; transition: background 0.15s;
+.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+
+/* 모달 공통 스타일에 맞춤 (Global 혹은 Local 선언) */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
+.modal-content { width: 100%; max-width: 400px; padding: 32px; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
+.btn-close-modal { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s; margin-top: -4px; margin-right: -4px; }
+.btn-close-modal:hover { color: var(--text-primary); }
+.modal-title { font-size: 15px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); margin-bottom: 6px; }
+.modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0; }
+.modal-body { margin-bottom: 24px; }
+.text-sm { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small:hover { background: transparent; color: var(--text-primary); }
+.btn-primary-small.btn-danger { background: #dc2626; border-color: #dc2626; color: white; }
+.btn-primary-small.btn-danger:hover { background: transparent; color: #dc2626; }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-outline-small:hover { border-color: var(--text-primary); background: var(--bg-hover); }
+
+/* 애니메이션 및 기타 */
+.fade-enter-active, .fade-leave-active { transition: opacity 0.3s; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
+
+/* 토스트 메시지 */
+.sync-toast { 
+  position: fixed; bottom: 24px; left: 284px; 
+  background: var(--text-primary); color: var(--bg-base); 
+  padding: 16px 24px; font-size: 13px; font-weight: 700; 
+  border: 1px solid var(--border); display: flex; align-items: center; gap: 12px; 
+  z-index: 1000; border-radius: 40px;
 }
-.sub-dot--active { background: #818cf8; box-shadow: 0 0 6px rgba(129,140,248,0.5); }
-.sub-item:hover .sub-dot:not(.sub-dot--active) { background: var(--text-muted); }
-
-.sub-info { display: flex; flex-direction: column; gap: 2px; }
-.sub-label { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
-.sub-item--active .sub-label { color: #818cf8; }
-.sub-desc  { font-size: 10px; color: var(--text-faint); }
-.sub-check { font-size: 11px; color: #818cf8; }
-
-.sub-expand-enter-active { transition: all 0.22s cubic-bezier(0.34,1.2,0.64,1); }
-.sub-expand-leave-active { transition: all 0.15s ease; }
-.sub-expand-enter-from, .sub-expand-leave-to { opacity: 0; transform: translateY(-4px); max-height: 0; }
-
-.sidebar-footer { border-top: 1px solid var(--border); padding: 14px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
-.theme-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; padding: 6px 4px; border-radius: 8px; transition: background 0.15s; }
-.theme-toggle:hover { background: var(--bg-hover); }
-.theme-track { width: 40px; height: 22px; background: var(--border-mid); border-radius: 11px; position: relative; transition: background 0.3s; flex-shrink: 0; }
-.theme-track--light { background: #bfdbfe; }
-.theme-thumb { position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-size: 9px; color: #facc15; transition: transform 0.3s; }
-.theme-track--light .theme-thumb { transform: translateX(18px); color: #f59e0b; }
-.theme-label { font-size: 12px; font-weight: 500; color: var(--text-muted); }
-
-.user-info--link { display: flex; align-items: center; gap: 10px; text-decoration: none; padding: 6px 4px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
-.user-info--link:hover { background: var(--bg-hover); }
-.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--bg-elevated); border: 1px solid var(--border-mid); display: flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 14px; flex-shrink: 0; }
-.user-detail { flex: 1; }
-.user-name { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-.user-sub  { font-size: 10px; color: var(--text-faint); margin-top: 1px; }
-.user-arrow { font-size: 10px; color: var(--text-faint); transition: transform 0.15s; }
-.user-info--link:hover .user-arrow { transform: translateX(2px); }
+.toast-enter-active, .toast-leave-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.toast-enter-from, .toast-leave-to { opacity: 0; transform: translateY(20px) scale(0.95); }
 </style>

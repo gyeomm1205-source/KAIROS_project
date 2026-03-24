@@ -17,6 +17,7 @@ variables:
   DOCKER_BUILDKIT: "1"
   IMAGE_TAG: "$CI_COMMIT_SHORT_SHA"
   DOCKERHUB_REPOSITORY: "ken-ssafy"
+  KUBE_CONTEXT: "s14-bigdata-recom-sub1/S14P21A506:k3s-agent"
 
 .docker-build-template:
   stage: build
@@ -50,12 +51,11 @@ build_vue_fe:
   script:
     - |
       set -e
-      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      export BASE_DOMAIN="${BASE_DOMAIN:-221.138.211.197.nip.io}"
       IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
       docker build --pull \
         -t "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}" \
-        --build-arg VITE_SPRING_BASE_URL="http://spring.${BASE_DOMAIN}" \
-        --build-arg VITE_FASTAPI_BASE_URL="http://fastapi.${BASE_DOMAIN}" \
+        --build-arg VITE_SPRING_BASE_URL="https://spring.${BASE_DOMAIN}" \
         -f vue-fe/Dockerfile vue-fe
       docker push "${IMAGE_REPO}:vue-fe-${IMAGE_TAG}"
 
@@ -95,7 +95,7 @@ update_gitops_manifest:
       set -e
       test -n "$DOCKERHUB_NAMESPACE"
       test -n "$DOCKERHUB_REPOSITORY"
-      export BASE_DOMAIN="${BASE_DOMAIN:-127.0.0.1.nip.io}"
+      export BASE_DOMAIN="${BASE_DOMAIN:-221.138.211.197.nip.io}"
       export IMAGE_REPO="docker.io/${DOCKERHUB_NAMESPACE}/${DOCKERHUB_REPOSITORY}"
       export VALUES_FILE="infra/helm/s14-app/values.yaml"
       export IMAGE_TAG
@@ -166,3 +166,27 @@ update_gitops_manifest:
       git add "$VALUES_FILE"
       git commit -m "chore(helm): update image tags to ${IMAGE_TAG} [skip ci]"
       git push origin "HEAD:${CI_COMMIT_BRANCH}"
+
+sync_runtime_secrets:
+  stage: gitops
+  image: alpine/k8s:1.31.0
+  needs:
+    - job: update_gitops_manifest
+  script:
+    - |
+      set -e
+      test -n "$SPRING_ENV_PROD_FILE"
+      kubectl config use-context "$KUBE_CONTEXT"
+
+      kubectl create namespace ssafy --dry-run=client -o yaml | kubectl apply -f -
+
+      kubectl create secret generic springboot-be-env -n ssafy \
+        --from-env-file="$SPRING_ENV_PROD_FILE" \
+        --dry-run=client -o yaml | kubectl apply -f -
+
+      if kubectl get deployment springboot-be -n ssafy >/dev/null 2>&1; then
+        kubectl rollout restart deployment/springboot-be -n ssafy
+        kubectl rollout status deployment/springboot-be -n ssafy --timeout=180s
+      else
+        echo "springboot-be deployment does not exist yet; skipping restart."
+      fi

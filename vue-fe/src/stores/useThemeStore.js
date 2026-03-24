@@ -1,8 +1,10 @@
+// src/stores/useThemeStore.js
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { updateDarkModeSetting } from '@/api/aiApi'
 
 export const useThemeStore = defineStore('theme', () => {
-  const isDark = ref(true)  // 기본: 다크
+  const isDark = ref(false)  // 기본: 라이트 모드로 변경됨
 
   const themeClass = computed(() => isDark.value ? 'theme-dark' : 'theme-light')
 
@@ -14,7 +16,18 @@ export const useThemeStore = defineStore('theme', () => {
 
   watch(isDark, syncBody, { immediate: true })
 
-  function toggle() { isDark.value = !isDark.value }
+  async function toggle() {
+    isDark.value = !isDark.value
+    try {
+      await updateDarkModeSetting({ darkModeEnabled: isDark.value })
+    } catch (e) {
+      console.error('다크모드 API 호출 실패:', e)
+    }
+  }
 
-  return { isDark, themeClass, toggle }
+  function setFromServer(darkModeEnabled) {
+    isDark.value = !!darkModeEnabled
+  }
+
+  return { isDark, themeClass, toggle, setFromServer }
 })
