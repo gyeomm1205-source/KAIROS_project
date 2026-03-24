@@ -1,5 +1,5 @@
 HELP.md
-.gradle*
+.gradle
 build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
@@ -36,11 +36,5 @@ out/
 ### VS Code ###
 .vscode/
 
-### env file ###
-/src/main/resources/env.txt
-
-### docker build ###
-/dockerBuild/
-
-### Codex CLI ###
-Agent.md
+# Local env file (do not commit)
+.env
