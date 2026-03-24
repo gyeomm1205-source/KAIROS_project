@@ -215,4 +215,13 @@ export const exportCalendar = () => {
 export const importCalendar = () => {
   return springApi.post('/api/v1/calendar/sync/import')
 }
+
+/**
+ * GitHub/Velog 활동 동기화 (Spring Boot)
+ * POST /api/v1/activities/sync/{provider}
+ */
+export const syncActivities = (provider) => {
+  return springApi.post(`/api/v1/activities/sync/${provider}`)
+}
+
 // Auth/Onboarding API는 authApi.js, onboardingApi.js에서 관리
