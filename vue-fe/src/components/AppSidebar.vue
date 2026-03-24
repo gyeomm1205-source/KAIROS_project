@@ -18,9 +18,9 @@
       <router-link to="/history" class="nav-item" active-class="active">
         <i class="fas fa-history" /> HISTORY
       </router-link>
-      <router-link to="/mypage" class="nav-item" active-class="active">
-        <i class="fas fa-user-circle" /> MY PAGE
-      </router-link>
+      <!-- <router-link to="/mypage" class="nav-item" active-class="active">
+        <i class="fas fa-user-circle" /> MY PAGE -->
+      <!-- </router-link> -->
     </nav>
 
     <div class="sync-section">
