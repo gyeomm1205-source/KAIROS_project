@@ -71,3 +71,27 @@ export const postQuizAnswer = (sessionId, data) => {
 export const postQuizComplete = (sessionId) => {
   return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/complete`)
 }
+
+/**
+ * 커리큘럼 미리보기 생성 (Spring Boot → FastAPI 경유)
+ * POST /api/v1/curricula/preview
+ */
+export const postCurriculumPreview = (data) => {
+  return springApi.post('/api/v1/curricula/preview', data, { timeout: 120000 })
+}
+
+/**
+ * 커리큘럼 추천 근거 조회 (Spring Boot)
+ * GET /api/v1/curricula/{curriculumId}/reason
+ */
+export const getCurriculumReason = (curriculumId) => {
+  return springApi.get(`/api/v1/curricula/${curriculumId}/reason`)
+}
+
+/**
+ * 커리큘럼 노드 상세 조회 (Spring Boot)
+ * GET /api/v1/curricula/nodes/{nodeId}
+ */
+export const getCurriculumNode = (nodeId) => {
+  return springApi.get(`/api/v1/curricula/nodes/${nodeId}`)
+}
