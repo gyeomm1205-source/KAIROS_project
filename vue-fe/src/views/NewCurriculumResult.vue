@@ -180,7 +180,7 @@ const confirmAndGoCalendar = async () => {
       await postCurriculaConfirm({ curriculumPreviewKey: store.curriculumPreviewKey || 'curriculumPreview:1:temp' })
     }
   } catch (e) {
-    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+    console.error('curricula/confirm 호출 실패:', e)
   }
   router.push('/calendar')
 }

@@ -49,6 +49,22 @@ export const getGrowthReport = () => {
 }
 
 /**
+ * 활동 기록 목록 조회 (Spring Boot)
+ * GET /api/v1/activities
+ */
+export const getActivities = (params) => {
+  return springApi.get('/api/v1/activities', { params })
+}
+
+/**
+ * 활동 기록 제외/복원 (Spring Boot)
+ * PATCH /api/v1/activities/{activityId}/inclusion
+ */
+export const patchActivityInclusion = (activityId, data) => {
+  return springApi.patch(`/api/v1/activities/${activityId}/inclusion`, data)
+}
+
+/**
  * 퀴즈 세션 시작 (Spring Boot)
  * POST /api/v1/quizzes/sessions
  */
@@ -58,18 +74,18 @@ export const postQuizSessionStart = (data) => {
 
 /**
  * 퀴즈 답안 제출 (Spring Boot)
- * POST /api/v1/quizzes/sessions/{sessionId}/answers
+ * POST /api/v1/quizzes/sessions/{curriculumId}/answers
  */
-export const postQuizAnswer = (sessionId, data) => {
-  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/answers`, data)
+export const postQuizAnswer = (curriculumId, data) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${curriculumId}/answers`, data)
 }
 
 /**
  * 퀴즈 세션 완료 (Spring Boot)
- * POST /api/v1/quizzes/sessions/{sessionId}/complete
+ * POST /api/v1/quizzes/sessions/{curriculumId}/complete
  */
-export const postQuizComplete = (sessionId) => {
-  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/complete`)
+export const postQuizComplete = (curriculumId) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${curriculumId}/complete`)
 }
 
 /**
@@ -94,6 +110,14 @@ export const getCurriculumReason = (curriculumId) => {
  */
 export const getCurriculumNode = (nodeId) => {
   return springApi.get(`/api/v1/curricula/nodes/${nodeId}`)
+}
+
+/**
+ * 커리큘럼 노드 수정 (Spring Boot)
+ * PATCH /api/v1/curricula/nodes/{nodeId}
+ */
+export const patchCurriculumNode = (nodeId, data) => {
+  return springApi.patch(`/api/v1/curricula/nodes/${nodeId}`, data)
 }
 
 /**
@@ -142,4 +166,52 @@ export const getRecommendations = () => {
  */
 export const getRecommendationDetail = (curriculumId) => {
   return springApi.get(`/api/v1/recommendations/${curriculumId}`)
+}
+
+/**
+ * 개인 일정 생성 (Spring Boot)
+ * POST /api/v1/schedules
+ */
+export const createSchedule = (data) => {
+  return springApi.post('/api/v1/schedules', data)
+}
+
+/**
+ * 개인 일정 수정 (Spring Boot)
+ * PATCH /api/v1/schedules/{scheduleId}
+ */
+export const updateSchedule = (scheduleId, data) => {
+  return springApi.patch(`/api/v1/schedules/${scheduleId}`, data)
+}
+
+/**
+ * 개인 일정 삭제 (Spring Boot)
+ * DELETE /api/v1/schedules/{scheduleId}
+ */
+export const deleteSchedule = (scheduleId) => {
+  return springApi.delete(`/api/v1/schedules/${scheduleId}`)
+}
+
+/**
+ * 캘린더 조회 (Spring Boot)
+ * GET /api/v1/calendar?year=&month=
+ */
+export const getCalendar = (params) => {
+  return springApi.get('/api/v1/calendar', { params })
+}
+
+/**
+ * Google Calendar 내보내기 (Spring Boot)
+ * POST /api/v1/calendar/sync/export
+ */
+export const exportCalendar = () => {
+  return springApi.post('/api/v1/calendar/sync/export')
+}
+
+/**
+ * Google Calendar 가져오기 (Spring Boot)
+ * POST /api/v1/calendar/sync/import
+ */
+export const importCalendar = () => {
+  return springApi.post('/api/v1/calendar/sync/import')
 }
