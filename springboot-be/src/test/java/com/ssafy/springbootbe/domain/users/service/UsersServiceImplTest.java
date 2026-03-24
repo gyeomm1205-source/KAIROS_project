@@ -4,11 +4,20 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.jwt.JWTUtils;
 import com.ssafy.springbootbe.common.redis.RedisService;
+import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
+import com.ssafy.springbootbe.domain.users.dto.response.ExternalAccountsResponse;
+import com.ssafy.springbootbe.domain.users.dto.response.GithubExternalAccountResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
+import com.ssafy.springbootbe.domain.users.dto.response.VelogExternalAccountResponse;
+import com.ssafy.springbootbe.domain.users.exception.ExternalAccountCacheException;
+import com.ssafy.springbootbe.domain.users.exception.GithubExternalAccountNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
+import com.ssafy.springbootbe.domain.users.exception.VelogUsernameNotFoundException;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
+import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.position.entity.DevPosition;
 import com.ssafy.springbootbe.persistence.position.repository.DevPositionRepository;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
@@ -35,6 +44,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -43,8 +54,10 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -56,9 +69,12 @@ class UsersServiceImplTest {
     @Mock private UserCurriculumCategoryRepository userCurriculumCategoryRepository;
     @Mock private DevPositionRepository devPositionRepository;
     @Mock private TechStackRepository techStackRepository;
+    @Mock private OAuthAccountRepository oAuthAccountRepository;
+    @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private RedisService redisService;
     @Mock private ObjectMapper objectMapper;
     @Mock private JWTUtils jwtUtils;
+    @Mock private OAuthTokenCryptoService oAuthTokenCryptoService;
 
     @InjectMocks
     private UsersServiceImpl usersService;
@@ -151,6 +167,111 @@ class UsersServiceImplTest {
     }
 
     // ===== updateProfile =====
+
+    @Test
+    void findExternalAccounts_캐시_히트() throws Exception {
+        // given
+        String githubJson = "{\"username\":\"junghyun-dev\"}";
+        String velogJson = "{\"username\":\"junghyun\"}";
+        GithubExternalAccountResponse github = GithubExternalAccountResponse.builder()
+                .username("junghyun-dev")
+                .recentCommits(24)
+                .build();
+        VelogExternalAccountResponse velog = VelogExternalAccountResponse.builder()
+                .username("junghyun")
+                .totalPosts(8)
+                .build();
+
+        given(redisService.get("external-account:1:github")).willReturn(githubJson);
+        given(redisService.get("external-account:1:velog")).willReturn(velogJson);
+        given(objectMapper.readValue(githubJson, GithubExternalAccountResponse.class)).willReturn(github);
+        given(objectMapper.readValue(velogJson, VelogExternalAccountResponse.class)).willReturn(velog);
+
+        // when
+        ExternalAccountsResponse response = usersService.findExternalAccounts(1L);
+
+        // then
+        assertThat(response.getGithub().getUsername()).isEqualTo("junghyun-dev");
+        assertThat(response.getVelog().getUsername()).isEqualTo("junghyun");
+        verify(oAuthAccountRepository, never()).findByUserUserIdAndProvider(anyLong(), any());
+    }
+
+    @Test
+    void findExternalAccounts_캐시_미스면_실시간_조회후_Redis_저장() throws Exception {
+        // given
+        UsersServiceImpl spyService = spy(usersService);
+        GithubExternalAccountResponse github = GithubExternalAccountResponse.builder()
+                .username("junghyun-dev")
+                .lastSyncedAt(LocalDateTime.of(2026, 3, 9, 14, 23))
+                .recentCommits(24)
+                .recentPrs(6)
+                .totalRepos(3)
+                .build();
+        VelogExternalAccountResponse velog = VelogExternalAccountResponse.builder()
+                .username("junghyun")
+                .lastSyncedAt(LocalDateTime.of(2026, 3, 9, 12, 10))
+                .totalPosts(8)
+                .latestPostDate(LocalDate.of(2026, 3, 7))
+                .totalViews(1247L)
+                .build();
+
+        given(redisService.get("external-account:1:github")).willReturn(null);
+        given(redisService.get("external-account:1:velog")).willReturn(null);
+        doReturn(github).when(spyService).loadGithubExternalAccount(1L);
+        doReturn(velog).when(spyService).loadVelogExternalAccount(1L);
+        given(objectMapper.writeValueAsString(github)).willReturn("{\"github\":true}");
+        given(objectMapper.writeValueAsString(velog)).willReturn("{\"velog\":true}");
+
+        // when
+        ExternalAccountsResponse response = spyService.findExternalAccounts(1L);
+
+        // then
+        assertThat(response.getGithub().getRecentCommits()).isEqualTo(24);
+        assertThat(response.getVelog().getTotalViews()).isEqualTo(1247L);
+        verify(redisService).save(eq("external-account:1:github"), eq("{\"github\":true}"), eq(1L), any());
+        verify(redisService).save(eq("external-account:1:velog"), eq("{\"velog\":true}"), eq(1L), any());
+    }
+
+    @Test
+    void findExternalAccounts_깃허브_연동없으면_예외() {
+        // given
+        given(redisService.get("external-account:1:github")).willReturn(null);
+        given(oAuthAccountRepository.findByUserUserIdAndProvider(1L, com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider.GITHUB))
+                .willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> usersService.findExternalAccounts(1L))
+                .isInstanceOf(GithubExternalAccountNotFoundException.class);
+    }
+
+    @Test
+    void findExternalAccounts_velogUsername_없으면_예외() throws Exception {
+        // given
+        String githubJson = "{\"username\":\"junghyun-dev\"}";
+        GithubExternalAccountResponse github = GithubExternalAccountResponse.builder()
+                .username("junghyun-dev")
+                .build();
+
+        given(redisService.get("external-account:1:github")).willReturn(githubJson);
+        given(redisService.get("external-account:1:velog")).willReturn(null);
+        given(objectMapper.readValue(githubJson, GithubExternalAccountResponse.class)).willReturn(github);
+        given(userRepository.findById(1L)).willReturn(Optional.of(mockUser));
+
+        // when & then
+        assertThatThrownBy(() -> usersService.findExternalAccounts(1L))
+                .isInstanceOf(VelogUsernameNotFoundException.class);
+    }
+
+    @Test
+    void findExternalAccounts_Redis_조회_실패() {
+        // given
+        given(redisService.get("external-account:1:github")).willThrow(new RuntimeException("redis down"));
+
+        // when & then
+        assertThatThrownBy(() -> usersService.findExternalAccounts(1L))
+                .isInstanceOf(ExternalAccountCacheException.class);
+    }
+
 
     @Test
     void updateProfile_성공_포지션_수정() {
