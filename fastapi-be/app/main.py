@@ -1,7 +1,9 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
+import os
 
 import uuid
+import httpx
 
 from fastapi import FastAPI, Request, BackgroundTasks, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -92,6 +94,46 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
             github_context = github_info["data"].get("github_context")
             
         results = await start_velog_and_analysis(req.velogUsername, github_context)
+        
+        # 1. 활동 내역 매핑 (techScores 제거, summary로 통일)
+        github_activities = []
+        velog_activities = []
+        for act in results["activities"]:
+            act_type = act.get("type", "")
+            mapped_type = "GITHUB_COMMIT"
+            if "PR" in act_type:
+                mapped_type = "GITHUB_PR"
+            elif "Velog" in act_type:
+                mapped_type = "VELOG_POST"
+                
+            activity_dto = {
+                "activityType": mapped_type,
+                "summary": str(act.get("summary", ""))[:495],  # DB 길이 제한 방어
+                "activityDate": datetime.now(timezone.utc).isoformat(),
+                "techStacks": act.get("tech_stacks", [])
+            }
+            if mapped_type in ["GITHUB_COMMIT", "GITHUB_PR"]:
+                github_activities.append(activity_dto)
+            else:
+                velog_activities.append(activity_dto)
+                
+        payload = {
+            "userId": req.userId,
+            "taskId": task_id,
+            "githubActivities": github_activities,
+            "velogActivities": velog_activities
+        }
+
+        # 3. Spring Boot Webhook 호출 (인증 토큰 생략)
+        spring_url = os.getenv("SPRING_SERVER_URL", "http://localhost:8080")
+        try:
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(f"{spring_url}/analysis/complete", json=payload, timeout=30.0)
+                resp.raise_for_status()
+                print("✅ Spring Boot callback success:", resp.text)
+        except Exception as http_err:
+            print("❌ Spring Boot callback failed:", str(http_err))
+
         fake_db[task_id]["status"] = "completed"
         fake_db[task_id]["data"] = {
             "profile": results["profile"],
@@ -100,6 +142,7 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
     except Exception as e:
         fake_db[task_id]["status"] = "failed"
         fake_db[task_id]["error_message"] = str(e)
+
 
 
 @app.post("/api/v1/ai/github/collect-async", status_code=202)

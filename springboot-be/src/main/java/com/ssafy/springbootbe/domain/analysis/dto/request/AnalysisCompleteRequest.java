@@ -12,7 +12,7 @@ public class AnalysisCompleteRequest {
 
     private Long userId;
     private String taskId;
-    private List<TechScoreItem> techScores;
+    // private List<TechScoreItem> techScores;
     private List<ActivityItem> githubActivities;
     private List<ActivityItem> velogActivities;
 
@@ -27,8 +27,9 @@ public class AnalysisCompleteRequest {
     @NoArgsConstructor
     public static class ActivityItem {
         private String activityType;
-        private String title;
-        private String description;
+        // private String title;
+        // private String description;
+        private String summary;
         private LocalDateTime activityDate;
         private List<String> techStacks;
     }

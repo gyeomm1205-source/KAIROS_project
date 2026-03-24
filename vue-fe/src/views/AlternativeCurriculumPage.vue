@@ -23,7 +23,13 @@
         <p>이번에는 프로젝트 적용성과 협업 효율을 높이는 방향으로 다시 구성했습니다.<br>기존 추천안과 비교해 더 맞는 흐름을 선택해보세요.</p>
       </div>
 
-      <div class="curriculum-body">
+      <!-- LOADING STATE -->
+      <div v-if="isLoading" class="loading-container">
+        <div class="spinner"></div>
+        <p class="loading-text">AI가 대체 커리큘럼을 생성 중입니다...</p>
+      </div>
+
+      <div v-else class="curriculum-body">
         <!-- Timeline Section -->
         <section class="base-panel p-lg mb-lg">
           <div class="panel-header mb-md">
@@ -140,23 +146,27 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { postCurriculumGenerate, postCurriculaConfirm } from '@/api/aiApi'
+import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const router = useRouter()
+const store = useCalendarStore()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
+const isLoading = ref(true)
 
-const scheduleItems = [
+const scheduleItems = ref([
   { date: "3월 11일 (수)", title: "TanStack Query로 서버 상태 설계하기", duration: "1시간 30분 예상" },
   { date: "3월 12일 (목)", title: "폼 검증 흐름 개선과 에러 UX 정리", duration: "2시간 예상" },
   { date: "3월 13일 (금)", title: "공통 컴포넌트 API와 접근성 기준 정리", duration: "2시간 예상" },
   { date: "3월 14일 (토)", title: "TypeScript로 props 타입과 상태 모델링 고도화", duration: "2시간 예상" },
   { date: "3월 16일 (월)", title: "React Testing Library로 핵심 화면 테스트 작성", duration: "2시간 30분 예상" },
   { date: "3월 17일 (화)", title: "기존 프로젝트 리팩터링 스프린트", duration: "2시간 예상" },
-]
+])
 
-const reasonSections = [
+const reasonSections = ref([
   {
     icon: "fab fa-github",
     title: "GitHub",
@@ -184,19 +194,69 @@ const reasonSections = [
       { text: "설문에서 즉시 프로젝트에 적용 가능한 학습을 더 선호한다고 응답", hint: "→ 개념보다 유지보수·협업 역량 중심 재구성" },
     ],
   },
-]
+])
+
+function formatDate(dateStr) {
+  const d = new Date(dateStr)
+  const days = ['일', '월', '화', '수', '목', '금', '토']
+  return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`
+}
+
+onMounted(async () => {
+  try {
+    const { data } = await postCurriculumGenerate({
+      userId: 1,
+      curriculumType: 'ONBOARDING',
+      considerPersonalSchedule: false
+    })
+
+    if (data.nodes && data.nodes.length > 0) {
+      store.curriculumResult = data
+      scheduleItems.value = data.nodes.map(n => ({
+        date: formatDate(n.scheduledDate),
+        title: n.title,
+        duration: `${n.expectedMinutes}분 예상`
+      }))
+    }
+
+    if (data.recommendationReason) {
+      const r = data.recommendationReason
+      reasonSections.value = [{
+        icon: "fas fa-robot",
+        title: "AI 분석",
+        meta: r.summaryLine || '',
+        bullets: [
+          { text: r.userContext || '', hint: '' },
+          { text: r.aiInterpretation || '', hint: '' },
+        ].filter(b => b.text)
+      }]
+    }
+  } catch (e) {
+    console.error('curriculum/generate 호출 실패:', e)
+  } finally {
+    isLoading.value = false
+  }
+})
 
 const openCoachmark = () => { showCoachmark.value = true }
 const closeCoachmark = () => { showCoachmark.value = false }
 
-const confirmAndGoCalendar = () => {
+const confirmAndGoCalendar = async () => {
   showCoachmark.value = false
   isAnimating.value = true
-  
+
+  try {
+    if (store.curriculumResult) {
+      await postCurriculaConfirm({ curriculumPreviewKey: 'curriculumPreview:1:temp' })
+    }
+  } catch (e) {
+    console.error('curricula/confirm 호출 실패 (BE 미구현):', e)
+  }
+
   setTimeout(() => {
     sessionStorage.setItem('playCalendarEntryAnim', 'true')
     router.push('/calendar')
-  }, 600) 
+  }, 600)
 }
 </script>
 
@@ -324,4 +384,9 @@ const confirmAndGoCalendar = () => {
   .action-buttons { flex-direction: column; }
   .btn-outline, .btn-primary { width: 100%; }
 }
+
+.loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); }
+.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 </style>

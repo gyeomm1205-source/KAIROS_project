@@ -39,8 +39,6 @@ public class AnalysisServiceImpl implements AnalysisService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 userId=" + request.getUserId()));
 
-        updateTechScores(user, request.getTechScores());
-
         int savedCount = saveActivities(user, request.getGithubActivities())
                 + saveActivities(user, request.getVelogActivities());
 
@@ -52,31 +50,7 @@ public class AnalysisServiceImpl implements AnalysisService {
                 .build();
     }
 
-    private void updateTechScores(User user, List<AnalysisCompleteRequest.TechScoreItem> techScores) {
-        if (techScores == null) {
-            return;
-        }
-        for (AnalysisCompleteRequest.TechScoreItem item : techScores) {
-            Optional<TechStack> techStackOpt = techStackRepository.findByTechName(item.getTechName());
-            if (techStackOpt.isEmpty()) {
-                log.warn("기술 스택을 찾을 수 없어 score 업데이트 생략. techName={}", item.getTechName());
-                continue;
-            }
-            TechStack techStack = techStackOpt.get();
-            Optional<UserTechStack> userTechStackOpt = userTechStackRepository
-                    .findByUserUserIdAndTechStackTechStackId(user.getUserId(), techStack.getTechStackId());
 
-            if (userTechStackOpt.isPresent()) {
-                userTechStackOpt.get().updateScore(item.getScore());
-            } else {
-                userTechStackRepository.save(UserTechStack.builder()
-                        .user(user)
-                        .techStack(techStack)
-                        .score(item.getScore())
-                        .build());
-            }
-        }
-    }
 
     private int saveActivities(User user, List<AnalysisCompleteRequest.ActivityItem> activities) {
         if (activities == null) {
@@ -95,8 +69,8 @@ public class AnalysisServiceImpl implements AnalysisService {
             ActivityHistory activity = ActivityHistory.builder()
                     .user(user)
                     .activityType(activityType)
-                    .title(item.getTitle())
-                    .description(item.getDescription())
+                    .title(activityType.name() + " 활동")  // DB의 not null 조건 만족을 위한 임시 타이틀
+                    .description(item.getSummary())
                     .activityDate(item.getActivityDate())
                     .build();
             activityHistoryRepository.save(activity);
