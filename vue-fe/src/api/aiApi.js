@@ -127,3 +127,19 @@ export const updateDarkModeSetting = (data) => {
 export const deleteUser = () => {
   return springApi.delete('/api/v1/users/me')
 }
+
+/**
+ * 추천 커리큘럼 목록 조회 (Spring Boot)
+ * GET /api/v1/recommendations
+ */
+export const getRecommendations = () => {
+  return springApi.get('/api/v1/recommendations')
+}
+
+/**
+ * 추천 상세 조회 (Spring Boot)
+ * GET /api/v1/recommendations/{curriculumId}
+ */
+export const getRecommendationDetail = (curriculumId) => {
+  return springApi.get(`/api/v1/recommendations/${curriculumId}`)
+}
