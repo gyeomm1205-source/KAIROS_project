@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.domain.activities.service;
 import com.ssafy.springbootbe.domain.activities.dto.request.ActivityInclusionRequest;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityInclusionResponse;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivityPageResponse;
+import com.ssafy.springbootbe.domain.activities.dto.response.GrowthReportResponse;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityAccessDeniedException;
 import com.ssafy.springbootbe.domain.activities.exception.ActivityNotFoundException;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
@@ -12,6 +13,8 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTec
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import com.ssafy.springbootbe.persistence.user.entity.User;
+import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
+import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,6 +41,7 @@ class ActivitiesServiceImplTest {
 
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
+    @Mock private UserTechStackRepository userTechStackRepository;
 
     @InjectMocks
     private ActivitiesServiceImpl activitiesService;
@@ -218,5 +222,132 @@ class ActivitiesServiceImplTest {
         // when & then
         assertThatThrownBy(() -> activitiesService.updateInclusion(1L, 10L, new ActivityInclusionRequest(false)))
                 .isInstanceOf(ActivityAccessDeniedException.class);
+    }
+
+    // ===== getGrowthReport =====
+
+    private TechStack buildTechStack(Long id, String name) {
+        return TechStack.builder()
+                .techStackId(id)
+                .techName(name)
+                .iconUrl("https://icon.example/" + name + ".png")
+                .color("#000000")
+                .build();
+    }
+
+    private void stubGrowthReportRepositories(
+            List<Object[]> topTechRaws,
+            long totalCount,
+            List<Object[]> recentGrowthRaws,
+            List<LocalDateTime> activityDates,
+            List<UserTechStack> topScoreStacks,
+            List<Object[]> monthlyRaws
+    ) {
+        // findTechStackCountsByUserId는 top(10개)과 ranking(5개) 두 번 호출됨
+        given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(1L), any()))
+                .willReturn(topTechRaws);
+        // findTechStackCountsSince는 최근 30일 성장 기술 조회
+        given(activityHistoryTechStackRepository.findTechStackCountsSince(eq(1L), any(), any()))
+                .willReturn(recentGrowthRaws);
+        given(activityHistoryRepository.countByUserUserId(1L)).willReturn(totalCount);
+        given(activityHistoryRepository.findActivityDatesByUserId(1L)).willReturn(activityDates);
+        given(userTechStackRepository.findTop6ByUserUserIdOrderByScoreDesc(1L)).willReturn(topScoreStacks);
+        given(activityHistoryRepository.findMonthlyActivityCountsByUserId(1L)).willReturn(monthlyRaws);
+    }
+
+    @Test
+    void getGrowthReport_성공_정상_데이터() {
+        // given
+        TechStack springStack = buildTechStack(1L, "Spring Boot");
+        TechStack javaStack = buildTechStack(2L, "Java");
+
+        List<Object[]> topTechRaws = new java.util.ArrayList<>();
+        topTechRaws.add(new Object[]{springStack, 10L});
+        topTechRaws.add(new Object[]{javaStack, 5L});
+        List<Object[]> recentGrowthRaws = new java.util.ArrayList<>();
+        recentGrowthRaws.add(new Object[]{springStack, 3L});
+
+        List<LocalDateTime> activityDates = List.of(
+                LocalDateTime.of(2025, 3, 1, 12, 0),
+                LocalDateTime.of(2025, 3, 2, 12, 0),
+                LocalDateTime.of(2025, 3, 3, 12, 0)
+        );
+
+        UserTechStack uts = UserTechStack.builder()
+                .userTechStackId(1L)
+                .techStack(springStack)
+                .score(80)
+                .build();
+
+        List<Object[]> monthlyRaws = new java.util.ArrayList<>();
+        monthlyRaws.add(new Object[]{2025, 3, ActivityType.GITHUB_COMMIT, 5L});
+
+        stubGrowthReportRepositories(topTechRaws, 15L, recentGrowthRaws, activityDates, List.of(uts), monthlyRaws);
+
+        // when
+        GrowthReportResponse response = activitiesService.getGrowthReport(1L);
+
+        // then
+        assertThat(response.getTopTechStacks()).hasSize(2);
+        assertThat(response.getTopTechStacks().get(0).getTechName()).isEqualTo("Spring Boot");
+        assertThat(response.getTotalActivityCount()).isEqualTo(15L);
+        assertThat(response.getRecentGrowthTech().getTechName()).isEqualTo("Spring Boot");
+        assertThat(response.getMaxStreakDays()).isEqualTo(3);
+        assertThat(response.getTechScoreSnapshot()).hasSize(1);
+        assertThat(response.getTechScoreSnapshot().get(0).getScore()).isEqualTo(80);
+        assertThat(response.getMonthlyActivityCounts()).hasSize(1);
+        assertThat(response.getTechActivityRanking()).hasSize(2);
+    }
+
+    @Test
+    void getGrowthReport_성공_활동_없으면_빈_응답() {
+        // given
+        stubGrowthReportRepositories(List.of(), 0L, List.of(), List.of(), List.of(), List.of());
+
+        // when
+        GrowthReportResponse response = activitiesService.getGrowthReport(1L);
+
+        // then
+        assertThat(response.getTopTechStacks()).isEmpty();
+        assertThat(response.getTotalActivityCount()).isEqualTo(0L);
+        assertThat(response.getRecentGrowthTech()).isNull();
+        assertThat(response.getMaxStreakDays()).isEqualTo(0);
+        assertThat(response.getTechScoreSnapshot()).isEmpty();
+        assertThat(response.getMonthlyActivityCounts()).isEmpty();
+        assertThat(response.getTechActivityRanking()).isEmpty();
+    }
+
+    @Test
+    void getGrowthReport_스트릭_계산_연속되지_않은_날짜() {
+        // given — 3/1, 3/3, 3/5: 연속 없음 → maxStreak = 1
+        List<LocalDateTime> activityDates = List.of(
+                LocalDateTime.of(2025, 3, 1, 12, 0),
+                LocalDateTime.of(2025, 3, 3, 12, 0),
+                LocalDateTime.of(2025, 3, 5, 12, 0)
+        );
+        stubGrowthReportRepositories(List.of(), 3L, List.of(), activityDates, List.of(), List.of());
+
+        // when
+        GrowthReportResponse response = activitiesService.getGrowthReport(1L);
+
+        // then
+        assertThat(response.getMaxStreakDays()).isEqualTo(1);
+    }
+
+    @Test
+    void getGrowthReport_스트릭_계산_같은_날_여러_활동은_1일로_카운트() {
+        // given — 3/1 두 번, 3/2 한 번 → 연속 2일
+        List<LocalDateTime> activityDates = List.of(
+                LocalDateTime.of(2025, 3, 1, 9, 0),
+                LocalDateTime.of(2025, 3, 1, 18, 0),
+                LocalDateTime.of(2025, 3, 2, 12, 0)
+        );
+        stubGrowthReportRepositories(List.of(), 3L, List.of(), activityDates, List.of(), List.of());
+
+        // when
+        GrowthReportResponse response = activitiesService.getGrowthReport(1L);
+
+        // then
+        assertThat(response.getMaxStreakDays()).isEqualTo(2);
     }
 }
