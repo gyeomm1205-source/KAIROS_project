@@ -109,7 +109,7 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
             activity_dto = {
                 "activityType": mapped_type,
                 "summary": str(act.get("summary", ""))[:495],  # DB 길이 제한 방어
-                "activityDate": datetime.now(timezone.utc).isoformat(),
+                "activityDate": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
                 "techStacks": act.get("tech_stacks", [])
             }
             if mapped_type in ["GITHUB_COMMIT", "GITHUB_PR"]:
