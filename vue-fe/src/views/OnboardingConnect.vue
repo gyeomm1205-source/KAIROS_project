@@ -112,7 +112,7 @@ const FASTAPI_URL = 'http://j14a506.p.ssafy.io:8000'
 const DEV_GITHUB_TOKEN = import.meta.env.VITE_GITHUB_TOKEN || 'ghp_여기에_토큰_입력'
 const DEV_GITHUB_USERNAME = import.meta.env.VITE_GITHUB_USERNAME || '여기에_깃헙_아이디'
 const DEV_VELOG_USERNAME = import.meta.env.VITE_VELOG_USERNAME || '여기에_벨로그_아이디'
-const DEV_USER_ID = 1
+const DEV_USER_ID = 2
 
 const devLoading = ref(false)
 const devStatus = ref('')
