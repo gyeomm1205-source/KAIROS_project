@@ -95,3 +95,35 @@ export const getCurriculumReason = (curriculumId) => {
 export const getCurriculumNode = (nodeId) => {
   return springApi.get(`/api/v1/curricula/nodes/${nodeId}`)
 }
+
+/**
+ * 사용자 프로필 조회 (Spring Boot)
+ * GET /api/v1/users/me
+ */
+export const getUserProfile = () => {
+  return springApi.get('/api/v1/users/me')
+}
+
+/**
+ * 사용자 프로필 수정 (Spring Boot)
+ * PATCH /api/v1/users/me/profile
+ */
+export const updateUserProfile = (data) => {
+  return springApi.patch('/api/v1/users/me/profile', data)
+}
+
+/**
+ * 다크모드 설정 변경 (Spring Boot)
+ * PATCH /api/v1/users/me/settings/dark-mode
+ */
+export const updateDarkModeSetting = (data) => {
+  return springApi.patch('/api/v1/users/me/settings/dark-mode', data)
+}
+
+/**
+ * 회원 탈퇴 (Spring Boot)
+ * DELETE /api/v1/users/me
+ */
+export const deleteUser = () => {
+  return springApi.delete('/api/v1/users/me')
+}
