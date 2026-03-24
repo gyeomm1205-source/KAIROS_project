@@ -178,7 +178,9 @@
                         <span class="stat-val">총 2문제</span>
                       </div>
                     </div>
-                    <button class="btn-primary-block" @click="quizStep = 'question'">퀴즈 시작하기</button>
+                    <button class="btn-primary-block" :disabled="store.isLoading" @click="handleQuizStart">
+                      {{ store.isLoading ? '퀴즈 생성 중...' : '퀴즈 시작하기' }}
+                    </button>
                   </template>
 
                   <template v-else-if="quizStep === 'question'">
@@ -207,14 +209,14 @@
                         </button>
                       </div>
                     </div>
-                    <button class="btn-primary-block" :disabled="selectedOption === null" @click="handleQuizSubmit">
-                      {{ currentQuizIndex < store.quizQuestions.length - 1 ? '다음 문제' : '결과 확인' }}
+                    <button class="btn-primary-block" :disabled="selectedOption === null || store.isSubmitting" @click="handleQuizSubmit">
+                      {{ store.isSubmitting ? '제출 중...' : (currentQuizIndex < store.quizQuestions.length - 1 ? '다음 문제' : '결과 확인') }}
                     </button>
                   </template>
 
                   <template v-else-if="quizStep === 'result'">
                     <div class="info-box center-txt mb-md p-lg">
-                      <div class="score-circle">{{ quizCorrectCount }}/{{ store.quizQuestions.length }}</div>
+                      <div class="score-circle">{{ store.quizTotalScore !== null ? store.quizTotalScore + '점' : quizCorrectCount + '/' + store.quizQuestions.length }}</div>
                       <h3 class="panel-title mb-sm mt-md">퀴즈를 완료했어요!</h3>
                       <p>현재 이해 수준을 반영해서 다음 추천 흐름을 조정할 수 있습니다.</p>
                     </div>
@@ -354,13 +356,30 @@ const closeMission = () => {
   quizAnswers.value = []
 }
 
-const handleQuizSubmit = () => {
+const handleQuizStart = async () => {
+  const curriculumId = selectedActivity.value
+  await store.startQuizSession(curriculumId)
+  quizStep.value = 'question'
+  currentQuizIndex.value = 0
+  selectedOption.value = null
+  quizAnswers.value = []
+}
+
+const handleQuizSubmit = async () => {
   if (selectedOption.value === null) return
+
+  // 인덱스 → 텍스트 변환하여 BE에 제출
+  const question = store.quizQuestions[currentQuizIndex.value]
+  question._selectedOption = selectedOption.value
   quizAnswers.value.push(selectedOption.value)
+
+  await store.submitQuizAnswer(currentQuizIndex.value)
+
   if (currentQuizIndex.value < store.quizQuestions.length - 1) {
     currentQuizIndex.value++
     selectedOption.value = null
   } else {
+    await store.completeQuizSession()
     quizStep.value = 'result'
   }
 }
