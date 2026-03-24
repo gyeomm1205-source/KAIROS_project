@@ -167,3 +167,51 @@ export const getRecommendations = () => {
 export const getRecommendationDetail = (curriculumId) => {
   return springApi.get(`/api/v1/recommendations/${curriculumId}`)
 }
+
+/**
+ * 개인 일정 생성 (Spring Boot)
+ * POST /api/v1/schedules
+ */
+export const createSchedule = (data) => {
+  return springApi.post('/api/v1/schedules', data)
+}
+
+/**
+ * 개인 일정 수정 (Spring Boot)
+ * PATCH /api/v1/schedules/{scheduleId}
+ */
+export const updateSchedule = (scheduleId, data) => {
+  return springApi.patch(`/api/v1/schedules/${scheduleId}`, data)
+}
+
+/**
+ * 개인 일정 삭제 (Spring Boot)
+ * DELETE /api/v1/schedules/{scheduleId}
+ */
+export const deleteSchedule = (scheduleId) => {
+  return springApi.delete(`/api/v1/schedules/${scheduleId}`)
+}
+
+/**
+ * 캘린더 조회 (Spring Boot)
+ * GET /api/v1/calendar?year=&month=
+ */
+export const getCalendar = (params) => {
+  return springApi.get('/api/v1/calendar', { params })
+}
+
+/**
+ * Google Calendar 내보내기 (Spring Boot)
+ * POST /api/v1/calendar/sync/export
+ */
+export const exportCalendar = () => {
+  return springApi.post('/api/v1/calendar/sync/export')
+}
+
+/**
+ * Google Calendar 가져오기 (Spring Boot)
+ * POST /api/v1/calendar/sync/import
+ */
+export const importCalendar = () => {
+  return springApi.post('/api/v1/calendar/sync/import')
+}
