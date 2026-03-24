@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class RedisRefreshScheduler {
     private final RecommendationsService recommendationsService;
 
-    @Scheduled(cron = "0 1 18 * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     public void refresh() {
         log.info("일일 추천 배치 시작");
         recommendationsService.refreshDailyRecommendations();

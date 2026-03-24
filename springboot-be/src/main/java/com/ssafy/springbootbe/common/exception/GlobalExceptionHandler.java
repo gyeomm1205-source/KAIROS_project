@@ -41,6 +41,21 @@ import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationNod
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationPayloadParsingException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationQuizGenerationException;
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAccessDeniedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizActivityHistoryPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAlreadyCompletedException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizAnswerConflictException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizCurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizGenerationException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizIncompleteException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizPayloadParsingException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizQuestionNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisCleanupException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizRedisException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionConflictException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionNotFoundException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSessionPersistenceException;
+import com.ssafy.springbootbe.domain.quizzes.exception.QuizSourceNotFoundException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
@@ -302,6 +317,71 @@ public class GlobalExceptionHandler {
             RecommendationQuizGenerationException e) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
                 .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizCurriculumNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleQuizCurriculumNotFoundException(
+            QuizCurriculumNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            QuizQuestionNotFoundException.class,
+            QuizSessionNotFoundException.class,
+            QuizSourceNotFoundException.class
+    })
+    public ResponseEntity<Map<String, String>> handleQuizNotFoundExceptions(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizAccessDeniedException.class)
+    public ResponseEntity<Map<String, String>> handleQuizAccessDeniedException(QuizAccessDeniedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(Map.of("error", "ACCESS_DENIED", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizSessionConflictException.class)
+    public ResponseEntity<Map<String, String>> handleQuizSessionConflictException(QuizSessionConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizAnswerConflictException.class)
+    public ResponseEntity<Map<String, String>> handleQuizAnswerConflictException(QuizAnswerConflictException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizAlreadyCompletedException.class)
+    public ResponseEntity<Map<String, String>> handleQuizAlreadyCompletedException(QuizAlreadyCompletedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(Map.of("error", "CONFLICT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizIncompleteException.class)
+    public ResponseEntity<Map<String, String>> handleQuizIncompleteException(QuizIncompleteException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("error", "INVALID_INPUT", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(QuizGenerationException.class)
+    public ResponseEntity<Map<String, String>> handleQuizGenerationException(QuizGenerationException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler({
+            QuizRedisException.class,
+            QuizRedisCleanupException.class,
+            QuizPayloadParsingException.class,
+            QuizSessionPersistenceException.class,
+            QuizActivityHistoryPersistenceException.class
+    })
+    public ResponseEntity<Map<String, String>> handleQuizInternalException(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
