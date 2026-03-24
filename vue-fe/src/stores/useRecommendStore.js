@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getRecommendations, getRecommendationDetail } from '@/api/aiApi'
+import { getRecommendations, getRecommendationDetail, postQuizSessionStart, postQuizAnswer, postQuizComplete } from '@/api/aiApi'
 
 export const useRecommendStore = defineStore('recommend', () => {
   const isLoading = ref(false)
@@ -176,14 +176,89 @@ export const useRecommendStore = defineStore('recommend', () => {
     }
   }
 
+  // Quiz session state
+  const quizResults = ref([])
+  const quizTotalScore = ref(null)
+  const quizCurriculumId = ref(null)
+  const isSubmitting = ref(false)
+
+  const startQuizSession = async (curriculumId) => {
+    isLoading.value = true
+    try {
+      const { data } = await postQuizSessionStart({ curriculumId })
+      quizQuestions.value = (data.questions || []).map(q => ({
+        questionNumber: q.questionNumber,
+        question: q.question,
+        options: q.options || [],
+        quizType: q.quizType,
+      }))
+      quizCurriculumId.value = curriculumId
+      quizResults.value = []
+      quizTotalScore.value = null
+      return true
+    } catch (e) {
+      console.error('퀴즈 세션 시작 실패 (Mock 유지):', e)
+      quizCurriculumId.value = curriculumId
+      return false
+    } finally {
+      isLoading.value = false
+    }
+  }
+
+  const submitQuizAnswer = async (questionIndex) => {
+    const question = quizQuestions.value[questionIndex]
+    if (!question || !quizCurriculumId.value) return null
+
+    isSubmitting.value = true
+    try {
+      const { data } = await postQuizAnswer(quizCurriculumId.value, {
+        questionNumber: question.questionNumber || (questionIndex + 1),
+        selectedAnswer: question.options[question._selectedOption],
+      })
+      quizResults.value.push({
+        questionNumber: data.questionNumber,
+        isCorrect: data.isCorrect,
+        correctAnswer: data.correctAnswer,
+        selectedAnswer: data.selectedAnswer,
+      })
+      return data
+    } catch (e) {
+      console.error('답안 제출 실패:', e)
+      return null
+    } finally {
+      isSubmitting.value = false
+    }
+  }
+
+  const completeQuizSession = async () => {
+    if (!quizCurriculumId.value) return null
+
+    isLoading.value = true
+    try {
+      const { data } = await postQuizComplete(quizCurriculumId.value)
+      quizTotalScore.value = data.totalScore
+      return data
+    } catch (e) {
+      console.error('퀴즈 완료 실패:', e)
+      // 로컬 계산 폴백
+      const correctCount = quizResults.value.filter(r => r.isCorrect).length
+      quizTotalScore.value = Math.round((correctCount / quizQuestions.value.length) * 100)
+      return null
+    } finally {
+      isLoading.value = false
+    }
+  }
+
   return {
-    isLoading,
+    isLoading, isSubmitting,
     recentActivities,
     recentFlow,
     missions,
     references,
     quizQuestions,
+    quizResults, quizTotalScore, quizCurriculumId,
     loadRecommendations,
     loadRecommendationDetail,
+    startQuizSession, submitQuizAnswer, completeQuizSession,
   }
 })
