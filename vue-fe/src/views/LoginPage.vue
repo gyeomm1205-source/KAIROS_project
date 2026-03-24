@@ -12,74 +12,88 @@
       </div>
 
       <h2 class="login-title">WELCOME BACK.</h2>
-      <p class="login-sub">계정에 로그인하여 학습을 이어가세요</p>
+      <p class="login-sub">구글 계정으로 간편하게 시작하세요.</p>
 
-      <div class="form-group">
-        <label class="form-label">EMAIL</label>
-        <input
-          v-model="email"
-          type="email"
-          class="form-input"
-          placeholder="example@email.com"
-        />
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">PASSWORD</label>
-        <div class="input-wrap">
-          <input
-            v-model="password"
-            :type="showPw ? 'text' : 'password'"
-            class="form-input"
-            placeholder="비밀번호를 입력하세요"
-          />
-          <button class="pw-toggle" @click="showPw = !showPw">
-            <i :class="showPw ? 'fas fa-eye-slash' : 'fas fa-eye'" />
-          </button>
-        </div>
-
-        <div class="auth-footer">
-          신규 유저이신가요? 
-          <span class="text-accent-1 link-hover" @click="$router.push('/signup')">[회원가입]</span>
-        </div>
-
-      </div>
-
-      <button class="btn-primary" @click="handleLogin">LOGIN</button>
-
-      <div class="divider"><span>OR</span></div>
-
-      <button class="btn-google" @click="handleLogin">
+      <button class="btn-google" @click="handleGoogleLoginClick">
         <div class="google-icon">G</div>
         CONTINUE WITH GOOGLE
       </button>
-
-      <p class="signup-link">
-        계정이 없으신가요?
-        <span @click="$router.push('/signup')">CREATE ACCOUNT</span>
-      </p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { loginWithGoogle } from '@/api/authApi'
 
 const router = useRouter()
+const route = useRoute()
 const themeStore = useThemeStore()
-const email = ref('')
-const password = ref('')
-const showPw = ref(false)
+const authStore = useAuthStore()
 
-function handleLogin() {
-  router.push('/calendar')
+/**
+ * 구글 로그인 콜백 처리 로직
+ * @param {string} code 구글 인가 코드
+ */
+async function processGoogleLogin(code) {
+  try {
+    // 1. 구글 인증 코드를 백엔드로 전송
+    const response = await loginWithGoogle(code)
+    const data = response.data
+
+    if (data.is_new_user) {
+      // 신규 유저인 경우 (isNewUser: true)
+      authStore.setOnboardingSession({
+        onboardingToken: data.onboarding_token,
+        email: data.email,
+        profileImageUrl: data.profile_image_url
+      })
+      router.replace('/onboarding/connect')
+    } else {
+      // 기존 유저인 경우 (isNewUser: false)
+      authStore.setTokens({
+        accessToken: data.access_token,
+        userId: data.user_id
+      })
+      await authStore.fetchMe()
+      router.replace('/calendar')
+    }
+  } catch (error) {
+    console.error('구글 로그인 실패:', error)
+    alert('구글 로그인에 실패했습니다. 다시 시도해 주세요.')
+  }
+}
+
+// 실제 Google 로그인 버튼 클릭 시 구글 OAuth 서버로 리다이렉트
+function handleGoogleLoginClick() {
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
+  const redirectUri = window.location.origin + '/google/redirect'
+  
+  // 1. 디버깅용 로그 추가
+  console.log('--- Google OAuth Debugging ---')
+  console.log('환경 변수(import.meta.env.VITE_GOOGLE_CLIENT_ID):', clientId)
+  console.log('사용할 Client ID:', clientId || '없음(초기화 필요)')
+  console.log('사용할 Redirect URI:', redirectUri)
+  
+  // 만약 값이 비어있다면, 경고창을 띄우고 리다이렉트를 막습니다.
+  if (!clientId || clientId === 'undefined') {
+    console.error('🚨 Error: VITE_GOOGLE_CLIENT_ID가 설정되지 않았습니다. .env 파일을 확인해 주세요.')
+    alert('구글 클라이언트 ID가 설정되지 않았습니다. 관리자에게 문의하시거나 .env 설정을 확인해 주세요.')
+    return
+  }
+  
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid profile email https://www.googleapis.com/auth/calendar`
+  window.location.href = url
 }
 
 onMounted(() => {
-  // 로그인 페이지 접속 시 기본적으로 다크모드가 감성이 좋아 다크모드로 세팅 권장 (선택사항)
-  // if (!themeStore.isDark) themeStore.isDark = true;
+  // 로그인 리다이렉트 콜백으로 들어왔을 때 URL Query에 code가 있다면 로직 수행!
+  if (route.query.code) {
+    processGoogleLogin(route.query.code)
+  }
 })
 </script>
 
@@ -137,86 +151,6 @@ onMounted(() => {
   margin-bottom: 32px;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 20px;
-}
-.form-label {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  color: var(--text-primary);
-}
-.input-wrap {
-  position: relative;
-}
-.form-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  box-sizing: border-box;
-}
-.form-input:focus {
-  outline: none;
-  border-color: var(--text-primary);
-}
-.pw-toggle {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 14px;
-}
-.pw-toggle:hover { color: var(--text-primary); }
-
-.btn-primary {
-  width: 100%;
-  padding: 16px;
-  border: 1px solid var(--text-primary);
-  background: var(--text-primary);
-  color: var(--bg-base);
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  cursor: pointer;
-  font-family: inherit;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  margin-top: 8px;
-}
-.btn-primary:hover { 
-  background: transparent; 
-  color: var(--text-primary); 
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 24px 0;
-  color: var(--text-muted);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-}
-.divider::before,
-.divider::after {
-  content: '';
-  flex: 1;
-  height: 1px;
-  background: var(--border);
-}
-
 .btn-google {
   width: 100%;
   padding: 14px;
@@ -256,18 +190,4 @@ onMounted(() => {
 .terminal-input::placeholder { color: var(--k-text-muted); font-family: 'Mulmaru', sans-serif; font-size: 13px; }
 .terminal-input:focus { outline: none; border-color: var(--k-acc-1-bg); background: var(--k-key-bg); color: var(--k-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 10px rgba(209, 154, 102, 0.2); }
 
-.signup-link {
-  text-align: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  margin-top: 24px;
-  letter-spacing: 0.05em;
-}
-.signup-link span {
-  color: var(--text-primary);
-  font-weight: 700;
-  cursor: pointer;
-  margin-left: 6px;
-}
-.signup-link span:hover { text-decoration: underline; }
 </style>

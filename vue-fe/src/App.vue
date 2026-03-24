@@ -6,10 +6,12 @@
 
 <script setup>
 import { useThemeStore } from '@/stores/useThemeStore'
+import { useAuthStore } from '@/stores/useAuthStore'
 import { storeToRefs } from 'pinia'
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 const { themeClass } = storeToRefs(themeStore)
 
 // Teleport된 요소(Legend 패널 등)도 테마 CSS 변수를 쓸 수 있도록 body에 클래스 동기화
@@ -17,6 +19,13 @@ watch(themeClass, (cls) => {
   document.body.classList.remove('theme-dark', 'theme-light')
   document.body.classList.add(cls)
 }, { immediate: true })
+
+onMounted(() => {
+  // 사용자가 로그인 상태(토큰 있음)인데 프로필 정보가 없다면 서버에서 불러오기 (새로고침 대응)
+  if (authStore.isAuthenticated && !authStore.profile) {
+    authStore.fetchMe()
+  }
+})
 </script>
 
 <style>

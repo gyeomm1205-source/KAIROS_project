@@ -42,11 +42,12 @@
     <div class="sidebar-footer">
       <div class="user-profile" @click="router.push('/mypage')">
         <div class="user-avatar">
-          <i class="fas fa-user-circle" />
+          <img v-if="authStore.displayProfileImage" :src="authStore.displayProfileImage" alt="avatar" class="avatar-img"/>
+          <i v-else class="fas fa-user-circle" />
         </div>
         <div class="user-details">
-          <span class="user-name">이카이로스</span>
-          <span class="user-email">kairos@ssafy.kr</span>
+          <span class="user-name">{{ authStore.displayName || '사용자' }}</span>
+          <span class="user-email">{{ authStore.displayEmail || '로그인이 필요합니다' }}</span>
         </div>
       </div>
       <button class="btn-logout" @click.stop="showLogoutModal = true" title="LOGOUT">
@@ -85,8 +86,10 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const isGithubSyncing = ref(false)
 const isVelogSyncing = ref(false)
@@ -210,7 +213,8 @@ const handleLogout = () => {
   overflow: hidden;
 }
 .user-profile:hover { border-color: var(--text-primary); background: var(--bg-hover); }
-.user-avatar { font-size: 20px; color: var(--text-muted); display: flex; align-items: center; }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; display: flex; align-items: center; justify-content: center; background: var(--bg-surface); font-size: 20px; color: var(--text-muted); }
+.avatar-img { width: 100%; height: 100%; object-fit: cover; }
 .user-details { display: flex; flex-direction: column; overflow: hidden; }
 .user-name { font-size: 11px; font-weight: 800; color: var(--text-primary); white-space: nowrap; text-overflow: ellipsis; }
 .user-email { font-size: 9px; color: var(--text-faint); white-space: nowrap; text-overflow: ellipsis; }
