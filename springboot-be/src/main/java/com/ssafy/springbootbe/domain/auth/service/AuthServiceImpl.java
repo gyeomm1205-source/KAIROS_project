@@ -164,7 +164,7 @@ public class AuthServiceImpl implements AuthService {
             throw new DuplicateOAuthEmailException(userInfoResponse.getEmail());
         }
 
-        return handleNewUser(userInfoResponse);
+        return handleNewUser(userInfoResponse, tokenResponse);
     }
 
     @Override
@@ -260,7 +260,7 @@ public class AuthServiceImpl implements AuthService {
 
     AuthTokenBundle handleExistingUser(OAuthAccount oAuthAccount, GoogleTokenResponse tokenResponse) {
         User user = oAuthAccount.getUser();
-        updateProviderRefreshTokenIfPresent(oAuthAccount, tokenResponse.getRefreshToken());
+        updateGoogleAccessTokenIfPresent(oAuthAccount, tokenResponse.getRefreshToken());
 
         String accessToken = jwtUtils.createAccessToken(user);
         String refreshToken = jwtUtils.createRefreshToken(user);
@@ -273,9 +273,9 @@ public class AuthServiceImpl implements AuthService {
         );
     }
 
-    AuthTokenBundle handleNewUser(GoogleUserInfoResponse userInfoResponse) {
+    AuthTokenBundle handleNewUser(GoogleUserInfoResponse userInfoResponse, GoogleTokenResponse tokenResponse) {
         String onboardingToken = jwtUtils.createOnboardingToken(userInfoResponse.getSub(), userInfoResponse.getEmail());
-        saveOnboardingData(userInfoResponse);
+        saveOnboardingData(userInfoResponse, tokenResponse.getRefreshToken());
 
         log.info("Google OAuth 신규 유저 확인 완료. googleSub={}", userInfoResponse.getSub());
         return AuthTokenBundle.newUser(
@@ -528,9 +528,9 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private void updateProviderRefreshTokenIfPresent(OAuthAccount oAuthAccount, String providerRefreshToken) {
-        if (providerRefreshToken != null && !providerRefreshToken.isBlank()) {
-            oAuthAccount.updateRefreshToken(providerRefreshToken);
+    private void updateGoogleAccessTokenIfPresent(OAuthAccount oAuthAccount, String googleAccessToken) {
+        if (googleAccessToken != null && !googleAccessToken.isBlank()) {
+            oAuthAccount.updateRefreshToken(oAuthTokenCryptoService.encrypt(googleAccessToken));
         }
     }
 
@@ -619,11 +619,11 @@ public class AuthServiceImpl implements AuthService {
         return onboardingData;
     }
 
-    private void saveOnboardingData(GoogleUserInfoResponse userInfoResponse) {
+    private void saveOnboardingData(GoogleUserInfoResponse userInfoResponse, String googleAccessToken) {
         try {
             redisService.save(
                     ONBOARDING_REDIS_KEY_PREFIX + userInfoResponse.getSub(),
-                    buildOnboardingPayload(userInfoResponse),
+                    buildOnboardingPayload(userInfoResponse, googleAccessToken),
                     ONBOARDING_TOKEN_TTL_SECONDS,
                     TimeUnit.SECONDS
             );
@@ -661,11 +661,15 @@ public class AuthServiceImpl implements AuthService {
             GithubUserInfoResponse githubUserInfoResponse,
             String githubAccessToken) {
         String encryptedGithubAccessToken = oAuthTokenCryptoService.encrypt(githubAccessToken);
+        String encryptedGoogleAccessToken = onboardingData.getGoogleAccessToken() != null && !onboardingData.getGoogleAccessToken().isBlank()
+                ? oAuthTokenCryptoService.encrypt(onboardingData.getGoogleAccessToken())
+                : null;
 
         OAuthAccount googleAccount = OAuthAccount.builder()
                 .user(user)
                 .provider(OAuthProvider.GOOGLE)
                 .providerAccountId(onboardingData.getGoogleSub())
+                .refreshToken(encryptedGoogleAccessToken)
                 .build();
         OAuthAccount githubAccount = OAuthAccount.builder()
                 .user(user)
@@ -786,12 +790,13 @@ public class AuthServiceImpl implements AuthService {
         }
     }
 
-    private String buildOnboardingPayload(GoogleUserInfoResponse userInfoResponse) {
+    private String buildOnboardingPayload(GoogleUserInfoResponse userInfoResponse, String googleAccessToken) {
         try {
             return objectMapper.writeValueAsString(Map.of(
                     "email", normalizeOnboardingValue(userInfoResponse.getEmail()),
                     "profileImageUrl", normalizeOnboardingValue(userInfoResponse.getPicture()),
-                    "googleSub", normalizeOnboardingValue(userInfoResponse.getSub())
+                    "googleSub", normalizeOnboardingValue(userInfoResponse.getSub()),
+                    "googleAccessToken", normalizeOnboardingValue(googleAccessToken)
             ));
         } catch (JacksonException e) {
             throw new InvalidOnboardingTokenException("onboarding 데이터 직렬화에 실패했습니다.", e);
@@ -818,12 +823,13 @@ public class AuthServiceImpl implements AuthService {
             String email = castToString(onboardingPayload.get("email"));
             String profileImageUrl = castToString(onboardingPayload.get("profileImageUrl"));
             String googleSub = castToString(onboardingPayload.get("googleSub"));
+            String googleAccessToken = castToString(onboardingPayload.get("googleAccessToken"));
 
             if (email == null && profileImageUrl == null && googleSub == null) {
                 throw new InvalidOnboardingTokenException("onboarding 데이터 파싱에 실패했습니다.");
             }
 
-            return new OnboardingData(email, profileImageUrl, googleSub);
+            return new OnboardingData(email, profileImageUrl, googleSub, googleAccessToken);
         } catch (JacksonException e) {
             throw new InvalidOnboardingTokenException("onboarding 데이터 파싱에 실패했습니다.");
         }
@@ -850,5 +856,6 @@ public class AuthServiceImpl implements AuthService {
         private final String email;
         private final String profileImageUrl;
         private final String googleSub;
+        private final String googleAccessToken;
     }
 }

@@ -249,8 +249,8 @@ public class CalendarServiceImpl implements CalendarService {
     private Calendar buildGoogleCalendarClient(Long userId) {
         OAuthAccount oAuthAccount = oAuthAccountRepository.findByUserUserIdAndProvider(userId, OAuthProvider.GOOGLE)
                 .orElseThrow(() -> new GoogleOAuthNotFoundException(userId));
-        String refreshToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
-        return googleCalendarClientService.buildCalendarClient(refreshToken);
+        String accessToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
+        return googleCalendarClientService.buildCalendarClient(accessToken);
     }
 
     private void invalidateCalendarCache(Long userId, LocalDate startDate, LocalDate endDate) {

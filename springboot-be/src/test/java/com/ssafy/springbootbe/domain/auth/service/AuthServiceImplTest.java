@@ -179,6 +179,7 @@ class AuthServiceImplTest {
                 .willReturn(Optional.of(oAuthAccount));
         given(jwtUtils.createAccessToken(user)).willReturn("service-access-token");
         given(jwtUtils.createRefreshToken(user)).willReturn("service-refresh-token");
+        given(oAuthTokenCryptoService.encrypt("new-provider-refresh")).willReturn("encrypted-new-provider-refresh");
 
         // when
         AuthTokenBundle result = authService.loginWithGoogle("valid-code");
@@ -187,7 +188,7 @@ class AuthServiceImplTest {
         assertThat(result.getResponse().getIsNewUser()).isFalse();
         assertThat(result.getResponse().getAccessToken()).isEqualTo("service-access-token");
         assertThat(result.getRefreshToken()).isEqualTo("service-refresh-token");
-        assertThat(oAuthAccount.getRefreshToken()).isEqualTo("new-provider-refresh");
+        assertThat(oAuthAccount.getRefreshToken()).isEqualTo("encrypted-new-provider-refresh");
         verify(redisService).save(
                 org.mockito.ArgumentMatchers.eq("refreshToken:1"),
                 anyString(),

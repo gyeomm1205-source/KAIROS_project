@@ -37,12 +37,12 @@ public class GoogleCalendarClientService {
     @Value("${google.client-secret}")
     private String googleClientSecret;
 
-    public Calendar buildCalendarClient(String refreshToken) {
+    public Calendar buildCalendarClient(String accessToken) {
         try {
             UserCredentials credentials = UserCredentials.newBuilder()
                     .setClientId(googleClientId)
                     .setClientSecret(googleClientSecret)
-                    .setRefreshToken(refreshToken)
+                    .setRefreshToken(accessToken)
                     .build();
 
             return new Calendar.Builder(
