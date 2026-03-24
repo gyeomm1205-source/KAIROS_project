@@ -74,18 +74,18 @@ export const postQuizSessionStart = (data) => {
 
 /**
  * 퀴즈 답안 제출 (Spring Boot)
- * POST /api/v1/quizzes/sessions/{sessionId}/answers
+ * POST /api/v1/quizzes/sessions/{curriculumId}/answers
  */
-export const postQuizAnswer = (sessionId, data) => {
-  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/answers`, data)
+export const postQuizAnswer = (curriculumId, data) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${curriculumId}/answers`, data)
 }
 
 /**
  * 퀴즈 세션 완료 (Spring Boot)
- * POST /api/v1/quizzes/sessions/{sessionId}/complete
+ * POST /api/v1/quizzes/sessions/{curriculumId}/complete
  */
-export const postQuizComplete = (sessionId) => {
-  return springApi.post(`/api/v1/quizzes/sessions/${sessionId}/complete`)
+export const postQuizComplete = (curriculumId) => {
+  return springApi.post(`/api/v1/quizzes/sessions/${curriculumId}/complete`)
 }
 
 /**
