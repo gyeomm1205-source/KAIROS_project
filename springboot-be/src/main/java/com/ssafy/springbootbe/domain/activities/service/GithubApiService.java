@@ -83,10 +83,24 @@ public class GithubApiService {
                 LocalDateTime eventTime = parseGithubDate(event.getCreatedAt());
                 if (since != null && !eventTime.isAfter(since)) continue;
 
-                if (event.getPayload() == null || event.getPayload().getCommits() == null) continue;
-                for (GithubEventResponse.GithubPayload.GithubCommit commit : event.getPayload().getCommits()) {
-                    if (commit.getMessage() != null && !commit.getMessage().isBlank()) {
-                        commits.add(new CommitInfo(commit.getMessage(), eventTime));
+                GithubEventResponse.GithubPayload payload = event.getPayload();
+                if (payload == null) continue;
+
+                List<GithubEventResponse.GithubPayload.GithubCommit> inlineCommits = payload.getCommits();
+                if (inlineCommits != null && !inlineCommits.isEmpty()) {
+                    for (GithubEventResponse.GithubPayload.GithubCommit commit : inlineCommits) {
+                        if (commit.getMessage() != null && !commit.getMessage().isBlank()) {
+                            commits.add(new CommitInfo(commit.getMessage(), eventTime));
+                        }
+                    }
+                } else if (event.getRepo() != null && payload.getHead() != null) {
+                    List<GithubCommitDetail> details = fetchCommitsFromRepo(
+                            accessToken, event.getRepo().getName(), payload.getHead(), payload.getSize());
+                    for (GithubCommitDetail detail : details) {
+                        if (detail.getCommit() != null && detail.getCommit().getMessage() != null
+                                && !detail.getCommit().getMessage().isBlank()) {
+                            commits.add(new CommitInfo(detail.getCommit().getMessage(), eventTime));
+                        }
                     }
                 }
             }
@@ -121,6 +135,27 @@ public class GithubApiService {
         }
     }
 
+    private List<GithubCommitDetail> fetchCommitsFromRepo(String accessToken, String repoName,
+                                                          String headSha, int size) {
+        try {
+            String url = GITHUB_API_BASE + "/repos/" + repoName + "/commits?sha=" + headSha
+                    + "&per_page=" + Math.max(size, 1);
+            List<GithubCommitDetail> result = RestClient.create()
+                    .get()
+                    .uri(url)
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+                    .header(HttpHeaders.ACCEPT, acceptVnd)
+                    .header("X-GitHub-Api-Version", apiVersion)
+                    .header(HttpHeaders.USER_AGENT, userAgent)
+                    .retrieve()
+                    .body(new ParameterizedTypeReference<List<GithubCommitDetail>>() {});
+            return result != null ? result : List.of();
+        } catch (RestClientException e) {
+            log.warn("GitHub Commits API 조회 실패. repo={}, sha={}", repoName, headSha, e);
+            return List.of();
+        }
+    }
+
     private LocalDateTime parseGithubDate(String dateStr) {
         if (dateStr == null) return LocalDateTime.MIN;
         try {
@@ -147,6 +182,7 @@ public class GithubApiService {
     public static class GithubEventResponse {
         private String type;
         private GithubPayload payload;
+        private GithubRepo repo;
         @JsonProperty("created_at")
         private String createdAt;
 
@@ -155,6 +191,9 @@ public class GithubApiService {
         @JsonIgnoreProperties(ignoreUnknown = true)
         public static class GithubPayload {
             private List<GithubCommit> commits;
+            private String ref;
+            private String head;
+            private int size;
 
             @Getter
             @NoArgsConstructor
@@ -162,6 +201,27 @@ public class GithubApiService {
             public static class GithubCommit {
                 private String message;
             }
+        }
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class GithubRepo {
+            private String name; // "owner/repo" 형식
+        }
+    }
+
+    @Getter
+    @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class GithubCommitDetail {
+        private GithubCommitInfo commit;
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class GithubCommitInfo {
+            private String message;
         }
     }
 
