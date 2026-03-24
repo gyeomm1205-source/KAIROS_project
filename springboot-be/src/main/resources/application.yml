@@ -62,6 +62,7 @@ ai:
   collect-async-path: ${AI_COLECT_ASYNC_PATH}
   velog-collect-async-path: ${AI_VELOG_COLLECT_ASYNC_PATH}
   recommendations-daily-generate-path: ${AI_RECOMMENDATIONS_DAILY_GENERATE_PATH}
+  curriculum-generate-path: ${AI_CURRICULUM_GENERATE_PATH:/api/v1/ai/curriculum/generate}
 app:
   crypto:
     password: ${TEXT_ENCRYPTOR_PASSWORD}
