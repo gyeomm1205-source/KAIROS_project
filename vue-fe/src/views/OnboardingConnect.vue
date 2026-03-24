@@ -24,10 +24,13 @@
 
       <div class="auth-section">
         <button class="link-btn is-connected" disabled>
+        <button class="link-btn is-connected" disabled>
           <div class="link-btn-left">
             <div class="link-icon"><i class="fab fa-google" /></div>
             <span class="text-blue-600">{{ userEmail }} 연동됨</span>
+            <span class="text-blue-600">{{ userEmail }} 연동됨</span>
           </div>
+          <i class="fas fa-check" />
           <i class="fas fa-check" />
         </button>
       </div>
@@ -40,10 +43,13 @@
           :class="{ 'is-connected': isGithubConnected }"
           :disabled="isGithubConnected"
           @click="handleGithubConnect"
+          :disabled="isGithubConnected"
+          @click="handleGithubConnect"
         >
           <div class="link-btn-left">
             <div class="link-icon"><i class="fab fa-github" /></div>
             <span v-if="!isGithubConnected">GitHub 연동하기</span>
+            <span v-else class="text-blue-600">{{ githubNickname }} 연동됨</span>
             <span v-else class="text-blue-600">{{ githubNickname }} 연동됨</span>
           </div>
           <i v-if="!isGithubConnected" class="fas fa-arrow-right" />
@@ -55,10 +61,13 @@
           :class="{ 'is-connected': isVelogConnected }"
           :disabled="!isGithubConnected"
           @click="handleVelogConnect"
+          :disabled="!isGithubConnected"
+          @click="handleVelogConnect"
         >
           <div class="link-btn-left">
             <div class="link-icon"><i class="fas fa-v" /></div>
             <span v-if="!isVelogConnected">Velog 연동하기</span>
+            <span v-else class="text-blue-600">{{ velogUsername }} 연동됨</span>
             <span v-else class="text-blue-600">{{ velogUsername }} 연동됨</span>
           </div>
           <i v-if="!isVelogConnected" class="fas fa-arrow-right" />
