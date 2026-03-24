@@ -225,7 +225,8 @@ public class AuthServiceImpl implements AuthService {
                     githubUserInfoResponse.getLogin()
             );
             if (githubTaskId != null) {
-                redisService.save("githubTaskId:" + user.getUserId(), githubTaskId, 30, java.util.concurrent.TimeUnit.MINUTES);
+                // 30 -> 30L 로 수정 (컴파일 에러 해결)
+                redisService.save("githubTaskId:" + user.getUserId(), githubTaskId, 30L, java.util.concurrent.TimeUnit.MINUTES);
             }
         } catch (RuntimeException e) {
             log.warn("GitHub collect async 부가 트리거 처리 중 예외가 발생했습니다. userId={}", user.getUserId(), e);
