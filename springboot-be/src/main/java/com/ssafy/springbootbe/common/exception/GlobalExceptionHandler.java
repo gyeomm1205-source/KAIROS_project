@@ -27,7 +27,6 @@ import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
-import com.ssafy.springbootbe.domain.onboarding.exception.AnalysisReportPreparationException;
 import com.ssafy.springbootbe.domain.onboarding.exception.InvalidSurveyInputException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDeniedException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
@@ -306,8 +305,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             OnboardingMetaRetrievalException.class,
-            OnboardingPersistenceException.class,
-            AnalysisReportPreparationException.class
+            OnboardingPersistenceException.class
     })
     public ResponseEntity<Map<String, String>> handleOnboardingInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
