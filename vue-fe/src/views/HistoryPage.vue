@@ -152,13 +152,17 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useHistoryStore } from '@/stores/useHistoryStore'
 
 const router = useRouter()
 const store = useHistoryStore()
+
+onMounted(() => {
+  store.loadActivities()
+})
 
 const categoryFilters = [
   { value: "all", label: "전체" },

@@ -49,6 +49,22 @@ export const getGrowthReport = () => {
 }
 
 /**
+ * 활동 기록 목록 조회 (Spring Boot)
+ * GET /api/v1/activities
+ */
+export const getActivities = (params) => {
+  return springApi.get('/api/v1/activities', { params })
+}
+
+/**
+ * 활동 기록 제외/복원 (Spring Boot)
+ * PATCH /api/v1/activities/{activityId}/inclusion
+ */
+export const patchActivityInclusion = (activityId, data) => {
+  return springApi.patch(`/api/v1/activities/${activityId}/inclusion`, data)
+}
+
+/**
  * 퀴즈 세션 시작 (Spring Boot)
  * POST /api/v1/quizzes/sessions
  */
