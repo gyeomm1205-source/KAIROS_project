@@ -10,6 +10,7 @@ import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.calendar.service.GoogleCalendarClientService;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumConfirmRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumGenerateRequest;
+import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumNodeUpdateRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.GoogleCalendarEventDto;
 import com.ssafy.springbootbe.domain.curricula.dto.request.SkillStatDto;
@@ -23,11 +24,9 @@ import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResp
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewReasonDto;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
-import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAlreadyActiveException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
-import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
@@ -260,6 +259,34 @@ public class CurriculaServiceImpl implements CurriculaService {
         return CurriculumNodeResponse.from(node);
     }
 
+    @Override
+    @Transactional
+    public CurriculumNodeResponse updateNode(Long userId, Long nodeId, CurriculumNodeUpdateRequest request) {
+        if (request.hasNoFields()) {
+            throw new IllegalArgumentException("수정할 필드가 없습니다.");
+        }
+
+        CurriculumNode node = curriculumNodeRepository.findById(nodeId)
+                .orElseThrow(() -> new CurriculumNodeNotFoundException(nodeId));
+
+        if (!node.getCurriculum().getUser().getUserId().equals(userId)) {
+            throw new CurriculumNodeAccessDeniedException(nodeId);
+        }
+
+        LocalDate oldDate = node.getScheduledDate();
+
+        node.update(request.getTitle(), request.getDescription(), request.getScheduledDate(), request.getProgressStatus());
+
+        curriculumNodeCalendarSyncRepository.findByCurriculumNodeCurriculumNodeId(nodeId)
+                .ifPresent(CurriculumNodeCalendarSync::markNotSynced);
+
+        invalidateCalendarCacheForMonths(userId, oldDate, node.getScheduledDate());
+
+        log.info("커리큘럼 노드 수정 완료. userId={}, nodeId={}", userId, nodeId);
+
+        return CurriculumNodeResponse.from(node);
+    }
+
     private Calendar buildGoogleCalendarClientOrNull(Long userId) {
         try {
             OAuthAccount oAuthAccount = oAuthAccountRepository
@@ -286,6 +313,15 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .distinct()
                 .forEach(ym -> redisService.delete(
                         "calendar:" + userId + ":" + ym.getYear() + ":" + ym.getMonthValue()));
+    }
+
+    private void invalidateCalendarCacheForMonths(Long userId, LocalDate date1, LocalDate date2) {
+        YearMonth ym1 = YearMonth.from(date1);
+        YearMonth ym2 = YearMonth.from(date2);
+        redisService.delete("calendar:" + userId + ":" + ym1.getYear() + ":" + ym1.getMonthValue());
+        if (!ym1.equals(ym2)) {
+            redisService.delete("calendar:" + userId + ":" + ym2.getYear() + ":" + ym2.getMonthValue());
+        }
     }
 
     private List<GoogleCalendarEventDto> fetchGoogleCalendarEvents(Long userId) {
