@@ -27,6 +27,7 @@ public class ActivityHistory {
     @Enumerated(EnumType.STRING)
     @Column(name = "activity_type", nullable = false)
     private ActivityType activityType;
+    @Enumerated(EnumType.STRING)
     @Column(name = "category")
     private CurriculumCategory category;
     @Column(name = "title", nullable = false, length = 500)

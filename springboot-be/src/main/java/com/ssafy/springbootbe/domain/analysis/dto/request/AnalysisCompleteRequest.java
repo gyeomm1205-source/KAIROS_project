@@ -30,6 +30,7 @@ public class AnalysisCompleteRequest {
         // private String title;
         // private String description;
         private String summary;
+        private String category;
         private LocalDateTime activityDate;
         private List<String> techStacks;
     }
