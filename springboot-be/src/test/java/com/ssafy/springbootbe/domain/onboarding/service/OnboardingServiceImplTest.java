@@ -78,6 +78,7 @@ class OnboardingServiceImplTest {
 
         validRequest = new OnboardingSurveyRequest(
                 UserPosition.STUDENT,
+                true,
                 List.of(1L, 3L),
                 List.of(2L, 5L, 7L),
                 List.of(CurriculumCategory.THEORY, CurriculumCategory.PRACTICE)
@@ -243,6 +244,7 @@ class OnboardingServiceImplTest {
         // given
         OnboardingSurveyRequest duplicateRequest = new OnboardingSurveyRequest(
                 UserPosition.STUDENT,
+                true,
                 List.of(1L, 1L, 3L),
                 List.of(2L, 2L, 5L),
                 List.of(CurriculumCategory.THEORY, CurriculumCategory.THEORY, CurriculumCategory.PRACTICE)

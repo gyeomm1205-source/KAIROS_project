@@ -96,12 +96,25 @@
 </template>
 
 <script setup>
+import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { getExternalAccounts } from '@/api/usersApi'
 
 const router = useRouter()
 
-const accounts = [
+function formatDateTime(iso) {
+  if (!iso) return '-'
+  const d = new Date(iso)
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  const h = String(d.getHours()).padStart(2, '0')
+  const min = String(d.getMinutes()).padStart(2, '0')
+  return `${y}.${m}.${day} ${h}:${min}`
+}
+
+const mockAccounts = [
   {
     icon: "fab fa-github",
     name: "GitHub",
@@ -124,11 +137,53 @@ const accounts = [
     desc: "블로그 발행 활동과 주제를 분석합니다",
     stats: [
       { label: "발행 글", value: "8편", sub: "최근 3개월" },
-      { label: "최근 글", value: "3월 7일", sub: "SSR vs CSR 비교 분석" },
+      { label: "최근 글", value: "3월 7일", sub: "" },
       { label: "총 조회수", value: "1,247", sub: "누적" },
     ],
   },
 ]
+
+const accounts = ref([...mockAccounts])
+
+onMounted(async () => {
+  try {
+    const { data } = await getExternalAccounts()
+    const mapped = []
+    if (data.github) {
+      mapped.push({
+        icon: "fab fa-github",
+        name: "GitHub",
+        account: data.github.username,
+        status: "connected",
+        lastSync: formatDateTime(data.github.lastSyncedAt),
+        desc: "커밋, PR, 이슈 활동을 분석합니다",
+        stats: [
+          { label: "최근 커밋", value: `${data.github.recentCommits}개`, sub: "이번 달" },
+          { label: "PR", value: `${data.github.recentPrs}개`, sub: "최근 30일" },
+          { label: "리포지토리", value: `${data.github.totalRepos}개`, sub: "활성 기준" },
+        ],
+      })
+    }
+    if (data.velog) {
+      mapped.push({
+        icon: "fas fa-file-alt",
+        name: "Velog",
+        account: `@${data.velog.username}`,
+        status: "connected",
+        lastSync: formatDateTime(data.velog.lastSyncedAt),
+        desc: "블로그 발행 활동과 주제를 분석합니다",
+        stats: [
+          { label: "발행 글", value: `${data.velog.totalPosts}편`, sub: "전체" },
+          { label: "최근 글", value: data.velog.latestPostDate || '-', sub: "" },
+          { label: "총 조회수", value: data.velog.totalViews?.toLocaleString() || '0', sub: "누적" },
+        ],
+      })
+    }
+    if (mapped.length > 0) accounts.value = mapped
+  } catch (e) {
+    console.error('external-accounts 조회 실패 (Mock 유지):', e)
+  }
+})
 </script>
 
 <style scoped>

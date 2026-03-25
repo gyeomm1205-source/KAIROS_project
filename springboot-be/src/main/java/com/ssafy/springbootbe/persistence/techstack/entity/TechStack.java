@@ -16,7 +16,7 @@ public class TechStack {
     @Column(name = "tech_stack_id")
     private Long techStackId;
 
-    @Column(name = "tech_name", nullable = false, length = 100)
+    @Column(name = "tech_name", nullable = false, unique = true, length = 100)
     private String techName;
 
     @Column(name = "icon_url", length = 500)

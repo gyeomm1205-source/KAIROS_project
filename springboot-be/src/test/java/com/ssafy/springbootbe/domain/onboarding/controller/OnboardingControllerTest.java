@@ -112,6 +112,7 @@ class OnboardingControllerTest {
         // given
         OnboardingSurveyRequest request = new OnboardingSurveyRequest(
                 UserPosition.STUDENT,
+                true,
                 List.of(1L, 3L),
                 List.of(2L, 5L, 7L),
                 List.of(CurriculumCategory.THEORY, CurriculumCategory.PRACTICE)
@@ -249,6 +250,7 @@ class OnboardingControllerTest {
         return """
                 {
                   "position": "STUDENT",
+                  "considerPersonalSchedule": true,
                   "desiredPositionIds": [1, 3],
                   "techStackIds": [2, 5, 7],
                   "curriculumCategories": ["THEORY", "PRACTICE"]
