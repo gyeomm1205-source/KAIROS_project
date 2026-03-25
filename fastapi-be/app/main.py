@@ -1,7 +1,5 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timezone
-import os
-
 import uuid
 import httpx
 
@@ -69,6 +67,7 @@ class ProfileAnalyzeRequest(BaseModel):
     userId: int
     velogUsername: str
     githubTaskId: str
+    callbackUrl: str
 
 async def github_collect_worker(task_id: str, req: GithubCollectRequest):
     """GitHub 사전 수집 백그라운드 워커"""
@@ -140,11 +139,10 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
             "velogActivities": velog_activities
         }
 
-        # 3. Spring Boot Webhook 호출 (인증 토큰 생략)
-        spring_url = os.getenv("SPRING_SERVER_URL", "http://localhost:8080")
+        # 3. Spring Boot Webhook 호출
         try:
             async with httpx.AsyncClient() as client:
-                resp = await client.post(f"{spring_url}/analysis/complete", json=payload, timeout=30.0)
+                resp = await client.post(req.callbackUrl, json=payload, timeout=30.0)
                 resp.raise_for_status()
                 print("✅ Spring Boot callback success:", resp.text)
         except Exception as http_err:

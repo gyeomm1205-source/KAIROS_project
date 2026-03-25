@@ -1,7 +1,7 @@
 // src/stores/useThemeStore.js
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
-import { updateDarkModeSetting } from '@/api/aiApi'
+import { updateDarkMode } from '@/api/usersApi'
 
 export const useThemeStore = defineStore('theme', () => {
   const isDark = ref(false)  // 기본: 라이트 모드로 변경됨
@@ -19,7 +19,7 @@ export const useThemeStore = defineStore('theme', () => {
   async function toggle() {
     isDark.value = !isDark.value
     try {
-      await updateDarkModeSetting({ darkModeEnabled: isDark.value })
+      await updateDarkMode(isDark.value)
     } catch (e) {
       console.error('다크모드 API 호출 실패:', e)
     }

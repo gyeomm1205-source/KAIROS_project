@@ -11,7 +11,6 @@ import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDenied
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
 import com.ssafy.springbootbe.domain.onboarding.service.OnboardingService;
-import com.ssafy.springbootbe.persistence.analysis.type.AnalysisStatus;
 import com.ssafy.springbootbe.persistence.user.type.CurriculumCategory;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
 import com.ssafy.springbootbe.persistence.user.type.UserStatus;
@@ -113,6 +112,7 @@ class OnboardingControllerTest {
         // given
         OnboardingSurveyRequest request = new OnboardingSurveyRequest(
                 UserPosition.STUDENT,
+                true,
                 List.of(1L, 3L),
                 List.of(2L, 5L, 7L),
                 List.of(CurriculumCategory.THEORY, CurriculumCategory.PRACTICE)
@@ -121,8 +121,6 @@ class OnboardingControllerTest {
                 .userId(1L)
                 .status(UserStatus.SURVEYED)
                 .considerPersonalSchedule(true)
-                .analysisReportId(42L)
-                .analysisStatus(AnalysisStatus.PENDING)
                 .build();
 
         given(onboardingService.submitSurvey(eq(1L), any())).willReturn(response);
@@ -136,8 +134,7 @@ class OnboardingControllerTest {
                 .andExpect(jsonPath("$.userId").value(1L))
                 .andExpect(jsonPath("$.status").value("SURVEYED"))
                 .andExpect(jsonPath("$.considerPersonalSchedule").value(true))
-                .andExpect(jsonPath("$.analysisReportId").value(42L))
-                .andExpect(jsonPath("$.analysisStatus").value("PENDING"));
+                ;
     }
 
     @Test
@@ -253,6 +250,7 @@ class OnboardingControllerTest {
         return """
                 {
                   "position": "STUDENT",
+                  "considerPersonalSchedule": true,
                   "desiredPositionIds": [1, 3],
                   "techStackIds": [2, 5, 7],
                   "curriculumCategories": ["THEORY", "PRACTICE"]

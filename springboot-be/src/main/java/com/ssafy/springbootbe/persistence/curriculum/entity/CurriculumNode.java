@@ -3,6 +3,8 @@ package com.ssafy.springbootbe.persistence.curriculum.entity;
 import com.ssafy.springbootbe.persistence.curriculum.type.ProgressStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDate;
 
@@ -20,6 +22,7 @@ public class CurriculumNode {
     private Long curriculumNodeId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "curriculum_id", nullable = false)
     private Curriculum curriculum;
 
