@@ -11,7 +11,6 @@ import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDenied
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
 import com.ssafy.springbootbe.domain.onboarding.service.OnboardingService;
-import com.ssafy.springbootbe.persistence.analysis.type.AnalysisStatus;
 import com.ssafy.springbootbe.persistence.user.type.CurriculumCategory;
 import com.ssafy.springbootbe.persistence.user.type.UserPosition;
 import com.ssafy.springbootbe.persistence.user.type.UserStatus;
@@ -121,8 +120,6 @@ class OnboardingControllerTest {
                 .userId(1L)
                 .status(UserStatus.SURVEYED)
                 .considerPersonalSchedule(true)
-                .analysisReportId(42L)
-                .analysisStatus(AnalysisStatus.PENDING)
                 .build();
 
         given(onboardingService.submitSurvey(eq(1L), any())).willReturn(response);
@@ -136,8 +133,7 @@ class OnboardingControllerTest {
                 .andExpect(jsonPath("$.userId").value(1L))
                 .andExpect(jsonPath("$.status").value("SURVEYED"))
                 .andExpect(jsonPath("$.considerPersonalSchedule").value(true))
-                .andExpect(jsonPath("$.analysisReportId").value(42L))
-                .andExpect(jsonPath("$.analysisStatus").value("PENDING"));
+                ;
     }
 
     @Test

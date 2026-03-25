@@ -3,13 +3,9 @@ package com.ssafy.springbootbe.domain.onboarding.service;
 import com.ssafy.springbootbe.domain.onboarding.dto.response.OnboardingMetaResponse;
 import com.ssafy.springbootbe.domain.onboarding.dto.request.OnboardingSurveyRequest;
 import com.ssafy.springbootbe.domain.onboarding.dto.response.OnboardingSurveyResponse;
-import com.ssafy.springbootbe.domain.onboarding.exception.AnalysisReportPreparationException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDeniedException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
-import com.ssafy.springbootbe.persistence.analysis.entity.AnalysisReport;
-import com.ssafy.springbootbe.persistence.analysis.repository.AnalysisReportRepository;
-import com.ssafy.springbootbe.persistence.analysis.type.AnalysisStatus;
 import com.ssafy.springbootbe.persistence.position.entity.DevPosition;
 import com.ssafy.springbootbe.persistence.position.repository.DevPositionRepository;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
@@ -39,7 +35,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.tuple;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -64,9 +59,6 @@ class OnboardingServiceImplTest {
 
     @Mock
     private UserCurriculumCategoryRepository userCurriculumCategoryRepository;
-
-    @Mock
-    private AnalysisReportRepository analysisReportRepository;
 
     @InjectMocks
     private OnboardingServiceImpl onboardingService;
@@ -136,23 +128,17 @@ class OnboardingServiceImplTest {
     }
 
     @Test
-    void submitSurvey_성공_GUEST를_SURVEYED로_변경하고_분석리포트를_생성한다() {
+    void submitSurvey_성공_GUEST를_SURVEYED로_변경한다() {
         // given
         DevPosition backend = DevPosition.builder().devPositionId(1L).positionName("Backend").build();
         DevPosition ai = DevPosition.builder().devPositionId(3L).positionName("AI").build();
         TechStack java = TechStack.builder().techStackId(2L).techName("Java").build();
         TechStack spring = TechStack.builder().techStackId(5L).techName("Spring").build();
         TechStack redis = TechStack.builder().techStackId(7L).techName("Redis").build();
-        AnalysisReport analysisReport = AnalysisReport.builder()
-                .analysisReportId(42L)
-                .user(guestUser)
-                .status(AnalysisStatus.PENDING)
-                .build();
 
         given(userRepository.findById(1L)).willReturn(Optional.of(guestUser));
         given(devPositionRepository.findAllById(validRequest.getDesiredPositionIds())).willReturn(List.of(backend, ai));
         given(techStackRepository.findAllById(validRequest.getTechStackIds())).willReturn(List.of(java, spring, redis));
-        given(analysisReportRepository.saveAndFlush(any(AnalysisReport.class))).willReturn(analysisReport);
 
         // when
         OnboardingSurveyResponse response = onboardingService.submitSurvey(1L, validRequest);
@@ -161,8 +147,6 @@ class OnboardingServiceImplTest {
         assertThat(response.getUserId()).isEqualTo(1L);
         assertThat(response.getStatus()).isEqualTo(UserStatus.SURVEYED);
         assertThat(response.getConsiderPersonalSchedule()).isTrue();
-        assertThat(response.getAnalysisReportId()).isEqualTo(42L);
-        assertThat(response.getAnalysisStatus()).isEqualTo(AnalysisStatus.PENDING);
         assertThat(guestUser.getPosition()).isEqualTo(UserPosition.STUDENT);
         assertThat(guestUser.getStatus()).isEqualTo(UserStatus.SURVEYED);
         assertThat(guestUser.getConsiderPersonalSchedule()).isTrue();
@@ -227,11 +211,6 @@ class OnboardingServiceImplTest {
         given(userRepository.findById(1L)).willReturn(Optional.of(guestUser));
         given(devPositionRepository.findAllById(validRequest.getDesiredPositionIds())).willReturn(List.of(backend, ai));
         given(techStackRepository.findAllById(validRequest.getTechStackIds())).willReturn(List.of(java, spring, redis));
-        given(analysisReportRepository.saveAndFlush(any(AnalysisReport.class))).willReturn(AnalysisReport.builder()
-                .analysisReportId(42L)
-                .user(guestUser)
-                .status(AnalysisStatus.PENDING)
-                .build());
 
         // when
         onboardingService.submitSurvey(1L, validRequest);
@@ -260,27 +239,6 @@ class OnboardingServiceImplTest {
     }
 
     @Test
-    void submitSurvey_분석리포트_생성에_실패하면_예외를_던진다() {
-        // given
-        given(userRepository.findById(1L)).willReturn(Optional.of(guestUser));
-        given(devPositionRepository.findAllById(validRequest.getDesiredPositionIds())).willReturn(List.of(
-                DevPosition.builder().devPositionId(1L).build(),
-                DevPosition.builder().devPositionId(3L).build()
-        ));
-        given(techStackRepository.findAllById(validRequest.getTechStackIds())).willReturn(List.of(
-                TechStack.builder().techStackId(2L).build(),
-                TechStack.builder().techStackId(5L).build(),
-                TechStack.builder().techStackId(7L).build()
-        ));
-        given(analysisReportRepository.saveAndFlush(any(AnalysisReport.class)))
-                .willThrow(new RuntimeException("db error"));
-
-        // when & then
-        assertThatThrownBy(() -> onboardingService.submitSurvey(1L, validRequest))
-                .isInstanceOf(AnalysisReportPreparationException.class);
-    }
-
-    @Test
     void submitSurvey_중복_입력은_제거한_뒤_저장한다() {
         // given
         OnboardingSurveyRequest duplicateRequest = new OnboardingSurveyRequest(
@@ -299,11 +257,6 @@ class OnboardingServiceImplTest {
                 TechStack.builder().techStackId(2L).build(),
                 TechStack.builder().techStackId(5L).build()
         ));
-        given(analysisReportRepository.saveAndFlush(any(AnalysisReport.class))).willReturn(AnalysisReport.builder()
-                .analysisReportId(42L)
-                .user(guestUser)
-                .status(AnalysisStatus.PENDING)
-                .build());
 
         // when
         onboardingService.submitSurvey(1L, duplicateRequest);
