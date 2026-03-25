@@ -10,6 +10,7 @@ import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import com.ssafy.springbootbe.persistence.techstack.repository.TechStackRepository;
 import com.ssafy.springbootbe.persistence.user.entity.User;
+import com.ssafy.springbootbe.persistence.user.type.CurriculumCategory;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
 import com.ssafy.springbootbe.persistence.user.repository.UserRepository;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
@@ -69,6 +70,7 @@ public class AnalysisServiceImpl implements AnalysisService {
             ActivityHistory activity = ActivityHistory.builder()
                     .user(user)
                     .activityType(activityType)
+                    .category(mapToCategory(item.getCategory()))
                     .title(activityType.name() + " 활동")  // DB의 not null 조건 만족을 위한 임시 타이틀
                     .description(item.getSummary())
                     .activityDate(item.getActivityDate())
@@ -91,5 +93,15 @@ public class AnalysisServiceImpl implements AnalysisService {
             savedCount++;
         }
         return savedCount;
+    }
+
+    private CurriculumCategory mapToCategory(String categoryStr) {
+        if (categoryStr == null) return CurriculumCategory.THEORY;
+        return switch (categoryStr) {
+            case "개발" -> CurriculumCategory.PRACTICE;
+            case "학습" -> CurriculumCategory.THEORY;
+            case "취준" -> CurriculumCategory.EMPLOYMENT;
+            default -> CurriculumCategory.THEORY;
+        };
     }
 }
