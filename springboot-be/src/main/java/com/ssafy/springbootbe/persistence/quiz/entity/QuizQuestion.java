@@ -4,6 +4,8 @@ import com.ssafy.springbootbe.persistence.quiz.type.QuizType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.hibernate.type.SqlTypes;
 
 import java.util.List;
@@ -22,6 +24,7 @@ public class QuizQuestion {
     private Long quizQuestionId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "quiz_session_id", nullable = false)
     private QuizSession quizSession;
 

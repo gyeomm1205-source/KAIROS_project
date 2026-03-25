@@ -3,6 +3,8 @@ package com.ssafy.springbootbe.persistence.curriculum.entity;
 import com.ssafy.springbootbe.persistence.curriculum.type.SyncStatus;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +22,7 @@ public class CurriculumNodeCalendarSync {
     private Long curriculumNodeCalendarSyncId;
 
     @OneToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "curriculum_node_id", nullable = false)
     private CurriculumNode curriculumNode;
 

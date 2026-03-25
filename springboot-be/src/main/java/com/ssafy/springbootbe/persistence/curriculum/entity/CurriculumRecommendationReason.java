@@ -3,6 +3,8 @@ package com.ssafy.springbootbe.persistence.curriculum.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -20,6 +22,7 @@ public class CurriculumRecommendationReason {
     private Long curriculumRecommendationReasonId;
 
     @OneToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "curriculum_id", nullable = false)
     private Curriculum curriculum;
 
