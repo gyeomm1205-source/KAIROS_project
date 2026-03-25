@@ -312,7 +312,7 @@ public class AuthServiceImpl implements AuthService {
 
     AuthTokenBundle handleNewUser(GoogleUserInfoResponse userInfoResponse, GoogleTokenResponse tokenResponse) {
         String onboardingToken = jwtUtils.createOnboardingToken(userInfoResponse.getSub(), userInfoResponse.getEmail());
-        saveOnboardingData(userInfoResponse, tokenResponse.getRefreshToken());
+        saveOnboardingData(userInfoResponse, tokenResponse.getAccessToken());
 
         log.info("Google OAuth 신규 유저 확인 완료. googleSub={}", userInfoResponse.getSub());
         return AuthTokenBundle.newUser(
