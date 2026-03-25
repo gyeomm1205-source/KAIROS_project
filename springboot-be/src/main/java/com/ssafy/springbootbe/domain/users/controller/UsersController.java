@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.domain.users.controller;
 import com.ssafy.springbootbe.common.dto.LoginUserPrincipal;
 import com.ssafy.springbootbe.domain.users.dto.request.DarkModeUpdateRequest;
 import com.ssafy.springbootbe.domain.users.dto.request.UserProfileUpdateRequest;
+import com.ssafy.springbootbe.domain.users.dto.response.ExternalAccountsResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileResponse;
 import com.ssafy.springbootbe.domain.users.dto.response.UserProfileUpdateResponse;
 import com.ssafy.springbootbe.domain.users.service.UsersService;
@@ -25,6 +26,12 @@ public class UsersController {
     public ResponseEntity<UserProfileResponse> getMyProfile(
             @AuthenticationPrincipal LoginUserPrincipal principal) {
         return ResponseEntity.ok(usersService.findProfile(principal.getUserId()));
+    }
+
+    @GetMapping("/me/external-accounts")
+    public ResponseEntity<ExternalAccountsResponse> getMyExternalAccounts(
+            @AuthenticationPrincipal LoginUserPrincipal principal) {
+        return ResponseEntity.ok(usersService.findExternalAccounts(principal.getUserId()));
     }
 
     @PatchMapping("/me/profile")

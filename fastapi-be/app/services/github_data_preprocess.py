@@ -15,8 +15,8 @@ load_dotenv()
 # GitHub OAuth 구현 전 임시 테스트용 — .env 파일에서 로드
 # 테스트 시 아래 주석을 풀고 넘겨받은 파라미터 대신 사용할 수 있습니다.
 # ==========================================
-# GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
-# USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
+GITHUB_TOKEN = os.getenv("GITHUB_TEST_TOKEN", "")
+USERNAME = os.getenv("GITHUB_TEST_USERNAME", "")
 
 def get_headers(github_token: str) -> dict:
     return {
@@ -236,8 +236,9 @@ async def process_repository(session, repo, github_token: str, username: str):
     }
 
 def convert_to_markdown_format(repo_data_list):
-    """3. 수집된 정보를 LLM 프롬프트용 마크다운 형태로 변환합니다."""
+    """3. 수집된 정보를 LLM 프롬프트용 마크다운 형태로 변환하고, id->date 맵도 반환합니다."""
     output = []
+    id_date_map = {}  # id -> date 맵
     global_id = 1
     
     for data in repo_data_list:
@@ -258,12 +259,13 @@ def convert_to_markdown_format(repo_data_list):
                 act['title'],
                 ", ".join(act['files'])
             ])
+            id_date_map[global_id] = act['date']  # id -> date 맵
             global_id += 1
             
         md += csv_io.getvalue()
         output.append(md)
         
-    return "\n---\n\n".join(output)
+    return "\n---\n\n".join(output), id_date_map
 
 async def main(github_token: str, username: str):
     start_time = time.time()
@@ -283,9 +285,9 @@ async def main(github_token: str, username: str):
     collection_time = time.time()
     print(f"\n⏱️ github 및 메타데이터 수집 소요 시간: {collection_time - start_time:.2f}초")
     
-    # 마크다운 텍스트 생성 후 리턴 (메모리 로드용)
-    formatted_text = convert_to_markdown_format(repo_data_list)
-    return formatted_text
+    # 마크다운 텍스트와 id_date_map 생성 후 리턴
+    formatted_text, id_date_map = convert_to_markdown_format(repo_data_list)
+    return {"context": formatted_text, "id_date_map": id_date_map}
 
 if __name__ == "__main__":
     import sys
@@ -317,6 +319,10 @@ if __name__ == "__main__":
   }}
 ]"""
 
+        print("\n" + "="*65)
+        print("✨ 완성된 LLM Batch 프롬프트 (레포 단위 컨텍스트 추가)")
+        print("="*65 + "\n")
+        print(prompt)
         print("\n" + "="*65)
         print("✨ 완성된 LLM Batch 프롬프트 (레포 단위 컨텍스트 추가)")
         print("="*65 + "\n")

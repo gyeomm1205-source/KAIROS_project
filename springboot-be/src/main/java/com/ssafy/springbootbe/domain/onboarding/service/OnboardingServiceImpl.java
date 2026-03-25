@@ -5,16 +5,12 @@ import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.domain.onboarding.dto.response.OnboardingMetaResponse;
 import com.ssafy.springbootbe.domain.onboarding.dto.request.OnboardingSurveyRequest;
 import com.ssafy.springbootbe.domain.onboarding.dto.response.OnboardingSurveyResponse;
-import com.ssafy.springbootbe.domain.onboarding.exception.AnalysisReportPreparationException;
 import com.ssafy.springbootbe.domain.onboarding.exception.InvalidSurveyInputException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDeniedException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingPersistenceException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingReferenceNotFoundException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingUserNotFoundException;
-import com.ssafy.springbootbe.persistence.analysis.entity.AnalysisReport;
-import com.ssafy.springbootbe.persistence.analysis.repository.AnalysisReportRepository;
-import com.ssafy.springbootbe.persistence.analysis.type.AnalysisStatus;
 import com.ssafy.springbootbe.persistence.position.entity.DevPosition;
 import com.ssafy.springbootbe.persistence.position.repository.DevPositionRepository;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
@@ -42,15 +38,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OnboardingServiceImpl implements OnboardingService {
 
-    private static final boolean DEFAULT_CONSIDER_PERSONAL_SCHEDULE = true;
-
     private final UserRepository userRepository;
     private final DevPositionRepository devPositionRepository;
     private final TechStackRepository techStackRepository;
     private final UserDesiredPositionRepository userDesiredPositionRepository;
     private final UserTechStackRepository userTechStackRepository;
     private final UserCurriculumCategoryRepository userCurriculumCategoryRepository;
-    private final AnalysisReportRepository analysisReportRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -86,23 +79,19 @@ public class OnboardingServiceImpl implements OnboardingService {
         List<DevPosition> devPositions = findDevPositionsOrThrow(desiredPositionIds);
         List<TechStack> techStacks = findTechStacksOrThrow(techStackIds);
 
-        user.updateProfile(request.getPosition(), DEFAULT_CONSIDER_PERSONAL_SCHEDULE);
+        user.updateProfile(request.getPosition(), request.getConsiderPersonalSchedule());
         user.updateStatus(UserStatus.SURVEYED);
 
         replaceDesiredPositions(user, devPositions);
         replaceTechStacks(user, techStacks);
         replaceCurriculumCategories(user, curriculumCategories);
 
-        AnalysisReport analysisReport = createPendingAnalysisReport(user);
-
-        log.info("온보딩 설문 저장 완료. userId={}, analysisReportId={}", userId, analysisReport.getAnalysisReportId());
+        log.info("온보딩 설문 저장 완료. userId={}", userId);
 
         return OnboardingSurveyResponse.builder()
                 .userId(user.getUserId())
                 .status(user.getStatus())
                 .considerPersonalSchedule(user.getConsiderPersonalSchedule())
-                .analysisReportId(analysisReport.getAnalysisReportId())
-                .analysisStatus(analysisReport.getStatus())
                 .build();
     }
 
@@ -220,14 +209,4 @@ public class OnboardingServiceImpl implements OnboardingService {
         }
     }
 
-    private AnalysisReport createPendingAnalysisReport(User user) {
-        try {
-            return analysisReportRepository.saveAndFlush(AnalysisReport.builder()
-                    .user(user)
-                    .status(AnalysisStatus.PENDING)
-                    .build());
-        } catch (RuntimeException e) {
-            throw new AnalysisReportPreparationException("analysis report 생성에 실패했습니다.", e);
-        }
-    }
 }

@@ -121,38 +121,6 @@ export const patchCurriculumNode = (nodeId, data) => {
 }
 
 /**
- * 사용자 프로필 조회 (Spring Boot)
- * GET /api/v1/users/me
- */
-export const getUserProfile = () => {
-  return springApi.get('/api/v1/users/me')
-}
-
-/**
- * 사용자 프로필 수정 (Spring Boot)
- * PATCH /api/v1/users/me/profile
- */
-export const updateUserProfile = (data) => {
-  return springApi.patch('/api/v1/users/me/profile', data)
-}
-
-/**
- * 다크모드 설정 변경 (Spring Boot)
- * PATCH /api/v1/users/me/settings/dark-mode
- */
-export const updateDarkModeSetting = (data) => {
-  return springApi.patch('/api/v1/users/me/settings/dark-mode', data)
-}
-
-/**
- * 회원 탈퇴 (Spring Boot)
- * DELETE /api/v1/users/me
- */
-export const deleteUser = () => {
-  return springApi.delete('/api/v1/users/me')
-}
-
-/**
  * 추천 커리큘럼 목록 조회 (Spring Boot)
  * GET /api/v1/recommendations
  */
@@ -215,4 +183,13 @@ export const exportCalendar = () => {
 export const importCalendar = () => {
   return springApi.post('/api/v1/calendar/sync/import')
 }
+
+/**
+ * GitHub/Velog 활동 동기화 (Spring Boot)
+ * POST /api/v1/activities/sync/{provider}
+ */
+export const syncActivities = (provider) => {
+  return springApi.post(`/api/v1/activities/sync/${provider}`)
+}
+
 // Auth/Onboarding API는 authApi.js, onboardingApi.js에서 관리

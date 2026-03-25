@@ -27,7 +27,6 @@ import com.ssafy.springbootbe.domain.auth.exception.InvalidAccessTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidRefreshTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.InvalidOnboardingTokenException;
 import com.ssafy.springbootbe.domain.auth.exception.VelogCollectAsyncFailedException;
-import com.ssafy.springbootbe.domain.onboarding.exception.AnalysisReportPreparationException;
 import com.ssafy.springbootbe.domain.onboarding.exception.InvalidSurveyInputException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingAccessDeniedException;
 import com.ssafy.springbootbe.domain.onboarding.exception.OnboardingMetaRetrievalException;
@@ -60,6 +59,10 @@ import com.ssafy.springbootbe.domain.quizzes.exception.QuizSourceNotFoundExcepti
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleAccessDeniedException;
 import com.ssafy.springbootbe.domain.schedules.exception.ScheduleNotFoundException;
 import com.ssafy.springbootbe.domain.users.exception.UserNotFoundException;
+import com.ssafy.springbootbe.domain.users.exception.ExternalAccountCacheException;
+import com.ssafy.springbootbe.domain.users.exception.ExternalAccountFetchFailedException;
+import com.ssafy.springbootbe.domain.users.exception.GithubExternalAccountNotFoundException;
+import com.ssafy.springbootbe.domain.users.exception.VelogUsernameNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -198,6 +201,29 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
     }
 
+    @ExceptionHandler({
+            GithubExternalAccountNotFoundException.class,
+            VelogUsernameNotFoundException.class
+    })
+    public ResponseEntity<Map<String, String>> handleExternalAccountNotFoundException(RuntimeException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(Map.of("error", "NOT_FOUND", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ExternalAccountFetchFailedException.class)
+    public ResponseEntity<Map<String, String>> handleExternalAccountFetchFailedException(
+            ExternalAccountFetchFailedException e) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                .body(Map.of("error", "BAD_GATEWAY", "message", e.getMessage()));
+    }
+
+    @ExceptionHandler(ExternalAccountCacheException.class)
+    public ResponseEntity<Map<String, String>> handleExternalAccountCacheException(
+            ExternalAccountCacheException e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("error", "SERVER_ERROR", "message", e.getMessage()));
+    }
+
     @ExceptionHandler(GoogleOAuthNotFoundException.class)
     public ResponseEntity<Map<String, String>> handleGoogleOAuthNotFoundException(GoogleOAuthNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -279,8 +305,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             OnboardingMetaRetrievalException.class,
-            OnboardingPersistenceException.class,
-            AnalysisReportPreparationException.class
+            OnboardingPersistenceException.class
     })
     public ResponseEntity<Map<String, String>> handleOnboardingInternalException(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

@@ -135,7 +135,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
-import { getUserProfile, updateUserProfile } from '@/api/aiApi'
+import { getMe, updateProfile } from '@/api/usersApi'
 
 const router = useRouter()
 const isSaving = ref(false)
@@ -186,7 +186,7 @@ const togglePosition = (value) => {
 
 onMounted(async () => {
   try {
-    const { data } = await getUserProfile()
+    const { data } = await getMe()
     if (data.position) job.value = data.position
     if (data.desiredPositions) positions.value = data.desiredPositions.map(p => p.name || p.positionName || p)
     if (data.techStacks) techStacks.value = data.techStacks.map(t => t.name || t.techName || t)
@@ -199,7 +199,7 @@ onMounted(async () => {
 const saveProfile = async () => {
   isSaving.value = true
   try {
-    await updateUserProfile({
+    await updateProfile({
       position: job.value,
       desiredPositionIds: positions.value,
       techStackIds: techStacks.value,

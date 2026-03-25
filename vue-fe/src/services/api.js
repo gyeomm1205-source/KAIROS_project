@@ -1,8 +1,8 @@
 import axios from 'axios';
-import { getAuthToken } from './authToken';
+import { getAuthToken, setAuthToken, clearAuthToken } from './authToken';
 
-const springBaseURL = import.meta.env.VITE_SPRING_BASE_URL || 'http://localhost:8080';
-const fastApiBaseURL = import.meta.env.VITE_FASTAPI_BASE_URL || 'http://localhost:8000';
+const springBaseURL = import.meta.env.VITE_SPRING_BASE_URL || '';
+const fastApiBaseURL = import.meta.env.VITE_FASTAPI_BASE_URL || '';
 
 export const springApi = axios.create({
   baseURL: springBaseURL,
@@ -43,3 +43,55 @@ function attachBearerToken(config) {
 springApi.interceptors.request.use(attachBearerToken);
 springApiSlow.interceptors.request.use(attachBearerToken);
 fastApi.interceptors.request.use(attachBearerToken);
+
+// --- 401 토큰 만료 시 자동 갱신 ---
+let isRefreshing = false;
+let pendingRequests = [];
+
+function onRefreshed(newToken) {
+  pendingRequests.forEach(cb => cb(newToken));
+  pendingRequests = [];
+}
+
+function handle401(error) {
+  const originalRequest = error.config;
+
+  if (originalRequest.url?.includes('/auth/reissue')) {
+    clearAuthToken();
+    window.location.href = '/login';
+    return Promise.reject(error);
+  }
+
+  if (!isRefreshing) {
+    isRefreshing = true;
+    axios.post(`${springBaseURL}/api/v1/auth/reissue`, null, { withCredentials: true })
+      .then(({ data }) => {
+        setAuthToken(data.accessToken);
+        isRefreshing = false;
+        onRefreshed(data.accessToken);
+      })
+      .catch(() => {
+        isRefreshing = false;
+        pendingRequests = [];
+        clearAuthToken();
+        window.location.href = '/login';
+      });
+  }
+
+  return new Promise(resolve => {
+    pendingRequests.push(newToken => {
+      originalRequest.headers.Authorization = `Bearer ${newToken}`;
+      resolve(springApi(originalRequest));
+    });
+  });
+}
+
+function responseErrorInterceptor(error) {
+  if (error.response?.status === 401) {
+    return handle401(error);
+  }
+  return Promise.reject(error);
+}
+
+springApi.interceptors.response.use(res => res, responseErrorInterceptor);
+springApiSlow.interceptors.response.use(res => res, responseErrorInterceptor);

@@ -6,6 +6,8 @@ import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import java.time.LocalDateTime;
 @Entity
 @Table(name = "activity_history")
@@ -19,11 +21,13 @@ public class ActivityHistory {
     @Column(name = "activity_history_id")
     private Long activityHistoryId;
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
     @Enumerated(EnumType.STRING)
     @Column(name = "activity_type", nullable = false)
     private ActivityType activityType;
+    @Enumerated(EnumType.STRING)
     @Column(name = "category")
     private CurriculumCategory category;
     @Column(name = "title", nullable = false, length = 500)

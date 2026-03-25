@@ -22,7 +22,7 @@ class ActivitySummary(BaseModel):
     id: int = Field(description="작업의 고유 ID")
     tech_stacks: list[str] = Field(description="어떤 구체적 기술을 썼는지 1~3개 추출. 'NPM 패키지', 'Python 패키지' 같은 단어는 금지! (예: React, TypeScript, socket.io, Python)")
     summary: str = Field(description="수정된 파일명(changed_files)과 커밋 메시지를 참고하여, '무슨 기술적 구현/변경'을 했는지 시니어 개발자 관점으로 요약. 커밋 메시지를 그대로 베끼지 말 것!")
-    category: str = Field(description="개발(실제 프로젝트 구현), 학습(알고리즘, TIL 등), 기타 중 하나로 분류")
+    category: str = Field(description="개발(실제 프로젝트 구현), 학습(알고리즘, TIL 등), 취준(면접, 코딩테스트 등), 기타 중 하나로 분류")
 
 def analyze_github_activities(github_markdown_context: str) -> list[dict]:
     """메모리 상의 마크다운 텍스트를 받아서 GPT-4o-mini로 분석한 뒤 JSON 리스트로 리턴합니다."""

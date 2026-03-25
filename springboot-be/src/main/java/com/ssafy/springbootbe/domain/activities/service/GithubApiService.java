@@ -174,6 +174,8 @@ public class GithubApiService {
         private String login;
         @JsonProperty("public_repos")
         private int publicRepos;
+        @JsonProperty("total_private_repos")
+        private int totalPrivateRepos;
     }
 
     @Getter

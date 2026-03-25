@@ -87,6 +87,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
+import { syncActivities } from '@/api/aiApi'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -97,19 +98,21 @@ const showToast = ref(false)
 const showLogoutModal = ref(false)
 const toastMsg = ref('')
 
-const handleSync = (type) => {
+const handleSync = async (type) => {
   if (type === 'github') isGithubSyncing.value = true
   else isVelogSyncing.value = true
 
-  // 1.5초 후 동기화 완료 시뮬레이션
-  setTimeout(() => {
-    if (type === 'github') isGithubSyncing.value = false
-    else isVelogSyncing.value = false
-    
-    toastMsg.value = `${type === 'github' ? 'GitHub' : 'Velog'} 데이터가 동기화되었습니다.`
+  try {
+    const { data } = await syncActivities(type)
+    toastMsg.value = `${type === 'github' ? 'GitHub' : 'Velog'} 동기화 완료 (${data.newCount}건 추가)`
     showToast.value = true
     setTimeout(() => showToast.value = false, 3000)
-  }, 1500)
+  } catch (e) {
+    console.error('활동 동기화 실패:', e)
+  } finally {
+    if (type === 'github') isGithubSyncing.value = false
+    else isVelogSyncing.value = false
+  }
 }
 
 const handleLogout = () => {

@@ -1,10 +1,9 @@
 package com.ssafy.springbootbe.domain.activities.service;
 
-import tools.jackson.core.JacksonException;
-import tools.jackson.databind.ObjectMapper;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.OAuthTokenCryptoService;
 import com.ssafy.springbootbe.domain.activities.dto.response.ActivitySyncResponse;
+import com.ssafy.springbootbe.domain.activities.exception.ActivitySyncFailedException;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
@@ -17,8 +16,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -35,6 +35,8 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     private static final long EXTERNAL_ACCOUNT_CACHE_TTL_HOURS = 1L;
     private static final int RECENT_DAYS = 30;
     private static final int TITLE_MAX_LENGTH = 490;
+    private static final String GITHUB_PROVIDER = "github";
+    private static final String VELOG_PROVIDER = "velog";
 
     private final UserRepository userRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
@@ -53,7 +55,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         LocalDateTime syncedAt = LocalDateTime.now();
         int newCount;
 
-        if ("github".equalsIgnoreCase(provider)) {
+        if (GITHUB_PROVIDER.equalsIgnoreCase(provider)) {
             newCount = syncGithub(userId, syncedAt);
         } else {
             newCount = syncVelog(userId, syncedAt);
@@ -68,7 +70,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
     }
 
     private void validateProvider(String provider) {
-        if (!"github".equalsIgnoreCase(provider) && !"velog".equalsIgnoreCase(provider)) {
+        if (!GITHUB_PROVIDER.equalsIgnoreCase(provider) && !VELOG_PROVIDER.equalsIgnoreCase(provider)) {
             throw new IllegalArgumentException("지원하지 않는 provider 입니다: " + provider);
         }
     }
@@ -103,7 +105,13 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
             activityHistoryRepository.saveAll(activities);
         }
 
-        updateGithubCache(userId, login, syncedAt, accessToken, userDetail.getPublicRepos());
+        updateGithubCache(
+                userId,
+                login,
+                syncedAt,
+                accessToken,
+                userDetail.getPublicRepos() + userDetail.getTotalPrivateRepos()
+        );
         return newCommits.size();
     }
 
@@ -151,7 +159,7 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         cacheValue.put("recentPrs", recentPrs);
         cacheValue.put("totalRepos", totalRepos);
 
-        saveToRedis("external-account:" + userId + ":github", cacheValue);
+        saveToRedis(GITHUB_PROVIDER, "external-account:" + userId + ":github", cacheValue);
     }
 
     private void updateVelogCache(Long userId, String username, LocalDateTime syncedAt) {
@@ -166,15 +174,15 @@ public class ActivitySyncServiceImpl implements ActivitySyncService {
         cacheValue.put("latestPostDate", latestPostDate.map(d -> d.toLocalDate().toString()).orElse(null));
         cacheValue.put("totalViews", 0);
 
-        saveToRedis("external-account:" + userId + ":velog", cacheValue);
+        saveToRedis(VELOG_PROVIDER, "external-account:" + userId + ":velog", cacheValue);
     }
 
-    private void saveToRedis(String key, Object value) {
+    private void saveToRedis(String provider, String key, Object value) {
         try {
             String json = objectMapper.writeValueAsString(value);
             redisService.save(key, json, EXTERNAL_ACCOUNT_CACHE_TTL_HOURS, TimeUnit.HOURS);
-        } catch (JacksonException e) {
-            log.warn("외부 계정 캐시 직렬화 실패. key={}", key, e);
+        } catch (RuntimeException e) {
+            throw new ActivitySyncFailedException(provider + " 동기화 결과 Redis 저장에 실패했습니다.", e, true);
         }
     }
 

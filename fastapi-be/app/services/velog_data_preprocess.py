@@ -58,7 +58,7 @@ def clean_text(text):
     return ' '.join(cleaned.split())
 
 def convert_velog_to_markdown(posts, velog_username: str):
-    """수집된 Velog 데이터를 LLM이 좋아하는 마크다운+CSV 형태로 변환합니다."""
+    """수집된 Velog 데이터를 LLM이 좋아하는 마크다운+CSV 형태로 변환하고, id->date 맵도 반환합니다."""
     
     md = f"### 블로그: Velog (@{velog_username})\n"
     md += f"* **블로그 특징**: 개발자 기술 블로그 (마크다운 기반 포스팅)\n"
@@ -67,6 +67,8 @@ def convert_velog_to_markdown(posts, velog_username: str):
     csv_io = io.StringIO()
     writer = csv.writer(csv_io)
     writer.writerow(['id', 'date', 'activity_type', 'title', 'tags', 'content_snippet'])
+    
+    id_date_map = {}  # id -> date 맵
     
     for idx, post in enumerate(posts):
         date = post.get('released_at', '')[:10]  # YYYY-MM-DD
@@ -86,12 +88,16 @@ def convert_velog_to_markdown(posts, velog_username: str):
             tags,
             clean_text(snippet)
         ])
+        id_date_map[idx + 1] = date  # id -> date 맵
         
     md += csv_io.getvalue()
-    return md
+    return md, id_date_map
 
 async def main(velog_username: str):
     start_time = time.time()
+    
+    # @zhy2on 처럼 @ 기호 포함해서 입력해도 자동으로 처리
+    velog_username = velog_username.lstrip('@').strip()
     
     async with aiohttp.ClientSession() as session:
         posts = await fetch_velog_posts(session, velog_username)
@@ -102,9 +108,9 @@ async def main(velog_username: str):
     if not posts:
         return None
         
-    # 메모리에 올릴 문자열 포맷팅
-    formatted_text = convert_velog_to_markdown(posts, velog_username)
-    return formatted_text
+    # 마크다운 텍스트와 id_date_map 생성 후 리턴
+    formatted_text, id_date_map = convert_velog_to_markdown(posts, velog_username)
+    return {"context": formatted_text, "id_date_map": id_date_map}
 
 if __name__ == "__main__":
     import sys
