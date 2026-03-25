@@ -45,8 +45,7 @@ def analyze_all_activities(merged_context: str) -> list[dict]:
    - [Github 경우]: 수정된 파일(changed_files)과 겹쳐봐서 "어떤 기술적 구현/구조 변경"을 했는지 파악.
    - [Velog 경우]: 본문 요약(content_snippet)을 보고 "어떤 기술적 난제를 해결했거나 무엇을 깊게 학습했는지" 파악.
 3. category: 활동의 본질을 파악하여 '개발', '학습', '취준', '기타' 중 하나로 정확하게 분류해라.
-4. date: 컨텍스트(CSV 등)에 명시된 날짜를 'YYYY-MM-DD' 형식으로 그대로 가져와라. 절대 오늘 날짜로 조작하지 마라.
-5. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 기재.
+4. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 기재.
 
 {format_instructions}
 
