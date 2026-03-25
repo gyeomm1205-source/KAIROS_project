@@ -98,7 +98,8 @@ public class CalendarServiceImpl implements CalendarService {
 
         List<CurriculumNodeCalendarSync> notSyncedNodes =
                 curriculumNodeCalendarSyncRepository
-                        .findByCurriculumNodeCurriculumUserUserIdAndSyncStatus(userId, SyncStatus.NOT_SYNCED);
+                        .findByCurriculumNodeCurriculumUserUserIdAndSyncStatusIn(
+                                userId, List.of(SyncStatus.NOT_SYNCED, SyncStatus.SYNC_FAILED));
 
         int exportedNodes = 0;
         for (CurriculumNodeCalendarSync sync : notSyncedNodes) {
@@ -121,6 +122,7 @@ public class CalendarServiceImpl implements CalendarService {
                             node.getScheduledDate()
                     );
                 }
+
                 sync.synced("primary", event.getId(), event.getEtag());
                 exportedNodes++;
             } catch (IOException e) {

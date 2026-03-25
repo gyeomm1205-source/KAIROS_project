@@ -8,7 +8,7 @@ import java.util.Optional;
 public interface CurriculumNodeCalendarSyncRepository extends JpaRepository<CurriculumNodeCalendarSync, Long> {
     Optional<CurriculumNodeCalendarSync> findByCurriculumNodeCurriculumNodeId(Long curriculumNodeId);
     Optional<CurriculumNodeCalendarSync> findByGoogleEventId(String googleEventId);
-    // 내보내기 시 미연동 노드 조회
-    List<CurriculumNodeCalendarSync> findByCurriculumNodeCurriculumUserUserIdAndSyncStatus(
-            Long userId, SyncStatus syncStatus);
+    // 내보내기 시 미연동 노드 조회 (NOT_SYNCED + SYNC_FAILED 모두 대상)
+    List<CurriculumNodeCalendarSync> findByCurriculumNodeCurriculumUserUserIdAndSyncStatusIn(
+            Long userId, List<SyncStatus> syncStatuses);
 }
