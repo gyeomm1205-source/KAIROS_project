@@ -160,8 +160,22 @@ public class AuthServiceImpl implements AuthService {
             return handleExistingUser(existingGoogleAccount.get(), tokenResponse);
         }
 
-        if (userRepository.findByEmail(userInfoResponse.getEmail()).isPresent()) {
-            throw new DuplicateOAuthEmailException(userInfoResponse.getEmail());
+        Optional<User> existingUserOpt = userRepository.findByEmail(userInfoResponse.getEmail());
+        if (existingUserOpt.isPresent()) {
+            User existingUser = existingUserOpt.get();
+            // 백도어 API로 미리 생성된 유저인 경우 (Google OAuthAccount가 아직 없는 상태)
+            // 중복 예외를 던지지 않고, 강제로 구글 계정 연동(OAuthAccount)을 생성해 기존 회원으로 로그인시켜버린다!
+            String encryptedGoogleToken = tokenResponse.getRefreshToken() != null && !tokenResponse.getRefreshToken().isBlank()
+                    ? oAuthTokenCryptoService.encrypt(tokenResponse.getRefreshToken())
+                    : null;
+            OAuthAccount newGoogleAccount = OAuthAccount.builder()
+                    .user(existingUser)
+                    .provider(OAuthProvider.GOOGLE)
+                    .providerAccountId(userInfoResponse.getSub())
+                    .refreshToken(encryptedGoogleToken)
+                    .build();
+            oAuthAccountRepository.save(newGoogleAccount);
+            return handleExistingUser(newGoogleAccount, tokenResponse);
         }
 
         return handleNewUser(userInfoResponse, tokenResponse);
