@@ -18,6 +18,9 @@ public class OnboardingSurveyRequest {
     @NotNull(message = "position은 필수입니다.")
     private UserPosition position;
 
+    @NotNull(message = "considerPersonalSchedule은 필수입니다.")
+    private Boolean considerPersonalSchedule;
+
     @NotEmpty(message = "desiredPositionIds는 필수입니다.")
     private List<@NotNull(message = "desiredPositionIds에는 null이 포함될 수 없습니다.") Long> desiredPositionIds;
 

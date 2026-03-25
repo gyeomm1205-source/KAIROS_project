@@ -38,8 +38,6 @@ import java.util.List;
 @RequiredArgsConstructor
 public class OnboardingServiceImpl implements OnboardingService {
 
-    private static final boolean DEFAULT_CONSIDER_PERSONAL_SCHEDULE = true;
-
     private final UserRepository userRepository;
     private final DevPositionRepository devPositionRepository;
     private final TechStackRepository techStackRepository;
@@ -81,7 +79,7 @@ public class OnboardingServiceImpl implements OnboardingService {
         List<DevPosition> devPositions = findDevPositionsOrThrow(desiredPositionIds);
         List<TechStack> techStacks = findTechStacksOrThrow(techStackIds);
 
-        user.updateProfile(request.getPosition(), DEFAULT_CONSIDER_PERSONAL_SCHEDULE);
+        user.updateProfile(request.getPosition(), request.getConsiderPersonalSchedule());
         user.updateStatus(UserStatus.SURVEYED);
 
         replaceDesiredPositions(user, devPositions);
