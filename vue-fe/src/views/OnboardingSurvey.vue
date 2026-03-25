@@ -141,10 +141,22 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { getOnboardingMeta, submitSurvey as apiSubmitSurvey } from '@/api/onboardingApi'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()
+const authStore = useAuthStore()
+
+const SCOPE_TO_CATEGORY = { study: 'THEORY', dev: 'PRACTICE', career: 'EMPLOYMENT' }
+const JOB_TO_POSITION = {
+  '학생': 'STUDENT',
+  '취업 준비생': 'JOB_SEEKER',
+  '주니어 개발자': 'JUNIOR',
+  '시니어 개발자': 'SENIOR',
+  '기타': 'OTHER',
+}
 
 const scopeOptions = [
   { value: "study", label: "학습", desc: "온라인 강의, 문서 읽기, 퀴즈 등" },
@@ -152,8 +164,12 @@ const scopeOptions = [
   { value: "career", label: "취준", desc: "이력서, 면접 준비, 포트폴리오 등" },
 ]
 const jobOptions = ["학생", "취업 준비생", "주니어 개발자", "시니어 개발자", "기타"]
-const positionOptions = ["백엔드", "프론트엔드", "AI", "디자인", "PM", "데이터 분석가", "잘 모르겠어요"]
-const suggestedTechs = ["JavaScript", "TypeScript", "React", "Vue", "Spring", "Python", "Java", "Node.js", "Docker", "AWS"]
+
+// BE에서 가져올 목록 (onMounted에서 채워짐)
+const metaPositions = ref([])
+const metaTechStacks = ref([])
+const positionOptions = computed(() => metaPositions.value.map(p => p.positionName))
+const suggestedTechs = computed(() => metaTechStacks.value.map(t => t.techName))
 
 const selectedScopes = ref(["study", "dev", "career"])
 const scheduleInclusion = ref("")
@@ -161,6 +177,17 @@ const job = ref("")
 const techs = ref([])
 const techInput = ref("")
 const positions = ref([])
+const isSubmitting = ref(false)
+
+onMounted(async () => {
+  try {
+    const { data } = await getOnboardingMeta()
+    metaPositions.value = data.devPositions || []
+    metaTechStacks.value = data.techStacks || []
+  } catch (e) {
+    console.error('onboarding meta 조회 실패:', e)
+  }
+})
 
 const toggleScope = (val) => {
   if (selectedScopes.value.includes(val)) selectedScopes.value = selectedScopes.value.filter(x => x !== val)
@@ -183,16 +210,41 @@ const removeTech = (t) => {
 }
 
 const availableSuggestedTechs = computed(() => {
-  return suggestedTechs.filter(t => !techs.value.includes(t))
+  return suggestedTechs.value.filter(t => !techs.value.includes(t))
 })
 
 const canProceed = computed(() => {
   return scheduleInclusion.value !== "" && job.value !== "" && techs.value.length > 0
 })
 
-const submitSurvey = () => {
-  if (canProceed.value) {
-    router.push('/onboarding/loading')
+const submitSurvey = async () => {
+  if (!canProceed.value || isSubmitting.value) return
+  isSubmitting.value = true
+
+  const techStackIds = techs.value
+    .map(name => metaTechStacks.value.find(t => t.techName === name)?.techStackId)
+    .filter(Boolean)
+
+  const desiredPositionIds = positions.value
+    .map(name => metaPositions.value.find(p => p.positionName === name)?.devPositionId)
+    .filter(Boolean)
+
+  const payload = {
+    position: JOB_TO_POSITION[job.value] || 'OTHER',
+    desiredPositionIds,
+    techStackIds,
+    curriculumCategories: selectedScopes.value.map(s => SCOPE_TO_CATEGORY[s]).filter(Boolean),
+    considerPersonalSchedule: scheduleInclusion.value === 'yes',
+    githubTaskId: authStore.githubTaskId || '',
+    velogTaskId: authStore.velogTaskId || '',
+  }
+
+  try {
+    const { data } = await apiSubmitSurvey(payload)
+    router.push({ path: '/onboarding/loading', query: { taskId: data.taskId } })
+  } catch (e) {
+    console.error('설문 제출 실패:', e)
+    isSubmitting.value = false
   }
 }
 </script>
