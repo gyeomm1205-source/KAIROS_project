@@ -74,9 +74,9 @@ async def github_collect_worker(task_id: str, req: GithubCollectRequest):
     try:
         fake_db[task_id] = {"status": "processing", "data": None}
         # 본래는 req에서 받은 파라미터를 넘겨야 하지만 구조상 현재는 기존 함수 사용
-        github_context = await start_github_collection(req.githubToken, req.githubUsername)
+        github_result = await start_github_collection(req.githubToken, req.githubUsername)
         fake_db[task_id]["status"] = "completed"
-        fake_db[task_id]["data"] = {"github_context": github_context}
+        fake_db[task_id]["data"] = {"github_result": github_result}  # dict {context, id_date_map}
     except Exception as e:
         fake_db[task_id]["status"] = "failed"
         fake_db[task_id]["error_message"] = str(e)
@@ -87,13 +87,17 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
         fake_db[task_id] = {"status": "processing", "data": None}
 
         # 이전 GitHub 수집 결과 가져오기 (fake_db)
-        github_info = fake_db.get(req.githubTaskId)
-        github_context = None
-        if github_info and github_info["status"] == "completed":
-            github_context = github_info["data"].get("github_context")
-            
-        results = await start_velog_and_analysis(req.velogUsername, github_context)
-        
+        github_result = None
+        if req.githubTaskId:
+            github_info = fake_db.get(req.githubTaskId)
+            if github_info and github_info["status"] == "completed":
+                github_result = github_info["data"].get("github_result")  # dict 형식
+
+        results = await start_velog_and_analysis(req.velogUsername, github_result)
+
+        # id -> date 맵에서 날짜를 직접 조회 (LLM이 아닌 원본 데이터 기준)
+        id_date_map = results.get("id_date_map", {})
+
         # 1. 활동 내역 매핑 (techScores 제거, summary로 통일)
         github_activities = []
         velog_activities = []
@@ -104,11 +108,23 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
                 mapped_type = "GITHUB_PR"
             elif "Velog" in act_type:
                 mapped_type = "VELOG_POST"
-                
+
+            # 원본 데이터에서 날짜 직접 조회 (LLM 불필요!)
+            act_id = act.get("id")
+            raw_date = id_date_map.get(act_id)
+            if raw_date:
+                try:
+                    final_date = datetime.strptime(raw_date, "%Y-%m-%d").isoformat()
+                except:
+                    final_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+            else:
+                final_date = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
             activity_dto = {
                 "activityType": mapped_type,
                 "summary": str(act.get("summary", ""))[:495],  # DB 길이 제한 방어
-                "activityDate": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S"),
+                "activityDate": final_date,
+                "category": act.get("category", "학습"),
                 "techStacks": act.get("tech_stacks", [])
             }
             if mapped_type in ["GITHUB_COMMIT", "GITHUB_PR"]:

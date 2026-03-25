@@ -29,6 +29,7 @@ class Source(str, Enum):
 class Category(str, Enum):
     development = "개발"
     learning = "학습"
+    job_preparation = "취준"
     other = "기타"
 
 
