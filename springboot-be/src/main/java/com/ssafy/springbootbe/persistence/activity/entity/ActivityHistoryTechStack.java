@@ -3,6 +3,8 @@ package com.ssafy.springbootbe.persistence.activity.entity;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 @Entity
 @Table(name = "activity_history_tech_stack")
@@ -18,6 +20,7 @@ public class ActivityHistoryTechStack {
     private Long activityHistoryTechStackId;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     @JoinColumn(name = "activity_history_id", nullable = false)
     private ActivityHistory activityHistory;
 
