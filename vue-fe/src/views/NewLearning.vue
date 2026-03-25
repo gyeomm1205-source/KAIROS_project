@@ -154,7 +154,7 @@
             <div class="space-y-lg">
               
               <!-- AI 판단 요약 -->
-              <div class="base-panel bg-surface p-md">
+              <div class="base-panel bg-surface p-md mb-gap">
                 <div class="info-title mb-md"><i class="fas fa-brain" /> AI가 사용자 상태를 이렇게 해석했어요</div>
                 <div class="grid-3 col-gap gap-y">
                   <div class="stat-box bg-white">
@@ -178,7 +178,7 @@
               </div>
 
               <!-- 추천 커리큘럼 -->
-              <div class="base-panel p-md">
+              <div class="base-panel p-md mb-gap">
                 <div class="flex-between mb-md items-start">
                   <div>
                     <h4 class="font-bold text-lg">추천 커리큘럼</h4>
@@ -215,9 +215,9 @@
                   </div>
                   <div class="flex-col gap-sm">
                     <div v-for="mission in computedMissions" :key="mission.title" class="base-panel p-md bg-white">
-                      <div class="flex-align mb-xs">
-                        <span class="brutal-tag bg-surface border-muted">{{ mission.tag }}</span>
+                      <div class="flex-between mb-xs items-start">
                         <span class="font-bold text-sm">{{ mission.title }}</span>
+                        <span class="brutal-tag bg-surface border-muted">{{ mission.tag }}</span>
                       </div>
                       <p class="text-xs text-muted mb-sm">{{ mission.desc }}</p>
                       <div class="text-xs text-muted flex-align gap-xs">
@@ -234,20 +234,16 @@
                   </div>
                   <div class="flex-col gap-sm">
                     <div v-for="ref in computedReferences" :key="ref.title" class="base-panel p-md bg-white">
-                      <div class="flex-between mb-sm items-start">
-                        <div class="flex-align gap-sm">
-                          <i class="fas fa-file-alt text-muted shrink-0" />
-                          <span class="font-bold text-sm">{{ ref.title }}</span>
-                        </div>
+                      <div class="flex-between mb-xs items-start">
+                        <span class="font-bold text-sm">{{ ref.title }}</span>
                         <span class="brutal-tag bg-surface border-muted">{{ ref.type }}</span>
                       </div>
-                      <p class="text-xs text-muted pl-lg mb-sm">{{ ref.reason }}</p>
-                      <div class="flex-between pl-lg">
-                        <div class="flex-align gap-md text-xs text-muted">
-                          <span>{{ ref.freshness }}</span>
-                          <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
+                      <p class="text-xs text-muted mb-sm">{{ ref.reason }}</p>
+                      <div class="text-xs text-muted flex-align gap-md">
+                        <div class="flex-align gap-xs"><i class="fas fa-history" /> {{ ref.freshness }}</div>
+                        <div class="flex-align gap-xs cursor-pointer font-bold text-primary" @click="$router.push('/recommend/new-curriculum')">
+                          <i class="fas fa-external-link-alt" /> 자료 보기
                         </div>
-                        <button class="btn-text" @click="$router.push('/recommend/new-curriculum')"><i class="fas fa-external-link-alt" /> 보기</button>
                       </div>
                     </div>
                   </div>
@@ -440,8 +436,20 @@ const computedReferences = computed(() => [
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
-.header-title { font-size: 16px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.page-header { 
+  display: flex !important; align-items: center; 
+  height: 64px !important; min-height: 64px; max-height: 64px; 
+  flex-shrink: 0;
+  padding: 0 24px; border-bottom: 1px solid var(--border); 
+  background: var(--bg-surface); position: sticky; top: 0; z-index: 10; 
+  box-sizing: border-box; 
+}
+.header-title { 
+  font-size: 15px; font-weight: 900; letter-spacing: 0.15em; 
+  color: var(--text-primary); display: flex; align-items: center; gap: 12px; 
+  text-transform: uppercase;
+}
+.header-title i { font-size: 18px; width: 24px; text-align: center; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
 .max-w-xl { max-width: 680px; }
@@ -495,34 +503,34 @@ const computedReferences = computed(() => [
 .btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 24px; padding: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .btn-back:hover { color: var(--text-primary); transform: translateX(-4px); }
 
-.base-panel { background: transparent; border: 1px solid var(--border); padding: 32px; display: flex; flex-direction: column; border-radius: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
-.form-panel { padding: 32px; border-radius: 0; }
+.base-panel { background: transparent; border: 1px solid var(--border); padding: 32px; display: flex; flex-direction: column; border-radius: 8px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.form-panel { padding: 32px; border-radius: 8px; }
 .form-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
-.brutal-input { width: 100%; border: 1px solid var(--border); padding: 16px; font-size: 14px; font-weight: 600; background: transparent; color: var(--text-primary); outline: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; font-family: inherit; }
+.brutal-input { width: 100%; border: 1px solid var(--border); padding: 16px; font-size: 14px; font-weight: 600; background: transparent; color: var(--text-primary); outline: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; font-family: inherit; }
 .brutal-input:focus { border-color: var(--text-primary); background: var(--bg-hover);}
-.brutal-textarea { width: 100%; border: 1px solid var(--border); padding: 16px; font-size: 14px; font-weight: 600; background: transparent; color: var(--text-primary); outline: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; resize: none; font-family: inherit; }
+.brutal-textarea { width: 100%; border: 1px solid var(--border); padding: 16px; font-size: 14px; font-weight: 600; background: transparent; color: var(--text-primary); outline: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; resize: none; font-family: inherit; }
 .brutal-textarea:focus { border-color: var(--text-primary); background: var(--bg-hover);}
 
-.brutal-tag { padding: 8px 16px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 40px; }
+.brutal-tag { padding: 8px 16px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
 .clickable-tag { cursor: pointer; }
 .clickable-tag:hover { background: var(--bg-hover); border-color: var(--text-primary); color: var(--text-primary); }
 .clickable-tag.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 .inline-tag { display: inline-block; }
 .border-muted { border-color: var(--border); }
 
-.goal-card { padding: 24px; text-align: left; background: transparent; border: 1px solid var(--border); cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; gap: 8px; border-radius: 0; font-family: inherit; }
+.goal-card { padding: 24px; text-align: left; background: transparent; border: 1px solid var(--border); cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; gap: 8px; border-radius: 8px; font-family: inherit; }
 .goal-card:hover { border-color: var(--text-primary); background: var(--bg-hover);}
 .goal-card.active { border-color: var(--text-primary); background: transparent; }
 .goal-label { font-size: 14px; font-weight: 800; color: var(--text-primary); }
 .goal-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
-.info-box { background: transparent; border: 1px dashed var(--border); padding: 24px; text-align: left; border-radius: 0; }
+.info-box { background: transparent; border: 1px dashed var(--border); padding: 24px; text-align: left; border-radius: 8px; }
 .question-icon { width: 32px; height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0; border-radius: 50%; }
 .info-title { font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
 .info-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; font-weight: 600; }
 
-.btn-primary-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 16px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 40px; letter-spacing: 0.1em; }
+.btn-primary-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 16px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; letter-spacing: 0.1em; }
 .btn-primary-block:hover:not(:disabled) { background: var(--text-primary); color: var(--bg-base); }
 .btn-primary-block:disabled { background: transparent; border-color: var(--border); color: var(--text-faint); cursor: not-allowed; }
 .btn-text { background: transparent; border: none; font-size: 11px; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 4px; padding: 0; cursor: pointer; transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -530,7 +538,7 @@ const computedReferences = computed(() => [
 
 /* Modal and Quiz styles */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
-.modal-large { max-width: 900px; max-height: 90vh; width: 100%; padding: 0; display: flex; flex-direction: column; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0;}
+.modal-large { max-width: 900px; max-height: 90vh; width: 100%; padding: 0; display: flex; flex-direction: column; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px;}
 @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
 .modal-header { padding: 24px 32px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: flex-start; background: transparent; }
@@ -549,7 +557,7 @@ const computedReferences = computed(() => [
 
 .quiz-q { font-size: 18px; font-weight: 800; line-height: 1.6; margin: 0 0 24px 0; color: var(--text-primary); letter-spacing: 0.05em; }
 .options-list { display: flex; flex-direction: column; gap: 12px; }
-.option-btn { background: var(--bg-surface); border: 1px solid var(--border); padding: 24px; cursor: pointer; text-align: left; display: flex; align-items: flex-start; gap: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; font-family: inherit; }
+.option-btn { background: var(--bg-surface); border: 1px solid var(--border); padding: 24px; cursor: pointer; text-align: left; display: flex; align-items: flex-start; gap: 16px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; font-family: inherit; }
 .option-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); transform: translateX(4px); }
 .option-btn.selected { border-color: var(--text-primary); background: var(--bg-surface); box-shadow: inset 4px 0 0 var(--text-primary); }
 .radio-circle { width: 18px; height: 18px; border: 1px solid var(--border); border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
@@ -559,7 +567,7 @@ const computedReferences = computed(() => [
 .opt-desc { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 
 /* Stats box */
-.stat-box { background: transparent; border: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.stat-box { background: transparent; border: 1px solid var(--border); padding: 24px; display: flex; flex-direction: column; gap: 12px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
 .stat-box:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .light-box { background: transparent; border-style: dashed; }
 .stat-lbl { font-size: 11px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; }

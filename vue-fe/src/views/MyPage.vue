@@ -81,8 +81,18 @@ const authStore = useAuthStore()
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 2px solid var(--text-primary); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
-.header-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.page-header { 
+  display: flex; align-items: center; 
+  height: 64px; min-height: 64px; flex-shrink: 0;
+  padding: 0 24px; border-bottom: 1px solid var(--border); 
+  background: var(--bg-surface); position: sticky; top: 0; z-index: 10; 
+  box-sizing: border-box; 
+}
+.header-title { 
+  font-size: 16px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-primary); 
+  display: flex; align-items: center; gap: 12px; 
+}
+.header-title i { font-size: 18px; width: 24px; text-align: center; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
 .max-w-xl { max-width: 600px; }
@@ -113,7 +123,7 @@ const authStore = useAuthStore()
 .base-panel { 
   background: transparent; 
   border: 1px solid var(--border); 
-  border-radius: 0; 
+  border-radius: 8px; 
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; 
 }
 .shadow-normal { box-shadow: none; }
@@ -130,7 +140,7 @@ const authStore = useAuthStore()
 .menu-card { 
   display: flex; align-items: center; gap: 20px; text-align: left; 
   padding: 24px; background: transparent; 
-  border: 1px solid var(--border); cursor: pointer; 
+  border: 1px solid var(--border); border-radius: 8px; cursor: pointer; 
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
   font-family: inherit; margin-bottom: 16px; 
 }
@@ -139,7 +149,7 @@ const authStore = useAuthStore()
 }
 .menu-icon-box { 
   width: 48px; height: 48px; background: transparent; 
-  border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; 
+  border: 1px solid var(--border); border-radius: 8px; display: flex; align-items: center; justify-content: center; 
   font-size: 20px; color: var(--text-primary); transition: all 0.3s; 
 }
 .menu-card:hover .menu-icon-box { border-color: var(--text-primary); }

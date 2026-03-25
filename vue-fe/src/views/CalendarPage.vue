@@ -7,21 +7,25 @@
         :date-text="headerDateText"
         :current-view="currentView"
         :current-date="parseDate(focusedDay)"
+        :is-legend-visible="isLegendVisible"
         @navigate="navigate"
         @change-view="setView"
         @jump-to-date="jumpToDate"
+        @toggle-legend="isLegendVisible = !isLegendVisible"
       />
 
-      <!-- Flow Legend Chips (프로토타입 동일) -->
-      <div class="flow-chips">
-        <div v-for="track in flowChipTracks" :key="track.id" class="flow-chip">
-          <div class="flow-chip-bar" :style="{ background: track.color }" />
-          <div>
-            <div class="flow-chip-name">{{ track.name }}</div>
-            <div class="flow-chip-sub">{{ getTrackScheduleCount(track.id) }}개 활동</div>
+      <!-- Flow Legend Chips -->
+      <Transition name="legend-slide">
+        <div v-if="isLegendVisible" class="flow-chips">
+          <div v-for="track in flowChipTracks" :key="track.id" class="flow-chip">
+            <div class="flow-chip-bar" :style="{ background: track.color }" />
+            <div>
+              <div class="flow-chip-name">{{ track.name }}</div>
+              <div class="flow-chip-sub">{{ getTrackScheduleCount(track.id) }}개 활동</div>
+            </div>
           </div>
         </div>
-      </div>
+      </Transition>
 
       <div v-if="currentView === 'month'" class="calendar-area">
           <div class="month-scroll-body custom-scroll" ref="monthScrollBody" @scroll.passive="handleMonthScroll">
@@ -98,7 +102,6 @@
               <span class="week-col-label">{{ DAY_LABELS[idx] }}</span>
               <span class="week-col-date" :class="{ 'is-today text-accent-1': day === todayStr }">
                 {{ dateOf(day) }}
-                <span v-if="day === todayStr" class="week-today-tag">TODAY</span>
               </span>
             </div>
           </div>
@@ -199,7 +202,7 @@
       </div>
     </main>
 
-    <NodeFormModal v-model="isScheduleModalOpen" :mode="modalMode" :initial-form="modalInitialForm" :edit-node-id="editTargetId" @save="handleSaveSchedule" @jump="handleModalJump" />
+    <NodeFormModal v-model="isScheduleModalOpen" :mode="modalMode" :initial-form="modalInitialForm" :edit-node-id="editTargetId" @save="handleSaveSchedule" @jump="handleModalJump" @delete="handleDeleteFromModal" />
     <DayDetailModal v-model="isDayDetailOpen" :day-str="dayDetailTarget" :schedules="store.getSchedulesForDay(dayDetailTarget)" @add-schedule="(d) => { isDayDetailOpen = false; openCreateModal(d) }" @edit-schedule="(s) => { isDayDetailOpen = false; openEditModal(s) }" @delete-schedule="(id) => { handleDeleteSchedule(id) }" />
     
     <AIReasoningModal
@@ -252,6 +255,7 @@ const focusedDay = ref(todayStr)
 const selectedDay = ref(null)
 const activeTooltipId = ref(null)
 const selectedSchedules = ref([])
+const isLegendVisible = ref(false)
 
 const currentScrollY = ref(0)
 const calendarWrapper = ref(null)
@@ -361,8 +365,8 @@ const updateConnections = () => {
 
       let d = "";
       if (currentView.value === 'week') {
-        const midY = (y1 + y2) / 2;
-        d = `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
+        const midX = (x1 + x2) / 2;
+        d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
       } else {
         const midX = (x1 + x2) / 2;
         d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
@@ -487,10 +491,16 @@ function initMonthScroll() {
 function scrollToDate(dateStr, behavior = 'smooth', align = 'top') {
   const el = document.getElementById(`day-${dateStr}`);
   if (el && monthScrollBody.value) {
-    let targetTop = el.offsetTop - 50; 
+    const rect = el.getBoundingClientRect();
+    const containerRect = monthScrollBody.value.getBoundingClientRect();
+    const relativeTop = rect.top - containerRect.top + monthScrollBody.value.scrollTop;
+    
+    const headerH = monthScrollBody.value.querySelector('.calendar-header-row')?.offsetHeight || 44;
+    let targetTop = relativeTop - headerH;
+
     if (align === 'center') {
       const containerH = monthScrollBody.value.clientHeight;
-      targetTop = Math.max(0, el.offsetTop - (containerH / 2) + (el.clientHeight / 2));
+      targetTop = Math.max(0, relativeTop - (containerH / 2) + (el.clientHeight / 2));
     }
     monthScrollBody.value.scrollTo({ top: targetTop, behavior });
     return true;
@@ -712,6 +722,7 @@ function handleModalJump(dateStr) {
 }
 
 async function handleDeleteSchedule(id) { if (!confirm('이 일정을 삭제하시겠습니까?')) return; await store.deleteSchedule(id); activeTooltipId.value = null }
+async function handleDeleteFromModal(id) { if (!id) return; await store.deleteSchedule(id); activeTooltipId.value = null; isScheduleModalOpen.value = false }
 function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; selectedSchedules.value.forEach(id => store.deleteSchedule(id)); selectedSchedules.value = [] }
 
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
@@ -760,6 +771,8 @@ function onWeekWheel(e) {
 .custom-scroll { overflow-y: auto; overflow-x: hidden; -ms-overflow-style: none; scrollbar-width: none; overflow-anchor: auto; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
+::selection { background: var(--accent); color: var(--bg-base); }
+
 .app-layout { display: flex; width: 100%; height: 100vh; overflow: hidden; background: var(--bg-base); font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; }
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
@@ -770,19 +783,23 @@ function onWeekWheel(e) {
 /* ── 공통 ── */
 /* Flow Legend Chips */
 .flow-chips { display: flex; gap: 12px; padding: 12px 24px; flex-shrink: 0; flex-wrap: wrap; }
-.flow-chip { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--border); background: var(--bg-surface); }
+.flow-chip { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border: 1px solid var(--border); background: var(--bg-surface); border-radius: 8px; }
 .flow-chip-bar { width: 4px; height: 24px; border-radius: 2px; flex-shrink: 0; }
 .flow-chip-name { font-size: 12px; font-weight: 800; color: var(--text-primary); }
 .flow-chip-sub { font-size: 10px; font-weight: 700; color: var(--text-muted); }
+
+.legend-slide-enter-active, .legend-slide-leave-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+.legend-slide-enter-from, .legend-slide-leave-to { opacity: 0; transform: translateY(-10px); height: 0; padding-top: 0; padding-bottom: 0; margin-bottom: 0; overflow: hidden; }
 
 .calendar-area { flex: 1; overflow: hidden; position: relative; display: flex; flex-direction: column; background: var(--bg-base); }
 .calendar-wrapper { position: relative; width: 100%; min-height: 100%; display: flex; flex-direction: column; }
 
 /* ── 월간 뷰 전용 ── */
 .month-scroll-body { flex: 1; position: relative; z-index: 10; scroll-behavior: auto; }
-.calendar-header-row { display: grid; border-bottom: 1px solid var(--border-mid); background: var(--bg-surface); z-index: 150 !important; position: sticky; top: 0; }
+.calendar-header-row { display: grid; border-bottom: 1px solid var(--border-mid); background: var(--bg-base); z-index: 150 !important; position: sticky; top: 0; }
 .grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
 .day-header { padding: 14px 0; text-align: center; font-size: 13px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; border-right: 1px solid var(--border); box-sizing: border-box; }
+.day-header:last-child { border-right: none; }
 .day-header--sat { color: #2563eb !important; }
 .day-header--sun { color: #dc2626 !important; }
 .line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
@@ -792,18 +809,18 @@ function onWeekWheel(e) {
 .conn-path.is-dimmed { opacity: 0.05 !important; }
 h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
-.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; border-left: 1px solid var(--border); }
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
 
 /* ── Floating Action Bar ── */
 .floating-action-bar {
   position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-  background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); border-radius: 40px;
+  background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); border-radius: 8px;
   padding: 10px 24px; display: flex; align-items: center; gap: 16px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; font-weight: 900; letter-spacing: 0.05em;
 }
 .floating-action-bar button {
   background: transparent; color: var(--bg-base); border: 1px solid rgba(255,255,255,0.2);
-  padding: 6px 16px; font-weight: 900; cursor: pointer; border-radius: 40px; transition: all 0.2s; letter-spacing: 0.05em;
+  padding: 6px 16px; font-weight: 900; cursor: pointer; border-radius: 6px; transition: all 0.2s; letter-spacing: 0.05em;
   font-size: 11px;
 }
 .floating-action-bar button:hover { background: rgba(255,255,255,0.1); border-color: white; }
@@ -827,7 +844,7 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 .week-col-header:has(.is-today) .week-col-date,
 .week-col-header:has(.is-today) .week-holiday-name { color: var(--bg-base) !important; }
 .week-col-header:has(.is-today) { background: var(--bg-surface); color: var(--text-primary); }
-.week-today-tag { font-size: 10px; background: var(--text-primary); border: none; padding: 2px 8px; color: var(--bg-base); font-weight: 900; letter-spacing: 0.05em; border-radius: 40px; }
+.week-today-tag { font-size: 10px; background: var(--text-primary); border: none; padding: 2px 8px; color: var(--bg-base); font-weight: 900; letter-spacing: 0.05em; border-radius: 4px; }
 
 /* 그래프 구역 */
 .week-graph-zone { position: relative; border-bottom: 2px solid var(--border); flex-shrink: 0; background: transparent; z-index: 10; }
@@ -841,7 +858,7 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 .week-lane-label { 
   position: absolute; left: 12px; transform: translateY(-50%); margin-top: 0; 
   display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; 
-  border-radius: 40px; border: 1px solid var(--border); background: var(--bg-elevated); 
+  border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elevated); 
   font-size: 10px; font-weight: 800; color: var(--text-primary); 
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; text-transform: uppercase;
   max-width: calc((100% / 12) - 12px); 
@@ -857,11 +874,11 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 .week-cell { border-right: 1px solid var(--border); padding: 16px 8px 48px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: background 0.1s; cursor: pointer; min-height: 100%; }
 .week-cell:last-child { border-right: none; }
 .week-cell:hover { background: var(--bg-hover); }
-.week-cell--today { background: transparent !important; }
+.week-cell--today { background: var(--bg-base) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 5; }
 .week-cell--selected { outline: 2px solid var(--text-primary); outline-offset: -2px; background: transparent !important; }
 .week-cards { display: flex; flex-direction: column; gap: 8px; }
 
-.btn-add-week { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 32px; height: 32px; border-radius: 0; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
+.btn-add-week { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 32px; height: 32px; border-radius: 8px; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
 .week-cell:hover .btn-add-week { opacity: 1; }
 .btn-add-week:hover { background: var(--text-primary); color: var(--bg-base); transform: scale(1.1); box-shadow: 2px 2px 0 var(--text-primary); }
 

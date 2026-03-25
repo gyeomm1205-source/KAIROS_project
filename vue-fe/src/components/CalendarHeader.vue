@@ -49,7 +49,6 @@
 
         <div class="nav-controls">
           <button class="nav-btn" @click="$emit('navigate', 'prev')"><i class="fas fa-chevron-left" /></button>
-          <button class="nav-btn nav-btn--text" @click="$emit('navigate', 'today')">TODAY</button>
           <button class="nav-btn" @click="$emit('navigate', 'next')"><i class="fas fa-chevron-right" /></button>
         </div>
       </div>
@@ -61,16 +60,11 @@
     </div>
 
     <div class="header-right">
-      <div class="legend-inline">
-        <span class="legend-item"><i class="fas fa-check-circle" style="color:var(--text-primary);"/> 완료</span>
-        <span class="legend-item"><i class="fas fa-spinner" style="color:var(--text-muted);"/> 진행중</span>
-        <span class="legend-item"><i class="fas fa-circle" style="color:var(--text-faint);"/> 예정</span>
-        <span class="legend-divider" />
-        <span class="legend-item"><span class="legend-dot" style="background:#6366f1;" /> 학습</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#10b981;" /> 개발</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#f59e0b;" /> 블로그</span>
-        <span class="legend-item"><span class="legend-dot" style="background:#8b5cf6;" /> 복습</span>
-      </div>
+      <button class="btn-legend-toggle" :class="{ active: isLegendVisible }" @click="$emit('toggle-legend')">
+        <i class="fas fa-layer-group" /> <span>FLOW LEGEND</span>
+      </button>
+
+      <div class="legend-divider" />
 
       <button class="btn-manage" @click="$emit('import-external')">
         <i class="fas fa-download" /><span>외부 일정 가져오기</span>
@@ -85,11 +79,11 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 
-const props = defineProps({ dateText: String, currentView: String, currentDate: Date })
-const emit = defineEmits(['navigate', 'change-view', 'jump-to-date', 'import-external', 'sync-schedule'])
+const props = defineProps({ dateText: String, currentView: String, currentDate: Date, isLegendVisible: Boolean })
+const emit = defineEmits(['navigate', 'change-view', 'jump-to-date', 'import-external', 'sync-schedule', 'toggle-legend'])
 
 const isPopoverOpen = ref(false); const dateWrapRef = ref(null); const activeSelect = ref(null); const selYear = ref(new Date().getFullYear()); const selMonth = ref(new Date().getMonth() + 1); const selDay = ref(new Date().getDate());
-const yearOptions = computed(() => { const current = new Date().getFullYear(); return Array.from({ length: 11 }, (_, i) => current - 5 + i) })
+const yearOptions = computed(() => { const current = new Date().getFullYear(); return Array.from({ length: 21 }, (_, i) => current - 10 + i) })
 const daysInSelectedMonth = computed(() => new Date(selYear.value, selMonth.value, 0).getDate())
 
 function toggleDatePopover() { if (!isPopoverOpen.value) { const d = props.currentDate || new Date(); selYear.value = d.getFullYear(); selMonth.value = d.getMonth() + 1; selDay.value = d.getDate() || 1; activeSelect.value = null; } isPopoverOpen.value = !isPopoverOpen.value }
@@ -119,7 +113,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .calendar-header {
   height: 64px;
   border-bottom: 1px solid var(--border);
-  background: var(--bg-surface);
+  background: var(--bg-base);
   display: flex; align-items: center; justify-content: space-between;
   padding: 0 24px;
   flex-shrink: 0; z-index: 200;
@@ -145,7 +139,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .date-text {
   font-size: 20px; font-weight: 900; color: var(--text-primary);
   cursor: pointer; display: flex; align-items: center; gap: 4px;
-  border-radius: 0; padding: 4px 8px; letter-spacing: 0.05em;
+  border-radius: 4px; padding: 4px 8px; letter-spacing: 0.05em;
   transition: background 0.15s; white-space: nowrap;
 }
 .date-text:hover { background: var(--text-primary); color: var(--bg-base); }
@@ -162,7 +156,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .custom-sel-wrap { position: relative; }
 .custom-sel-display {
   background: transparent; border: 1px solid var(--border); color: var(--text-primary);
-  padding: 10px 14px; border-radius: 0;
+  padding: 10px 14px; border-radius: 4px;
   font-size: 13px; font-weight: 800; cursor: pointer;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   min-width: 95px; white-space: nowrap; transition: all 0.1s ease;
@@ -179,29 +173,29 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   box-shadow: 0 4px 12px rgba(0,0,0,0.1); list-style: none; margin: 0;
 }
 .custom-sel-item {
-  padding: 8px 10px; font-size: 12px; border-radius: 0; cursor: pointer;
+  padding: 8px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;
   transition: all 0.1s; font-weight: 700; color: var(--text-primary); white-space: nowrap;
 }
 .custom-sel-item:hover { background: var(--text-primary); color: var(--bg-base); }
 .custom-sel-item.selected { background: var(--text-primary); color: var(--bg-base); }
 
-.btn-pop-confirm { width: 100%; background: var(--text-primary); color: var(--bg-base); border: none; padding: 12px; border-radius: 0; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; }
+.btn-pop-confirm { width: 100%; background: var(--text-primary); color: var(--bg-base); border: none; padding: 12px; border-radius: 4px; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; }
 .btn-pop-confirm:hover { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--text-primary); }
 
 .nav-controls { display: flex; align-items: center; gap: 6px; }
-.nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: transparent; border-radius: 0; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.1s; }
+.nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: transparent; border-radius: 4px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.1s; }
 .nav-btn--text { width: auto; padding: 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; }
 .nav-btn:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
-.view-switcher { display: flex; gap: 4px; background: transparent; border: 1px solid var(--border); padding: 4px; border-radius: 0; }
-.view-btn { padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 0; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.1s; }
+.view-switcher { display: flex; gap: 4px; background: transparent; border: 1px solid var(--border); padding: 4px; border-radius: 4px; }
+.view-btn { padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 4px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.1s; }
 .view-btn:hover { color: var(--text-primary); border-color: var(--border); }
 .view-btn--active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
 .btn-manage, .btn-study-cal {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 16px; border: 1px solid var(--border); background: transparent;
-  color: var(--text-primary); border-radius: 0;
+  color: var(--text-primary); border-radius: 4px;
   font-size: 12px; font-weight: 800; cursor: pointer;
   transition: all 0.1s; white-space: nowrap; letter-spacing: 0.05em;
 }
@@ -215,4 +209,15 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .legend-item i { font-size: 10px; }
 .legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 .legend-divider { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
+
+.btn-legend-toggle {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); border-radius: 4px;
+  font-size: 12px; font-weight: 800; cursor: pointer;
+  transition: all 0.2s; white-space: nowrap; letter-spacing: 0.05em;
+}
+.btn-legend-toggle:hover { color: var(--text-primary); border-color: var(--text-primary); background: var(--bg-hover); }
+.btn-legend-toggle.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+
 </style>

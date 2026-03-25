@@ -18,9 +18,9 @@
       <router-link to="/history" class="nav-item" active-class="active">
         <i class="fas fa-history" /> HISTORY
       </router-link>
-      <router-link to="/mypage" class="nav-item" active-class="active">
+      <!-- <router-link to="/mypage" class="nav-item" active-class="active">
         <i class="fas fa-user-circle" /> MY PAGE
-      </router-link>
+      </router-link> -->
     </nav>
 
     <div class="sync-section">
@@ -204,7 +204,7 @@ const handleLogout = () => {
   padding: 16px; 
   border-top: 1px solid var(--border); 
   display: flex; align-items: center; gap: 8px; 
-  background: var(--bg-surface);
+  background: var(--bg-base);
 }
 .user-profile { 
   flex: 1; display: flex; align-items: center; gap: 12px; 

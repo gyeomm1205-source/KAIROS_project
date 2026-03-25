@@ -21,9 +21,6 @@
               </div>
             </div>
             <div class="modal-header-actions">
-              <button class="btn-add-header" title="일정 추가" @click="$emit('add-schedule', dayStr)">
-                <i class="fas fa-plus" />
-              </button>
               <button class="modal-close" @click="close">
                 <i class="fas fa-times" />
               </button>
@@ -157,7 +154,7 @@ function trackName(id)  { return store.getTrackById(id)?.name  || id }
   display: flex; flex-direction: column; 
   background: rgba(var(--bg-surface-rgb, 255, 255, 255), 0.95); 
   border: 1px solid var(--text-primary); 
-  border-radius: 0; 
+  border-radius: 8px; 
   box-shadow: 0 40px 100px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.1) inset; 
   overflow: hidden;
   animation: modal-pop 0.4s cubic-bezier(0.16, 1, 0.3, 1);
@@ -170,10 +167,19 @@ function trackName(id)  { return store.getTrackById(id)?.name  || id }
 
 .modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px 32px; border-bottom: 1px solid var(--border); background: rgba(255,255,255,0.02); }
 .header-left { display: flex; align-items: center; gap: 16px; }
-.icon-circle { width: 44px; height: 44px; background: var(--text-primary); color: var(--bg-base); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+.icon-circle { width: 44px; height: 44px; background: var(--text-primary); color: var(--bg-base); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
 .header-text h3 { font-size: 18px; font-weight: 800; margin: 0; color: var(--text-primary); letter-spacing: -0.02em; font-family: 'Space Grotesk', sans-serif; }
 .header-text p { font-size: 12px; font-weight: 600; margin: 2px 0 0 0; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; }
 
+.modal-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  align-self: flex-start;
+  margin-top: -8px;
+  margin-right: -16px;
+}
 .modal-close { background: transparent; border: none; color: var(--text-muted); font-size: 20px; cursor: pointer; transition: 0.3s cubic-bezier(0.16, 1, 0.3, 1); padding: 4px; display: flex; align-items: center; justify-content: center; }
 .modal-close:hover { color: var(--text-primary); transform: rotate(90deg); }
 
@@ -193,7 +199,7 @@ function trackName(id)  { return store.getTrackById(id)?.name  || id }
 .timeline-item:hover .tl-dot { transform: scale(1.4); border-color: var(--text-primary); }
 
 .tl-card { 
-  flex: 1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-left: 12px;
+  flex: 1; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin-left: 12px;
   box-shadow: 0 4px 15px rgba(0,0,0,0.02); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
   position: relative; overflow: hidden;
 }
@@ -207,18 +213,18 @@ function trackName(id)  { return store.getTrackById(id)?.name  || id }
 
 .tl-actions { display: flex; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); opacity: 0; transition: 0.2s; }
 .timeline-item:hover .tl-actions { opacity: 1; }
-.action-btn { background: var(--bg-hover); border: none; color: var(--text-muted); padding: 6px 10px; border-radius: 6px; font-size: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; }
+.action-btn { background: var(--bg-hover); border: none; color: var(--text-muted); padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 900; cursor: pointer; transition: 0.2s; }
 .action-btn:hover { background: var(--text-primary); color: var(--bg-base); }
 
 /* Empty State */
 .modal-empty-card { 
-  margin: 32px; padding: 48px 32px; border: 1px dashed var(--border); border-radius: 20px; 
+  margin: 32px; padding: 48px 32px; border: 1px dashed var(--border); border-radius: 8px; 
   display: flex; flex-direction: column; align-items: center; text-align: center; gap: 16px;
 }
-.empty-icon-box { width: 64px; height: 64px; background: var(--bg-hover); border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-faint); }
+.empty-icon-box { width: 64px; height: 64px; background: var(--bg-hover); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-faint); }
 .empty-text h4 { font-size: 16px; font-weight: 800; margin: 0; color: var(--text-primary); letter-spacing: -0.01em; }
 .empty-text p  { font-size: 13px; font-weight: 500; color: var(--text-muted); margin: 6px 0 0; line-height: 1.5; }
-.btn-add-primary { margin-top: 8px; padding: 14px 24px; font-size: 12px; font-weight: 900; background: var(--text-primary); color: var(--bg-base); border: none; border-radius: 12px; cursor: pointer; transition: 0.3s; }
+.btn-add-primary { margin-top: 8px; padding: 14px 24px; font-size: 12px; font-weight: 900; background: var(--text-primary); color: var(--bg-base); border: none; border-radius: 8px; cursor: pointer; transition: 0.3s; }
 .btn-add-primary:hover { transform: translateY(-2px); opacity: 0.9; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
 .modal-fade-enter-active, .modal-fade-leave-active { transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
