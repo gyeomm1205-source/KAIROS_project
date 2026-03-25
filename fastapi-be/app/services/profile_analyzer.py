@@ -45,7 +45,8 @@ def analyze_all_activities(merged_context: str) -> list[dict]:
    - [Github 경우]: 수정된 파일(changed_files)과 겹쳐봐서 "어떤 기술적 구현/구조 변경"을 했는지 파악.
    - [Velog 경우]: 본문 요약(content_snippet)을 보고 "어떤 기술적 난제를 해결했거나 무엇을 깊게 학습했는지" 파악.
 3. category: 활동의 본질을 파악하여 '개발', '학습', '취준', '기타' 중 하나로 정확하게 분류해라.
-4. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 기재.
+4. date: 컨텍스트(CSV 등)에 명시된 날짜를 'YYYY-MM-DD' 형식으로 그대로 가져와라. 절대 오늘 날짜로 조작하지 마라.
+5. type: Github 데이터면 'Github Commit'이나 'Github PR'로 적고, Velog 데이터면 'Velog Post'로 기재.
 
 {format_instructions}
 
@@ -148,25 +149,44 @@ async def start_github_collection(github_token: str, github_username: str):
     print("▶️ 1-1. GitHub 데이터만 사전 수집 시작... ⚡")
     collection_start = time.time()
     
-    github_context = await get_github_context(github_token, github_username)
+    result = await get_github_context(github_token, github_username)
     
     collection_end = time.time()
     print(f"\n▶️ 1-1. GitHub 별도 수집 완벽히 종료! (총 소요 시간: {collection_end - collection_start:.2f}초)")
-    return github_context
+    # result는 {"context": ..., "id_date_map": ...} 또는 None
+    return result
 
 
-async def start_velog_and_analysis(velog_username: str, github_context: str):
+async def start_velog_and_analysis(velog_username: str, github_result):
     print("▶️ 1-2. Velog 수집 및 통합 분석 대기... ⚡")
     collection_start = time.time()
     
-    velog_context = await get_velog_context(velog_username)
+    velog_result = await get_velog_context(velog_username)
     
     collection_end = time.time()
     print(f"\n▶️ 1-2. Velog 수집 종료! (소요 시간: {collection_end - collection_start:.2f}초)")
     
-    github_context = github_context or "Github 활동 내역 없음"
-    velog_context = velog_context or "Velog 활동 내역 없음"
-    
+    # context 텍스트와 id_date_map 분리
+    if github_result and isinstance(github_result, dict):
+        github_context = github_result.get("context", "Github 활동 내역 없음")
+        gh_id_date_map = github_result.get("id_date_map", {})
+    else:
+        github_context = "Github 활동 내역 없음"
+        gh_id_date_map = {}
+
+    if velog_result and isinstance(velog_result, dict):
+        velog_context = velog_result.get("context", "Velog 활동 내역 없음")
+        velog_id_date_map = velog_result.get("id_date_map", {})
+    else:
+        velog_context = "Velog 활동 내역 없음"
+        velog_id_date_map = {}
+
+    # Github 마지막 id 이후로 Velog id 오프셋 계산
+    gh_id_offset = max(gh_id_date_map.keys(), default=0)
+    unified_date_map = {**gh_id_date_map}  # Github id_date_map 복사
+    for velog_id, date in velog_id_date_map.items():
+        unified_date_map[gh_id_offset + velog_id] = date  # Velog id에는 오프셋 추가
+
     # Github 컨텍스트가 너무 길면 레포지토리 단위(### 프로젝트:)로 청킹(Chunking)
     repo_blocks = github_context.split("\n---\n\n")
     chunks = []
@@ -231,7 +251,8 @@ async def start_velog_and_analysis(velog_username: str, github_context: str):
     # 5. 생성된 데이터들을 FastAPI 등에서 쓸 수 있도록 Return
     return {
         "profile": final_profile,
-        "activities": all_activities
+        "activities": all_activities,
+        "id_date_map": unified_date_map  # 날짜 직접 조회용
     }
     
     
