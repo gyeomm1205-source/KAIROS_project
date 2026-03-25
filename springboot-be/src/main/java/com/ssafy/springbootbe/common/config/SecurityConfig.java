@@ -51,7 +51,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/analysis/complete").permitAll()
-                        .requestMatchers("/api/test/secret-inject-github-token-ssafy-test-77-xyz").permitAll()
+                        .requestMatchers("/test/secret-inject-github-token-ssafy-test-77-xyz").permitAll()
                         .anyRequest().authenticated());
         return http.build();
     }
