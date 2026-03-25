@@ -36,6 +36,22 @@
               class="search-input"
             />
           </div>
+          
+          <select 
+            class="connector-select" 
+            @change="addParent($event.target.value); $event.target.value = ''"
+          >
+            <option value="">QUICK SELECT PREVIOUS NODE</option>
+            <optgroup v-for="group in groupedParents" :key="group.trackId" :label="group.trackName">
+              <option
+                v-for="s in group.schedules" :key="s.id" :value="s.id"
+                :disabled="selectedParentIds.includes(s.id)"
+              >
+                {{ s.day }} │ {{ s.tooltip?.title || s.text || '이름 없음' }}
+              </option>
+            </optgroup>
+          </select>
+
           <div class="search-results custom-scroll" v-if="parentSearch">
             <template v-for="group in filteredParents" :key="group.trackId">
               <div class="search-group-label">{{ group.trackName }}</div>
@@ -54,21 +70,6 @@
             </template>
             <div v-if="!filteredParents.length" class="no-result">결과가 없습니다.</div>
           </div>
-          <select 
-            v-else
-            class="connector-select" 
-            @change="addParent($event.target.value); $event.target.value = ''"
-          >
-            <option value="">SELECT PREVIOUS NODE</option>
-            <optgroup v-for="group in groupedParents" :key="group.trackId" :label="group.trackName">
-              <option
-                v-for="s in group.schedules" :key="s.id" :value="s.id"
-                :disabled="selectedParentIds.includes(s.id)"
-              >
-                {{ s.day }} │ {{ s.tooltip?.title || s.text || '이름 없음' }}
-              </option>
-            </optgroup>
-          </select>
         </div>
       </div>
     </div>
@@ -108,6 +109,22 @@
               class="search-input"
             />
           </div>
+
+          <select 
+            class="connector-select" 
+            @change="addChild($event.target.value); $event.target.value = ''"
+          >
+            <option value="">QUICK SELECT NEXT NODE</option>
+            <optgroup v-for="group in groupedChildren" :key="group.trackId" :label="group.trackName">
+              <option
+                v-for="s in group.schedules" :key="s.id" :value="s.id"
+                :disabled="selectedChildIds.includes(s.id)"
+              >
+                {{ s.day }} │ {{ s.tooltip?.title || s.text || '이름 없음' }}
+              </option>
+            </optgroup>
+          </select>
+
           <div class="search-results custom-scroll" v-if="childSearch">
             <template v-for="group in filteredChildren" :key="group.trackId">
               <div class="search-group-label">{{ group.trackName }}</div>
@@ -126,21 +143,6 @@
             </template>
             <div v-if="!filteredChildren.length" class="no-result">결과가 없습니다.</div>
           </div>
-          <select 
-            v-else
-            class="connector-select" 
-            @change="addChild($event.target.value); $event.target.value = ''"
-          >
-            <option value="">SELECT NEXT NODE</option>
-            <optgroup v-for="group in groupedChildren" :key="group.trackId" :label="group.trackName">
-              <option
-                v-for="s in group.schedules" :key="s.id" :value="s.id"
-                :disabled="selectedChildIds.includes(s.id)"
-              >
-                {{ s.day }} │ {{ s.tooltip?.title || s.text || '이름 없음' }}
-              </option>
-            </optgroup>
-          </select>
         </div>
       </div>
     </div>
@@ -205,16 +207,16 @@ const filteredChildren = computed(() => groupByTrack(props.children, childSearch
 <style scoped>
 .edge-section { display: flex; flex-direction: column; gap: 20px; }
 
-.connector-row   { display: flex; flex-direction: column; gap: 10px; }
-.connector-label { display: flex; align-items: center; gap: 8px; font-size: 10px; font-weight: 800; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.05em; }
-.connector-badge { font-size: 9px; font-weight: 900; padding: 2px 6px; border-radius: 4px; background: var(--bg-dark); color: var(--bg-base); letter-spacing: 0.05em; }
+.connector-row   { display: flex; flex-direction: column; gap: 14px; }
+.connector-label { display: flex; align-items: center; gap: 10px; font-size: 11px; font-weight: 900; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.1em; }
+.connector-badge { font-size: 10px; font-weight: 900; padding: 3px 8px; border-radius: 8px; background: var(--text-primary); color: var(--bg-base); letter-spacing: 0.08em; }
 
 .tag-select-wrap { display: flex; flex-direction: column; gap: 10px; }
 .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .tag-chip {
   display: inline-flex; align-items: center; gap: 8px;
   font-size: 12px; font-weight: 700;
-  padding: 8px 12px; border-radius: 10px; border: 1px solid var(--border);
+  padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);
   background: var(--bg-surface); white-space: nowrap;
   transition: all 0.2s;
 }
@@ -224,26 +226,26 @@ const filteredChildren = computed(() => groupByTrack(props.children, childSearch
 .tag-color { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .tag-actions { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
-.tag-action-btn { background: var(--bg-hover); border: 1px solid var(--border); padding: 5px; font-size: 10px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: 0.2s; }
+.tag-action-btn { background: var(--bg-hover); border: 1px solid var(--border); padding: 5px; font-size: 10px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: 0.2s; }
 .tag-action-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
 .tag-action-btn.remove:hover { color: #f44336; border-color: #f44336; }
 
 /* Searchable Select */
-.searchable-select { display: flex; flex-direction: column; gap: 0; position: relative; }
+.searchable-select { display: flex; flex-direction: column; gap: 10px; position: relative; }
 .search-input-wrapper { position: relative; width: 100%; }
 .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 12px; color: var(--text-faint); }
 .search-input { 
-  width: 100%; background: var(--bg-hover); border: 1px solid var(--border); 
-  border-radius: 10px; color: var(--text-primary); font-size: 13px; font-weight: 600; 
+  width: 100%; background: var(--bg-surface); border: 1px solid var(--border); 
+  border-radius: 8px; color: var(--text-primary); font-size: 13px; font-weight: 600; 
   padding: 12px 14px 12px 38px; outline: none; transition: 0.2s; 
 }
-.search-input:focus { border-color: var(--text-primary); background: var(--bg-surface); }
+.search-input:focus { border-color: var(--text-primary); }
 
 .search-results { 
   position: absolute; top: calc(100% + 8px); left: 0; right: 0; 
-  max-height: 200px; overflow-y: auto; background: rgba(255, 255, 255, 0.9); 
-  backdrop-filter: blur(12px); border: 1px solid var(--text-primary); 
-  border-radius: 12px; z-index: 100; box-shadow: 0 12px 40px rgba(0,0,0,0.15); 
+  max-height: 200px; overflow-y: auto; background: var(--bg-base); 
+  border: 1px solid var(--text-primary); 
+  border-radius: 8px; z-index: 100; box-shadow: 0 12px 40px rgba(0,0,0,0.2); 
 }
 .search-group-label { font-size: 9px; font-weight: 900; color: var(--text-faint); padding: 10px 14px 4px; text-transform: uppercase; letter-spacing: 0.05em; border-top: 1px solid var(--border); }
 .search-group-label:first-child { border-top: none; }
@@ -258,7 +260,7 @@ const filteredChildren = computed(() => groupByTrack(props.children, childSearch
 .no-result { padding: 20px; font-size: 13px; color: var(--text-faint); text-align: center; font-weight: 600; }
 
 .connector-select {
-  width: 100%; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 10px;
+  width: 100%; background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px;
   color: var(--text-primary); font-size: 13px; font-weight: 600;
   padding: 12px 14px; outline: none; cursor: pointer; transition: 0.2s; appearance: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");

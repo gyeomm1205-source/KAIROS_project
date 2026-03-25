@@ -14,7 +14,6 @@
     <div class="cell-header">
       <div class="wrapper--today" v-if="isToday">
         <span class="date-label date--today">{{ dayNum }}</span>
-        <span class="today-tag">TODAY</span>
       </div>
       <span v-else class="date-label" :class="{ 'date--holiday': isHoliday }">{{ dayNum }}</span>
       <button class="btn-add-schedule" @click.stop="$emit('add-schedule', dateStr)">
@@ -93,23 +92,26 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
   display: flex; flex-direction: column; padding: 8px; background: var(--bg-base);
   transition: background 0.1s; cursor: pointer; overflow: visible; min-height: 80px;
 }
-.calendar-cell:hover { background: var(--bg-hover); }
+.calendar-cell:nth-child(7n) { border-right: none; }
+.calendar-cell:hover { background: rgba(0,0,0,0.015); }
+.theme-dark .calendar-cell:hover { background: rgba(255,255,255,0.02); }
 .calendar-cell:hover .btn-add-schedule { opacity: 1; }
 
-.cell--today { background: var(--bg-base) !important; border-top: 3px solid var(--text-primary); }
+.cell--today { background: var(--bg-base) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 5; }
 .wrapper--today { display: flex; align-items: center; gap: 6px; }
 .date--today {
   color: var(--bg-base) !important; background: var(--text-primary) !important;
-  border-radius: 0; width: 24px; height: 24px;
+  border-radius: 4px; width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center; font-weight: 900 !important;
 }
 .today-tag {
   font-size: 9px; font-weight: 900;
   color: var(--bg-base); background: var(--text-primary);
-  border: 1px solid var(--text-primary); border-radius: 0; padding: 2px 6px; letter-spacing: 0.1em;
+  border: 1px solid var(--text-primary); border-radius: 4px; padding: 2px 6px; letter-spacing: 0.1em;
 }
 
-.cell--selected { background: var(--bg-hover) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; }
+.cell--selected { background: rgba(0,0,0,0.03) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; }
+.theme-dark .cell--selected { background: rgba(255,255,255,0.04) !important; }
 .cell--sat .date-label:not(.date--holiday) { color: #2563eb !important; font-weight: 800; }
 .cell--sun .date-label:not(.date--holiday) { color: #dc2626 !important; font-weight: 800; }
 .date--holiday { color: #dc2626 !important; font-weight: 900 !important; }
@@ -123,7 +125,7 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
 .date-label { font-size: 13px; font-weight: 700; color: var(--text-primary); font-family: 'Escoredream', sans-serif; line-height: 1; min-width: 22px; text-align: center; }
 
 .btn-add-schedule {
-  width: 20px; height: 20px; border-radius: 0;
+  width: 20px; height: 20px; border-radius: 4px;
   background: transparent; color: var(--text-primary);
   border: 1px solid var(--text-primary); cursor: pointer;
   display: flex; align-items: center; justify-content: center;

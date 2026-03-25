@@ -1,6 +1,9 @@
 <template>
   <div :class="['app-root', themeClass]">
     <RouterView />
+    <!-- 전역 커서 — LandingPage와 동일한 dot + ring -->
+    <div class="g-cur-dot" ref="dotEl" />
+    <div class="g-cur-ring" ref="ringEl" :class="{ big: curBig }" />
   </div>
 </template>
 
@@ -8,7 +11,31 @@
 import { useThemeStore } from '@/stores/useThemeStore'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { storeToRefs } from 'pinia'
-import { watch, onMounted } from 'vue'
+import { watch, onMounted, onUnmounted, ref } from 'vue'
+
+// ── 전역 커서 ──
+const dotEl  = ref(null)
+const ringEl = ref(null)
+const curBig = ref(false)
+
+let cx = -300, cy = -300, rx = -300, ry = -300, rafId = null
+
+function onMouse(e) { cx = e.clientX; cy = e.clientY }
+
+function tickCursor() {
+  if (dotEl.value)  dotEl.value.style.transform  = `translate(${cx - 4}px, ${cy - 4}px)`
+  rx += (cx - rx) * 0.1
+  ry += (cy - ry) * 0.1
+  const sz = curBig.value ? 44 : 22
+  if (ringEl.value) ringEl.value.style.transform = `translate(${rx - sz / 2}px, ${ry - sz / 2}px)`
+  rafId = requestAnimationFrame(tickCursor)
+}
+
+// 클릭 가능한 요소에 hover 시 ring 확대
+function onPointerOver(e) {
+  const el = e.target.closest('a, button, [role="button"], input, select, textarea, label, [tabindex], .cursor-pointer')
+  curBig.value = !!el
+}
 
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
@@ -25,11 +52,49 @@ onMounted(() => {
   if (authStore.isAuthenticated && !authStore.profile) {
     authStore.fetchMe()
   }
+  // 커서 시작
+  tickCursor()
+  window.addEventListener('mousemove', onMouse)
+  document.addEventListener('pointerover', onPointerOver)
+})
+
+onUnmounted(() => {
+  cancelAnimationFrame(rafId)
+  window.removeEventListener('mousemove', onMouse)
+  document.removeEventListener('pointerover', onPointerOver)
 })
 </script>
 
 <style>
-/* ── S-CoreDream 폰트 ── */
+/* ── 전역 커서 ── */
+@media (hover: hover) and (pointer: fine) {
+  * { cursor: none !important; }
+}
+.g-cur-dot {
+  position: fixed; top: 0; left: 0;
+  width: 8px; height: 8px;
+  background: var(--text-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99999;
+  will-change: transform;
+}
+.g-cur-ring {
+  position: fixed; top: 0; left: 0;
+  width: 22px; height: 22px;
+  border: 2px solid var(--text-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 99998;
+  opacity: 0.5;
+  transition: width .3s cubic-bezier(.16,1,.3,1),
+              height .3s cubic-bezier(.16,1,.3,1),
+              opacity .3s;
+  will-change: transform;
+}
+.g-cur-ring.big { width: 44px; height: 44px; opacity: 0.8; }
+
+
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-1Thin.woff') format('woff'); font-weight: 100; font-display: swap; }
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-2ExtraLight.woff') format('woff'); font-weight: 200; font-display: swap; }
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-3Light.woff') format('woff'); font-weight: 300; font-display: swap; }

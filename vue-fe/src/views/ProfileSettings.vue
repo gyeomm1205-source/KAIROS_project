@@ -221,8 +221,20 @@ const saveProfile = async () => {
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; align-items: center; padding: 20px 32px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
-.header-title { font-size: 16px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.page-header { 
+  display: flex !important; align-items: center; 
+  height: 64px !important; min-height: 64px; max-height: 64px; 
+  flex-shrink: 0;
+  padding: 0 24px; border-bottom: 1px solid var(--border); 
+  background: var(--bg-surface); position: sticky; top: 0; z-index: 10; 
+  box-sizing: border-box; 
+}
+.header-title { 
+  font-size: 15px; font-weight: 900; letter-spacing: 0.15em; 
+  color: var(--text-primary); display: flex; align-items: center; gap: 12px; 
+  text-transform: uppercase;
+}
+.header-title i { font-size: 18px; width: 24px; text-align: center; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
 .max-w-xl { max-width: 680px; }
@@ -248,7 +260,7 @@ const saveProfile = async () => {
 .pb-xl { padding-bottom: 64px; }
 
 /* Panels & Shadows */
-.base-panel { background: transparent; border: 1px solid var(--border); border-radius: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
+.base-panel { background: transparent; border: 1px solid var(--border); border-radius: 8px; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
 .shadow-normal { box-shadow: none; }
 
 .btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; margin-bottom: 24px; transition: color 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
@@ -258,7 +270,7 @@ const saveProfile = async () => {
 .form-label { display: block; font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 4px; }
 .form-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; margin: 0; line-height: 1.5; }
 
-.choice-btn { padding: 12px 16px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 13px; font-weight: 700; text-align: left; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 0; }
+.choice-btn { padding: 12px 16px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 13px; font-weight: 700; text-align: left; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 8px; }
 .choice-btn:hover { background: var(--bg-hover); border-color: var(--text-primary); color: var(--text-primary); }
 .choice-btn.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); font-weight: 800; }
 
@@ -270,14 +282,14 @@ const saveProfile = async () => {
 .tech-tag button { background: transparent; border: none; color: var(--text-muted); padding: 0; cursor: pointer; font-size: 12px; line-height: 1; transition: color 0.3s; }
 .tech-tag button:hover { color: var(--text-primary); }
 
-.text-input { padding: 10px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 700; outline: none; font-family: inherit; transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; }
+.text-input { padding: 10px 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-size: 13px; font-weight: 700; outline: none; font-family: inherit; transition: border-color 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
 .text-input:focus { border-color: var(--text-primary); }
 
-.scope-btn { padding: 16px; background: transparent; border: 1px solid var(--border); text-align: left; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 0; }
+.scope-btn { padding: 16px; background: transparent; border: 1px solid var(--border); text-align: left; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 8px; }
 .scope-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .scope-btn.active { border-color: var(--text-primary); background: transparent; }
 
-.checkbox { width: 18px; height: 18px; border: 1px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; border-radius: 0; transition: all 0.3s; font-size: 10px; color: var(--bg-base); }
+.checkbox { width: 18px; height: 18px; border: 1px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; border-radius: 4px; transition: all 0.3s; font-size: 10px; color: var(--bg-base); }
 .checkbox.checked { border-color: var(--text-primary); background: var(--text-primary); }
 
 .scope-label { font-size: 14px; font-weight: 800; color: var(--text-primary); }

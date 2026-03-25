@@ -154,6 +154,7 @@ function handleClose() {
   width: 100%; max-width: 520px; max-height: 90vh;
   background: var(--bg-base);
   border: 1px solid var(--border);
+  border-radius: 8px;
   overflow: hidden;
   display: flex; flex-direction: column;
 }
@@ -171,6 +172,7 @@ function handleClose() {
   background: var(--text-primary); color: var(--bg-base);
   display: flex; align-items: center; justify-content: center;
   font-size: 16px;
+  border-radius: 8px;
 }
 .modal-title { font-size: 16px; font-weight: 900; color: var(--text-primary); margin: 0; letter-spacing: 0.03em; }
 .modal-subtitle { font-size: 11px; font-weight: 700; color: var(--text-faint); margin-top: 2px; }
@@ -196,6 +198,7 @@ function handleClose() {
   background: transparent;
   border: 1px solid var(--border);
   padding: 20px;
+  border-radius: 8px;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -217,6 +220,7 @@ function handleClose() {
   font-size: 13px; font-weight: 900; color: var(--text-primary);
   display: flex; align-items: center; justify-content: center; gap: 10px;
   cursor: pointer; transition: all 0.3s; font-family: inherit;
+  border-radius: 8px;
 }
 .btn-expand:hover { background: var(--bg-hover); border-color: var(--text-primary); }
 
@@ -231,7 +235,7 @@ function handleClose() {
 }
 .step-dots { display: flex; align-items: center; gap: 8px; }
 .step-dot {
-  width: 28px; height: 28px; border-radius: 50%;
+  width: 28px; height: 28px; border-radius: 8px;
   background: var(--bg-surface); border: 2px solid var(--border);
   color: var(--text-muted); font-size: 12px; font-weight: 800;
   display: flex; align-items: center; justify-content: center;
@@ -249,12 +253,16 @@ function handleClose() {
 .step-title-row i { font-size: 12px; color: var(--text-muted); }
 .step-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; line-height: 1.5; margin-bottom: 16px; }
 
-.step-items { display: flex; flex-direction: column; gap: 8px; }
+.step-items { 
+  display: flex; flex-direction: column; gap: 8px; 
+  max-height: 280px; overflow-y: auto; padding-right: 4px;
+}
 .step-item {
   border: 1px solid var(--border);
   background: var(--bg-surface);
   padding: 12px 14px;
   font-size: 12px; line-height: 1.55; color: var(--text-secondary); font-weight: 600;
+  border-radius: 8px;
 }
 
 /* 단계 네비게이션 */
@@ -270,6 +278,7 @@ function handleClose() {
   background: transparent; color: var(--text-muted);
   font-size: 12px; font-weight: 700; cursor: pointer;
   transition: all 0.2s; font-family: inherit;
+  border-radius: 8px;
 }
 .btn-step-nav:hover:not(:disabled) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 .btn-step-nav.disabled { color: var(--text-faint); border-color: var(--border); cursor: not-allowed; }
@@ -284,6 +293,7 @@ function handleClose() {
   border: none;
   font-size: 14px; font-weight: 900; cursor: pointer;
   transition: all 0.2s; font-family: inherit; letter-spacing: 0.05em;
+  border-radius: 8px;
 }
 .btn-close-bottom:hover { opacity: 0.85; }
 </style>

@@ -192,8 +192,20 @@ const confirmAndGoCalendar = async () => {
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; border-bottom: 1px solid var(--border); background: var(--bg-surface); position: sticky; top: 0; z-index: 10; }
-.header-title { font-size: 16px; font-weight: 800; letter-spacing: 0.1em; color: var(--text-primary); display: flex; align-items: center; gap: 10px; }
+.page-header { 
+  display: flex !important; align-items: center; 
+  height: 64px !important; min-height: 64px; max-height: 64px; 
+  flex-shrink: 0;
+  padding: 0 24px; border-bottom: 1px solid var(--border); 
+  background: var(--bg-surface); position: sticky; top: 0; z-index: 10; 
+  box-sizing: border-box; 
+}
+.header-title { 
+  font-size: 15px; font-weight: 900; letter-spacing: 0.15em; 
+  color: var(--text-primary); display: flex; align-items: center; gap: 12px; 
+  text-transform: uppercase;
+}
+.header-title i { font-size: 18px; width: 24px; text-align: center; }
 
 .content-inner { padding: 48px 32px; width: 100%; }
 .max-w-xl { max-width: 900px; }
