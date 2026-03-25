@@ -52,7 +52,7 @@ public class TestController {
                             .email(email)
                             .nickname(githubUsername) // 닉네임을 깃허브 유저네임으로 설정
                             .profileImageUrl("")
-                            .status(UserStatus.ONBOARDING)
+                            .status(UserStatus.GUEST)
                             .build();
                     return userRepository.save(newUser);
                 });
