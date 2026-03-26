@@ -66,19 +66,29 @@
               :width="svgSize.w" 
               :height="svgSize.h" 
             >
-              <path
-                v-for="conn in activeConnections"
-                :key="conn.id"
-                :d="conn.path"
-                :stroke="conn.color"
-                class="conn-path"
-                :class="{
-                  'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
-                  'is-other-month': conn.isOtherMonth
-                }"
-                @click.stop="onEdgeClick(conn.data)"
-              />
+              <template v-for="conn in activeConnections" :key="conn.id">
+                <path
+                  :d="conn.path"
+                  stroke="transparent"
+                  stroke-width="14"
+                  fill="none"
+                  class="conn-hit-area"
+                  @click.stop="onEdgeClick(conn.data)"
+                  @mouseenter="onEdgeHover(conn.data)"
+                  @mouseleave="onEdgeHover(null)"
+                />
+                <path
+                  :d="conn.path"
+                  :stroke="conn.color"
+                  class="conn-path"
+                  :class="{
+                    'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
+                    'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
+                    'is-other-month': conn.isOtherMonth
+                  }"
+                  @click.stop="onEdgeClick(conn.data)"
+                />
+              </template>
             </svg>
           </div>
           <Transition name="floatbar">
@@ -141,19 +151,29 @@
               :width="svgSize.w"
               :height="svgSize.h"
             >
-              <path
-                v-for="conn in activeConnections"
-                :key="conn.id"
-                :d="conn.path"
-                :stroke="conn.color"
-                class="conn-path"
-                :class="{
-                  'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
-                  'is-other-month': conn.isOtherMonth
-                }"
-                @click.stop="onEdgeClick(conn.data)"
-              />
+              <template v-for="conn in activeConnections" :key="conn.id">
+                <path
+                  :d="conn.path"
+                  stroke="transparent"
+                  stroke-width="14"
+                  fill="none"
+                  class="conn-hit-area"
+                  @click.stop="onEdgeClick(conn.data)"
+                  @mouseenter="onEdgeHover(conn.data)"
+                  @mouseleave="onEdgeHover(null)"
+                />
+                <path
+                  :d="conn.path"
+                  :stroke="conn.color"
+                  class="conn-path"
+                  :class="{
+                    'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
+                    'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
+                    'is-other-month': conn.isOtherMonth
+                  }"
+                  @click.stop="onEdgeClick(conn.data)"
+                />
+              </template>
             </svg>
 
             <template v-for="(day, colIdx) in weekDays" :key="`nodes-col-${colIdx}`">
@@ -288,6 +308,7 @@ const playEntryAnim = ref(false)
 
 function onTrackHover(trackId) { interactionState.value.hovered = trackId ? { type: 'track', data: trackId } : null }
 function onNodeHover(schedule) { interactionState.value.hovered = schedule ? { type: 'node', data: schedule } : null }
+function onEdgeHover(edge) { interactionState.value.hovered = edge ? { type: 'edge', data: edge } : null }
 
 
 function getShortTrackName(name) { return name ? name.trim().split(' ')[0] : ''; }
@@ -884,7 +905,9 @@ function onWeekWheel(e) {
 .day-header--sat { color: var(--clr-primary) !important; }
 .day-header--sun { color: var(--clr-danger) !important; }
 .line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 6; }
-.conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; pointer-events: stroke; }
+.conn-hit-area { pointer-events: stroke; cursor: pointer; }
+.conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; }
+.conn-hit-area:hover + .conn-path { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
 .conn-path.is-dimmed { opacity: 0.05 !important; }
