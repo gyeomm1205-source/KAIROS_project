@@ -299,12 +299,14 @@ export const useCalendarStore = defineStore('calendar', () => {
   // ----------------------------------------------------------------
   // 7. AI 통합 Actions (기존 유지)
   // ----------------------------------------------------------------
-  const loadAnalysisResult = async (userId) => {
+  const loadAnalysisResult = async () => {
     isLoadingAI.value = true
     try {
       const cached = localStorage.getItem('analysisResult')
       if (cached) {
-        const raw = JSON.parse(cached)
+        let raw = JSON.parse(cached)
+        // FastAPI에서 { profile, activities } 형태로 내려주면 profile 부분만 추출
+        raw = raw.profile || raw
         analysisResult.value = mapAnalysisData(raw)
       } else {
         analysisResult.value = {
@@ -327,6 +329,30 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   function mapAnalysisData(raw) {
+    if (!raw) return null
+
+    // FastAPI 형태 (LLM 분석 등에서 skill_frequency를 반환하는 경우)
+    if (raw.skill_frequency) {
+      const skillFreq = raw.skill_frequency || {}
+      const techs = Object.keys(skillFreq).sort((a, b) => skillFreq[b] - skillFreq[a])
+      const maxCount = Math.max(...Object.values(skillFreq), 1)
+
+      return {
+        recentTechs: techs.slice(0, 10),
+        skillLevels: techs.map(t => ({
+          name: t,
+          level: Math.round((skillFreq[t] / maxCount) * 100)
+        })),
+        repeatedTechs: techs.map(t => ({ name: t, count: skillFreq[t] })),
+        recommendedPositions: (raw.possible_positions || []).map(p => ({
+          title: p,
+          isHighMatch: true
+        })),
+        summary: [raw.headline, raw.experience_summary, raw.learning_attitude].filter(Boolean).join('\n\n')
+      }
+    }
+
+    // Spring Boot / 기존 Mock 등 일반 데이터 형태 대응
     const techDetails = raw.techDetails || []
     const positions = raw.recommendedPositions || []
     return {

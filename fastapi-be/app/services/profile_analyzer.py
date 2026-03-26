@@ -99,7 +99,13 @@ def generate_final_profile(activities_json: list[dict]) -> dict:
     
     chain = prompt | llm | parser
     print("\n🧠 최종 대시보드 맞춤형 프로필 생성 중 (gpt-4o-mini)...")
-    return chain.invoke({"activities": json.dumps(activities_json, ensure_ascii=False)})
+    res = chain.invoke({"activities": json.dumps(activities_json, ensure_ascii=False)})
+    
+    # [로그 추가] 연동 확인용 원본 데이터 출력
+    print("\n🏆 [LLM 생성 프로필 원본 데이터]")
+    print(json.dumps(res, indent=2, ensure_ascii=False))
+    
+    return res
 
 async def regenerate_profile_with_feedback(previous_profile: dict, user_feedback: str) -> dict:
     """사용자가 1페이지 요약본을 보고 '아니오, 수정할게요'를 클릭했을 때, 대량의 데이터 재처리 없이 직전 분석 결과(JSON) 객체만으로 즉시 교정하는 특고속 함수"""
