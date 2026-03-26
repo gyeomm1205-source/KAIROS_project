@@ -133,7 +133,7 @@ public class AuthServiceImpl implements AuthService {
     @Value("${ai.collect-async-path}")
     private String aiCollectAsyncPath;
 
-    @Value("${server.url:http://springServer:8080}")
+    @Value("${server.url:http://kairos-server:8080}")
     private String serverUrl;
 
     @Value("${oauth.github.user-info-url}")
