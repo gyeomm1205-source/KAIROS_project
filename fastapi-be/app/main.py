@@ -141,12 +141,12 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
         }
 
         # 3. Spring Boot Webhook 호출
-        spring_url = os.getenv("SPRING_SERVER_URL", "http://localhost:8080")
+        # spring_url = os.getenv("SPRING_SERVER_URL", "http://localhost:8080")
 
         try:
             async with httpx.AsyncClient() as client:
-                # resp = await client.post(req.callbackUrl, json=payload, timeout=30.0)
-                resp = await client.post(f"{spring_url}/analysis/complete", json=payload, timeout=30.0)
+                resp = await client.post(req.callbackUrl, json=payload, timeout=30.0)
+                # resp = await client.post(f"{spring_url}/analysis/complete", json=payload, timeout=30.0)
                 resp.raise_for_status()
                 print("✅ Spring Boot callback success:", resp.text)
         except Exception as http_err:
