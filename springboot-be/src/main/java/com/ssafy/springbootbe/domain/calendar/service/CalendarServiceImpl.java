@@ -295,9 +295,13 @@ public class CalendarServiceImpl implements CalendarService {
                     List<CalendarNodeResponse> nodeResponses = periodNodes.stream()
                             .map(CalendarNodeResponse::from)
                             .toList();
+                    String displayName = allNodes.isEmpty()
+                            ? "커리큘럼 " + curriculumId
+                            : allNodes.get(0).getTitle();
 
                     return CalendarCurriculumResponse.builder()
                             .curriculumId(curriculumId)
+                            .displayName(displayName)
                             .status(curriculum.getStatus())
                             .prevNodeDate(prevNodeDate)
                             .nextNodeDate(nextNodeDate)
