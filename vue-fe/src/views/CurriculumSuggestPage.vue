@@ -25,8 +25,43 @@
 
       <!-- LOADING STATE -->
       <div v-if="isLoading" class="loading-container">
-        <div class="spinner"></div>
-        <p class="loading-text">AI가 맞춤 커리큘럼을 생성 중입니다...</p>
+        <h3 class="loading-title">GENERATING CURRICULUM...</h3>
+        <p class="loading-subtitle">분석 결과를 바탕으로 최적의 학습 계획을 설계 중입니다.</p>
+
+        <div class="curriculum-mock">
+          <div class="mock-titlebar">
+            <div class="mock-dots"><span /><span /><span /></div>
+            <div class="mock-url"><i class="fas fa-calendar-alt" /> Calendar Preview</div>
+          </div>
+          <div class="mock-calendar-body">
+            <div class="mock-week-header">
+              <span v-for="d in ['월','화','수','목','금','토','일']" :key="d">{{ d }}</span>
+            </div>
+            <div class="mock-week-grid">
+              <div v-for="n in 7" :key="n" class="mock-day" :class="{ 'has-node': [2,3,4,5,6].includes(n) }">
+                <div v-if="[2,3,4,5,6].includes(n)" class="mock-node" :class="'node-delay-' + n">
+                  <div class="mock-node-bar" />
+                  <div class="mock-node-text" />
+                </div>
+              </div>
+            </div>
+            <div class="mock-scan-line" />
+          </div>
+        </div>
+
+        <p class="curriculum-typing-text">{{ currTypingMsg }}<span class="cursor">▌</span></p>
+
+        <div class="curriculum-progress">
+          <div class="curr-dots">
+            <div v-for="n in 3" :key="n" class="curr-dot" :class="{ active: n - 1 === currLoadStep, done: n - 1 < currLoadStep }">
+              <i v-if="n - 1 < currLoadStep" class="fas fa-check" />
+              <i v-else-if="n - 1 === currLoadStep" class="fas fa-spinner fa-pulse" />
+            </div>
+          </div>
+          <div class="curr-progress-track">
+            <div class="curr-progress-fill" :style="{ width: currProgress + '%' }" />
+          </div>
+        </div>
       </div>
 
       <div v-else class="curriculum-body">
@@ -146,7 +181,7 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { postCurriculumGenerate, postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 import { useCalendarStore } from '@/stores/useCalendarStore'
@@ -156,6 +191,95 @@ const store = useCalendarStore()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
 const isLoading = ref(true)
+
+// --- 커리큘럼 로딩 애니메이션 ---
+const currLoadStep = ref(0)
+const currProgress = computed(() => {
+  return ((currLoadStep.value + 1) / 3) * 100
+})
+
+const CURR_STEPS = [
+  {
+    messages: [
+      '분석 결과를 읽고 있어요...',
+      '학습 주제를 선정 중이에요...',
+    ]
+  },
+  {
+    messages: [
+      '기존 일정을 확인하고 있어요...',
+      '충돌 없는 날짜를 찾고 있어요...',
+    ]
+  },
+  {
+    messages: [
+      '최적의 학습 순서를 배치 중이에요...',
+      '커리큘럼이 거의 완성됐어요!',
+    ]
+  },
+]
+
+const currTypingMsg = ref('')
+let currMsgIndex = 0
+let currCharIndex = 0
+let currTypingTimer = null
+let currStepTimer = null
+
+function stopCurrTyping() {
+  if (currTypingTimer) clearInterval(currTypingTimer)
+  currTypingTimer = null
+}
+
+function startCurrTyping() {
+  stopCurrTyping()
+  const step = CURR_STEPS[currLoadStep.value]
+  if (!step) return
+  const msg = step.messages[currMsgIndex % step.messages.length]
+
+  currTypingTimer = setInterval(() => {
+    if (currCharIndex < msg.length) {
+      currTypingMsg.value = msg.slice(0, currCharIndex + 1)
+      currCharIndex++
+    } else {
+      stopCurrTyping()
+      setTimeout(() => {
+        currMsgIndex = (currMsgIndex + 1) % step.messages.length
+        currCharIndex = 0
+        currTypingMsg.value = ''
+        startCurrTyping()
+      }, 1200)
+    }
+  }, 45)
+}
+
+function startCurrStepTimer() {
+  const DURATIONS = [5000, 8000, 12000]
+  function advance() {
+    if (currLoadStep.value < CURR_STEPS.length - 1) {
+      currLoadStep.value++
+      currStepTimer = setTimeout(advance, DURATIONS[currLoadStep.value])
+    }
+  }
+  currStepTimer = setTimeout(advance, DURATIONS[0])
+}
+
+watch(currLoadStep, () => {
+  stopCurrTyping()
+  currMsgIndex = 0
+  currCharIndex = 0
+  currTypingMsg.value = ''
+  startCurrTyping()
+})
+
+watch(isLoading, (val) => {
+  if (val) {
+    startCurrTyping()
+    startCurrStepTimer()
+  } else {
+    stopCurrTyping()
+    if (currStepTimer) clearTimeout(currStepTimer)
+  }
+})
 
 const scheduleItems = ref([
   { date: "3월 11일 (수)", title: "React 기초 및 렌더링 최적화", duration: "2시간 예상" },
@@ -265,6 +389,9 @@ function buildCurriculumAnalysisData(source) {
 }
 
 onMounted(async () => {
+  startCurrTyping()
+  startCurrStepTimer()
+
   try {
     // Spring Boot 경유 시도 (preview API)
     const analysisRaw = localStorage.getItem('analysisResult')
@@ -469,8 +596,105 @@ const confirmAndGoCalendar = async () => {
   .btn-outline, .btn-primary { width: 100%; }
 }
 
-.loading-container { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 300px; text-align: center; color: var(--text-muted); }
-.spinner { width: 32px; height: 32px; border: 2px solid var(--border); border-top-color: var(--text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px; }
+.loading-container {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  min-height: 400px; text-align: center; color: var(--text-muted); gap: 20px;
+}
+.loading-title {
+  font-size: 18px; font-weight: 900; letter-spacing: 0.12em; color: var(--text-primary); margin: 0;
+}
+.loading-subtitle {
+  font-size: 13px; font-weight: 600; color: var(--text-muted); margin: 0;
+}
+
+/* Mock Calendar */
+.curriculum-mock {
+  width: 100%; max-width: 380px; border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; background: var(--bg-base);
+}
+.mock-titlebar {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--bg-surface);
+}
+.mock-dots { display: flex; gap: 5px; }
+.mock-dots span { width: 8px; height: 8px; border-radius: 50%; background: var(--border); }
+.mock-dots span:nth-child(1) { background: #ef4444; }
+.mock-dots span:nth-child(2) { background: #eab308; }
+.mock-dots span:nth-child(3) { background: #22c55e; }
+.mock-url {
+  font-size: 11px; font-weight: 700; color: var(--text-muted);
+  display: flex; align-items: center; gap: 6px;
+}
+.mock-calendar-body { padding: 16px; position: relative; overflow: hidden; }
+.mock-week-header {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px;
+}
+.mock-week-header span {
+  text-align: center; font-size: 10px; font-weight: 800; color: var(--text-muted);
+}
+.mock-week-grid {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+}
+.mock-day {
+  aspect-ratio: 1; border: 1px solid var(--border); border-radius: 4px;
+  display: flex; align-items: center; justify-content: center; padding: 4px;
+}
+.mock-day.has-node { border-color: var(--text-primary); }
+.mock-node { width: 100%; display: flex; flex-direction: column; gap: 3px; }
+.mock-node-bar {
+  height: 4px; border-radius: 2px; background: var(--text-primary);
+  animation: nodeBarGrow 0.6s ease-out both;
+}
+.mock-node-text {
+  height: 3px; width: 70%; border-radius: 2px; background: var(--text-muted); opacity: 0.2;
+  animation: nodeBarGrow 0.6s ease-out 0.2s both;
+}
+.node-delay-2 .mock-node-bar, .node-delay-2 .mock-node-text { animation-delay: 0.5s; }
+.node-delay-3 .mock-node-bar, .node-delay-3 .mock-node-text { animation-delay: 1.0s; }
+.node-delay-4 .mock-node-bar, .node-delay-4 .mock-node-text { animation-delay: 1.5s; }
+.node-delay-5 .mock-node-bar, .node-delay-5 .mock-node-text { animation-delay: 2.0s; }
+.node-delay-6 .mock-node-bar, .node-delay-6 .mock-node-text { animation-delay: 2.5s; }
+@keyframes nodeBarGrow {
+  from { width: 0; opacity: 0; }
+  to { width: 100%; opacity: 1; }
+}
+.mock-scan-line {
+  position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg, transparent, var(--text-primary), transparent);
+  opacity: 0.04; animation: scanMove 3s ease-in-out infinite;
+}
+@keyframes scanMove {
+  0% { left: -100%; }
+  50% { left: 100%; }
+  100% { left: 100%; }
+}
+
+/* 타이핑 */
+.curriculum-typing-text {
+  font-size: 14px; font-weight: 700; color: var(--text-primary); min-height: 24px;
+}
+.cursor {
+  color: var(--text-primary); animation: blink 0.8s step-end infinite;
+  font-weight: 400; margin-left: 1px;
+}
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* 프로그레스 */
+.curriculum-progress { width: 100%; max-width: 380px; }
+.curr-dots { display: flex; justify-content: center; gap: 12px; margin-bottom: 12px; }
+.curr-dot {
+  width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; color: var(--text-faint); transition: all 0.3s;
+}
+.curr-dot.active { border-color: var(--text-primary); color: var(--text-primary); }
+.curr-dot.done { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.curr-progress-track {
+  width: 100%; height: 3px; background: var(--border); overflow: hidden; border-radius: 2px;
+}
+.curr-progress-fill {
+  height: 100%; background: var(--text-primary); transition: width 0.4s ease-out; border-radius: 2px;
+}
 @keyframes spin { to { transform: rotate(360deg); } }
 .loading-text { font-size: 13px; font-weight: 600; color: var(--text-muted); }
 </style>
