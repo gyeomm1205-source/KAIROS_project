@@ -35,18 +35,12 @@ const route = useRoute()
 const themeStore = useThemeStore()
 const authStore = useAuthStore()
 
-/**
- * 구글 로그인 콜백 처리 로직
- * @param {string} code 구글 인가 코드
- */
 async function processGoogleLogin(code) {
   try {
-    // 1. 구글 인증 코드를 백엔드로 전송
     const response = await loginWithGoogle(code)
     const data = response.data
 
     if (data.is_new_user) {
-      // 신규 유저인 경우 (isNewUser: true)
       authStore.setOnboardingSession({
         onboardingToken: data.onboarding_token,
         email: data.email,
@@ -54,7 +48,6 @@ async function processGoogleLogin(code) {
       })
       router.replace('/onboarding/connect')
     } else {
-      // 기존 유저인 경우 (isNewUser: false)
       authStore.setTokens({
         accessToken: data.access_token,
         userId: data.user_id
@@ -68,30 +61,26 @@ async function processGoogleLogin(code) {
   }
 }
 
-// 실제 Google 로그인 버튼 클릭 시 구글 OAuth 서버로 리다이렉트
 function handleGoogleLoginClick() {
   const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID
   const redirectUri = window.location.origin + '/google/redirect'
-  
-  // 1. 디버깅용 로그 추가
+
   console.log('--- Google OAuth Debugging ---')
   console.log('환경 변수(import.meta.env.VITE_GOOGLE_CLIENT_ID):', clientId)
   console.log('사용할 Client ID:', clientId || '없음(초기화 필요)')
   console.log('사용할 Redirect URI:', redirectUri)
-  
-  // 만약 값이 비어있다면, 경고창을 띄우고 리다이렉트를 막습니다.
+
   if (!clientId || clientId === 'undefined') {
     console.error('🚨 Error: VITE_GOOGLE_CLIENT_ID가 설정되지 않았습니다. .env 파일을 확인해 주세요.')
     alert('구글 클라이언트 ID가 설정되지 않았습니다. 관리자에게 문의하시거나 .env 설정을 확인해 주세요.')
     return
   }
-  
+
   const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=code&scope=openid profile email https://www.googleapis.com/auth/calendar`
   window.location.href = url
 }
 
 onMounted(() => {
-  // 로그인 리다이렉트 콜백으로 들어왔을 때 URL Query에 code가 있다면 로직 수행!
   if (route.query.code) {
     processGoogleLogin(route.query.code)
   }
