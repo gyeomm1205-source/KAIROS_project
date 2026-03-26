@@ -301,6 +301,7 @@ public class CalendarServiceImpl implements CalendarService {
                             .status(curriculum.getStatus())
                             .prevNodeDate(prevNodeDate)
                             .nextNodeDate(nextNodeDate)
+                            .totalNodeCount(allNodes.size())
                             .nodes(nodeResponses)
                             .build();
                 })
