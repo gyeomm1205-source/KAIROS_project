@@ -12,6 +12,7 @@
         @change-view="setView"
         @jump-to-date="jumpToDate"
         @toggle-legend="isLegendVisible = !isLegendVisible"
+        @import-external="handleImportExternal"
       />
 
       <!-- Flow Legend Chips -->
@@ -252,6 +253,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { importCalendar } from '@/api/aiApi'
 
 import AppSidebar        from '@/components/AppSidebar.vue'
 import CalendarHeader    from '@/components/CalendarHeader.vue'
@@ -824,6 +826,15 @@ async function refreshCurrentCalendar() {
     { year: y, month: m },
     { year: next.y, month: next.m },
   ])
+}
+
+async function handleImportExternal() {
+  try {
+    await importCalendar()
+    await refreshCurrentCalendar()
+  } catch (e) {
+    console.error('Google Calendar 가져오기 실패:', e)
+  }
 }
 
 async function handleSaveSchedule(payload) {

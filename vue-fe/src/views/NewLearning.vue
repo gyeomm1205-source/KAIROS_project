@@ -260,7 +260,7 @@
 
         <div class="modal-footer" v-if="quizStage === 'result'">
           <button class="btn-primary-block" @click="$router.push('/recommend/new-curriculum')">
-            <i class="fas fa-calendar-plus" /> 캘린더에 커리큘럼 일정 반영
+            <i class="fas fa-calendar-plus" /> 추천 커리큘럼 확인하기
           </button>
         </div>
       </div>
