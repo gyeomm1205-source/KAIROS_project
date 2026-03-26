@@ -570,6 +570,7 @@ function formatMonthDay(dateStr) {
 function getTrackDisplayName(trackId) {
   const track = allTracks.value.find(t => t.id === trackId)
   if (!track) return ''
+  if (track.displayName) return track.displayName
   if (!track.curriculumId) return track.name || ''
 
   const curriculum = curricula.value.find(c => c.curriculumId === track.curriculumId)
@@ -584,6 +585,9 @@ function getTrackDisplayName(trackId) {
 
 function getTrackScheduleCount(trackId) {
   const track = allTracks.value.find(t => t.id === trackId)
+  if (track?.totalNodeCount != null) {
+    return track.totalNodeCount
+  }
   if (track?.curriculumId) {
     const curriculum = curricula.value.find(c => c.curriculumId === track.curriculumId)
     return curriculum?.totalNodeCount ?? curriculum?.nodes?.length ?? 0
