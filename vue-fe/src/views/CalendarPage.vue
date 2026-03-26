@@ -66,18 +66,30 @@
               :width="svgSize.w" 
               :height="svgSize.h" 
             >
-              <path
-                v-for="conn in activeConnections"
-                :key="conn.id"
-                :d="conn.path"
-                :stroke="conn.color"
-                class="conn-path"
-                :class="{
-                  'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
-                }"
-                @click.stop="onEdgeClick(conn.data)"
-              />
+              <template v-for="conn in activeConnections" :key="conn.id">
+                <path
+                  :d="conn.path"
+                  stroke="transparent"
+                  stroke-width="14"
+                  fill="none"
+                  class="conn-hit-area"
+                  @click.stop="onEdgeClick(conn.data)"
+                  @mouseenter="onGroupHover(conn.groupId)"
+                  @mouseleave="onGroupHover(null)"
+                />
+                <path
+                  :d="conn.path"
+                  :stroke="conn.color"
+                  class="conn-path"
+                  :class="{
+                    'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
+                    'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isGroupHighlighted(conn.groupId),
+                    'is-other-month': conn.isOtherMonth,
+                    'is-group-hovered': hoveredGroupId === conn.groupId
+                  }"
+                  @click.stop="onEdgeClick(conn.data)"
+                />
+              </template>
             </svg>
           </div>
           <Transition name="floatbar">
@@ -140,18 +152,30 @@
               :width="svgSize.w"
               :height="svgSize.h"
             >
-              <path
-                v-for="conn in activeConnections"
-                :key="conn.id"
-                :d="conn.path"
-                :stroke="conn.color"
-                class="conn-path"
-                :class="{
-                  'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
-                }"
-                @click.stop="onEdgeClick(conn.data)"
-              />
+              <template v-for="conn in activeConnections" :key="conn.id">
+                <path
+                  :d="conn.path"
+                  stroke="transparent"
+                  stroke-width="14"
+                  fill="none"
+                  class="conn-hit-area"
+                  @click.stop="onEdgeClick(conn.data)"
+                  @mouseenter="onGroupHover(conn.groupId)"
+                  @mouseleave="onGroupHover(null)"
+                />
+                <path
+                  :d="conn.path"
+                  :stroke="conn.color"
+                  class="conn-path"
+                  :class="{
+                    'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
+                    'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isGroupHighlighted(conn.groupId),
+                    'is-other-month': conn.isOtherMonth,
+                    'is-group-hovered': hoveredGroupId === conn.groupId
+                  }"
+                  @click.stop="onEdgeClick(conn.data)"
+                />
+              </template>
             </svg>
 
             <template v-for="(day, colIdx) in weekDays" :key="`nodes-col-${colIdx}`">
@@ -286,6 +310,23 @@ const playEntryAnim = ref(false)
 
 function onTrackHover(trackId) { interactionState.value.hovered = trackId ? { type: 'track', data: trackId } : null }
 function onNodeHover(schedule) { interactionState.value.hovered = schedule ? { type: 'node', data: schedule } : null }
+function onEdgeHover(edge) { interactionState.value.hovered = edge ? { type: 'edge', data: edge } : null }
+
+const hoveredGroupId = ref(null)
+function onGroupHover(groupId) {
+  hoveredGroupId.value = groupId
+  if (groupId) {
+    const conn = activeConnections.value.find(c => c.groupId === groupId)
+    if (conn) onEdgeHover(conn.data)
+  } else {
+    onEdgeHover(null)
+  }
+}
+function isGroupHighlighted(groupId) {
+  if (hoveredGroupId.value === groupId) return true
+  const conn = activeConnections.value.find(c => c.groupId === groupId)
+  return conn ? isEdgeHighlighted(conn.data) : false
+}
 
 
 function getShortTrackName(name) { return name ? name.trim().split(' ')[0] : ''; }
@@ -369,26 +410,44 @@ const updateConnections = () => {
       const fRect = fromNode.getBoundingClientRect();
       const tRect = toNode.getBoundingClientRect();
 
-      const x1 = fRect.left + fRect.width / 2 - offsetLeft;
-      const y1 = fRect.bottom - offsetTop;
-      const x2 = tRect.left + tRect.width / 2 - offsetLeft;
-      const y2 = tRect.top - offsetTop;
-
-      let d = "";
       const sameWeek = sFrom.day && sTo.day && isSameWeek(sFrom.day, sTo.day);
-      if (sameWeek) {
-        d = `M ${x1} ${y1} L ${x2} ${y2}`;
-      } else {
-        const midX = (x1 + x2) / 2;
-        d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
-      }
 
-      newConns.push({
-        id: `${conn.from}-${conn.to}`,
-        path: d,
-        color: track?.color || '#9ca3af',
-        data: { ...conn, from: sFrom, to: sTo, color: track?.color }
-      });
+      const cmStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}`
+      const fromInMonth = sFrom.day?.startsWith(cmStr)
+      const toInMonth = sTo.day?.startsWith(cmStr)
+      const isOtherMonth = !fromInMonth || !toInMonth
+      const groupId = `${conn.from}-${conn.to}`
+      const connColor = track?.color || '#9ca3af'
+      const connData = { ...conn, from: sFrom, to: sTo, color: connColor }
+
+      if (sameWeek) {
+        // 같은 주: 우측 중앙 → 좌측 중앙 (직선)
+        const x1 = fRect.right - offsetLeft;
+        const y1 = fRect.top + fRect.height / 2 - offsetTop;
+        const x2 = tRect.left - offsetLeft;
+        const y2 = tRect.top + tRect.height / 2 - offsetTop;
+        newConns.push({
+          id: groupId, groupId, path: `M ${x1} ${y1} L ${x2} ${y2}`,
+          color: connColor, isOtherMonth, data: connData
+        });
+      } else {
+        // 다른 주: 2조각 분할 (from 우측→행 끝, 행 시작→to 좌측)
+        const rowRightX = scrollRect.right - offsetLeft;
+        const rowLeftX = scrollRect.left - offsetLeft;
+        const x1 = fRect.right - offsetLeft;
+        const y1 = fRect.top + fRect.height / 2 - offsetTop;
+        const x2 = tRect.left - offsetLeft;
+        const y2 = tRect.top + tRect.height / 2 - offsetTop;
+
+        newConns.push({
+          id: groupId, groupId, path: `M ${x1} ${y1} L ${rowRightX} ${y1}`,
+          color: connColor, isOtherMonth, data: connData
+        });
+        newConns.push({
+          id: `${groupId}-part2`, groupId, path: `M ${rowLeftX} ${y2} L ${x2} ${y2}`,
+          color: connColor, isOtherMonth, data: connData
+        });
+      }
     }
   });
   activeConnections.value = newConns;
@@ -872,10 +931,14 @@ function onWeekWheel(e) {
 .day-header--sat { color: var(--clr-primary) !important; }
 .day-header--sun { color: var(--clr-danger) !important; }
 .line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 6; }
-.conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; pointer-events: stroke; }
+.conn-hit-area { pointer-events: stroke; cursor: pointer; }
+.conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); pointer-events: none; }
+.conn-hit-area:hover + .conn-path { stroke-width: 4 !important; opacity: 1 !important; }
+.conn-path.is-group-hovered { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
 .conn-path.is-dimmed { opacity: 0.05 !important; }
+.conn-path.is-other-month { opacity: 0.12; filter: grayscale(0.5); }
 h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
