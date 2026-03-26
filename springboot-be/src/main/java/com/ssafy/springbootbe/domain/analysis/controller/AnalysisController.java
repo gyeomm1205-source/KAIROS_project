@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/analysis")
+@RequestMapping("/api/v1/analysis")
 @RequiredArgsConstructor
 public class AnalysisController {
 
