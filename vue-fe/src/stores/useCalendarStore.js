@@ -44,11 +44,13 @@ export const useCalendarStore = defineStore('calendar', () => {
 
     const currTracks = curricula.value.map((c, i) => ({
       id: `cur-${c.curriculumId}`,
-      name: `커리큘럼 ${c.curriculumId}`,
+      name: c.displayName || `커리큘럼 ${c.curriculumId}`,
       color: CURRICULUM_COLORS[i % CURRICULUM_COLORS.length],
       index: i,
       isEnded: c.status !== 'ACTIVE',
       curriculumId: c.curriculumId,
+      displayName: c.displayName || `커리큘럼 ${c.curriculumId}`,
+      totalNodeCount: c.totalNodeCount ?? c.nodes?.length ?? 0,
     }))
 
     currTracks.push({

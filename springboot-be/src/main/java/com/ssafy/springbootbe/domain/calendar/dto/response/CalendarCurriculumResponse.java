@@ -16,6 +16,7 @@ import java.util.List;
 public class CalendarCurriculumResponse {
 
     private Long curriculumId;
+    private String displayName;
     private CurriculumStatus status;
     private LocalDate prevNodeDate;
     private LocalDate nextNodeDate;
