@@ -11,6 +11,11 @@
     </div>
 
     <div class="loading-card">
+      <div v-if="loadError" class="error-banner">
+        <p>{{ loadError }}</p>
+        <button class="btn-outline-small" @click="router.push('/onboarding/connect')">다시 시도</button>
+      </div>
+
       <div class="loading-header">
         <div class="loading-icon-wrap">
           <i class="fas fa-cog fa-spin" />
@@ -45,13 +50,15 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { getTaskStatus } from '@/api/aiApi'
+import { useAuthStore } from '@/stores/useAuthStore'
 
 const router = useRouter()
-const route = useRoute()
+const authStore = useAuthStore()
 const currentStep = ref(0)
 const progressWidth = ref(0)
+const loadError = ref('')
 
 const steps = [
   { label: '계정 데이터 확인 중' },
@@ -67,6 +74,10 @@ function startProgressAnimation() {
   progressTimer = setInterval(() => {
     if (progressWidth.value < 90) progressWidth.value += 5
   }, 300)
+}
+
+function resolveTaskId() {
+  return authStore.velogTaskId || ''
 }
 
 async function pollTaskStatus(taskId) {
@@ -92,38 +103,29 @@ async function pollTaskStatus(taskId) {
     } else if (data.status === 'failed') {
       clearInterval(pollTimer)
       clearInterval(progressTimer)
+      loadError.value = data.error || '분석 작업이 실패했습니다. 다시 시도해 주세요.'
       console.error('분석 실패:', data.error)
     }
   } catch (e) {
-    console.error('상태 조회 실패:', e)
+    clearInterval(pollTimer)
+    clearInterval(progressTimer)
+    loadError.value = '분석 상태를 확인하지 못했습니다. 서버 연결이나 작업 ID를 다시 확인해 주세요.'
+    console.error('분석 상태 조회 실패:', e)
   }
-}
-
-function startMockTimer() {
-  let mockTimer = setInterval(() => {
-    if (currentStep.value < steps.length - 1) {
-      currentStep.value++
-      progressWidth.value = 0
-    } else {
-      clearInterval(mockTimer)
-      clearInterval(progressTimer)
-      progressWidth.value = 100
-      setTimeout(() => router.push('/onboarding/result'), 600)
-    }
-  }, 1200)
-  return mockTimer
 }
 
 onMounted(() => {
   startProgressAnimation()
 
-  const taskId = route.query.taskId
+  const taskId = resolveTaskId()
   if (taskId) {
     pollTimer = setInterval(() => pollTaskStatus(taskId), 2000)
     pollTaskStatus(taskId)
-  } else {
-    pollTimer = startMockTimer()
+    return
   }
+
+  clearInterval(progressTimer)
+  loadError.value = 'Velog 분석 작업 ID를 찾지 못했습니다. Velog 연동을 다시 확인해 주세요.'
 })
 
 onUnmounted(() => {
@@ -185,6 +187,22 @@ function statusClass(i) {
   color: var(--text-primary); margin-bottom: 10px;
 }
 .loading-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
+
+.error-banner {
+  border: 1px solid var(--border);
+  padding: 16px 18px;
+  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+.error-banner p {
+  font-size: 13px;
+  line-height: 1.5;
+  font-weight: 700;
+}
 
 /* ── Steps ── */
 .steps-container { display: flex; flex-direction: column; gap: 32px; }

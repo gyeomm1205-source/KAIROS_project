@@ -239,8 +239,9 @@ const submitSurvey = async () => {
   }
 
   try {
-    const { data } = await apiSubmitSurvey(payload)
-    router.push({ path: '/onboarding/loading', query: { taskId: data.taskId } })
+    await apiSubmitSurvey(payload)
+    // 분석 taskId는 이미 FastAPI 연동 단계에서 받아 store에 저장돼 있음
+    router.push('/onboarding/loading')
   } catch (e) {
     console.error('설문 제출 실패:', e)
     isSubmitting.value = false

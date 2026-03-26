@@ -105,8 +105,8 @@ const githubNickname = computed(() => authStore.profile?.nickname || 'GitHub 계
 const isVelogConnected = computed(() => !!authStore.profile?.velogUsername || !!velogUsername.value)
 const velogUsername = ref('')
 
-// 진행 가능 여부: GitHub 연동만 필수 (Velog는 선택)
-const canProceed = computed(() => isGithubConnected.value)
+// 진행 가능 여부: GitHub, Velog 모두 연동해야 다음 단계로 이동
+const canProceed = computed(() => isGithubConnected.value && isVelogConnected.value)
 
 function handleGithubConnect() {
   if (isGithubConnected.value) return
