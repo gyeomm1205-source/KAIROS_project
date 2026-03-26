@@ -74,7 +74,8 @@
                 class="conn-path"
                 :class="{
                   'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
+                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
+                  'is-other-month': conn.isOtherMonth
                 }"
                 @click.stop="onEdgeClick(conn.data)"
               />
@@ -148,7 +149,8 @@
                 class="conn-path"
                 :class="{
                   'is-default-dimmed': !interactionState.clicked && !interactionState.hovered,
-                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data)
+                  'is-dimmed': (interactionState.clicked || interactionState.hovered) && !isEdgeHighlighted(conn.data),
+                  'is-other-month': conn.isOtherMonth
                 }"
                 @click.stop="onEdgeClick(conn.data)"
               />
@@ -369,24 +371,37 @@ const updateConnections = () => {
       const fRect = fromNode.getBoundingClientRect();
       const tRect = toNode.getBoundingClientRect();
 
-      const x1 = fRect.left + fRect.width / 2 - offsetLeft;
-      const y1 = fRect.bottom - offsetTop;
-      const x2 = tRect.left + tRect.width / 2 - offsetLeft;
-      const y2 = tRect.top - offsetTop;
-
-      let d = "";
       const sameWeek = sFrom.day && sTo.day && isSameWeek(sFrom.day, sTo.day);
+
+      let x1, y1, x2, y2, d;
       if (sameWeek) {
+        // 같은 주: 우측 중앙 → 좌측 중앙
+        x1 = fRect.right - offsetLeft;
+        y1 = fRect.top + fRect.height / 2 - offsetTop;
+        x2 = tRect.left - offsetLeft;
+        y2 = tRect.top + tRect.height / 2 - offsetTop;
         d = `M ${x1} ${y1} L ${x2} ${y2}`;
       } else {
+        // 다른 주: 하단 중앙 → 상단 중앙 (곡선)
+        x1 = fRect.left + fRect.width / 2 - offsetLeft;
+        y1 = fRect.bottom - offsetTop;
+        x2 = tRect.left + tRect.width / 2 - offsetLeft;
+        y2 = tRect.top - offsetTop;
         const midX = (x1 + x2) / 2;
         d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
       }
+
+      // 이전/다음 달 노드 포함 시 연결선 흐리게
+      const cmStr = `${currentYear.value}-${String(currentMonth.value).padStart(2, '0')}`
+      const fromInMonth = sFrom.day?.startsWith(cmStr)
+      const toInMonth = sTo.day?.startsWith(cmStr)
+      const isOtherMonth = !fromInMonth || !toInMonth
 
       newConns.push({
         id: `${conn.from}-${conn.to}`,
         path: d,
         color: track?.color || '#9ca3af',
+        isOtherMonth,
         data: { ...conn, from: sFrom, to: sTo, color: track?.color }
       });
     }
@@ -873,6 +888,7 @@ function onWeekWheel(e) {
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
 .conn-path.is-dimmed { opacity: 0.05 !important; }
+.conn-path.is-other-month { opacity: 0.12; filter: grayscale(0.5); }
 h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }
