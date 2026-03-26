@@ -122,7 +122,7 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
 .cell--other-month .btn-add-schedule { display: none; }
 .cell--other-month .schedule-label-chip { opacity: 0.25; filter: grayscale(0.5); }
 
-.cell-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.cell-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; height: 24px; }
 .date-label { font-size: 13px; font-weight: 700; color: var(--text-primary); font-family: 'Escoredream', sans-serif; line-height: 1; min-width: 22px; text-align: center; }
 
 .btn-add-schedule {
@@ -134,7 +134,7 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
 }
 .btn-add-schedule:hover { background: var(--text-primary); color: var(--bg-base); }
 
-.label-cluster { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px; z-index: 25; position: relative; overflow: hidden; }
+.label-cluster { display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 2px; z-index: 25; position: relative; overflow: visible; }
 .schedule-label-chip {
   font-size: 10px; font-weight: 800; padding: 4px 6px; border-radius: 4px;
   border: 1px solid var(--border); cursor: pointer; white-space: nowrap;

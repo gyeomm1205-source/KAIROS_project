@@ -335,8 +335,8 @@ function isEdgeHighlighted(edge) {
   const { hovered, clicked } = interactionState.value;
   const active = clicked || hovered;
   if (!active) return false;
-  // 노드 선택 시 연결된 선들 강조
   if (active.type === 'node') return edge.from.id === active.data.id || edge.to.id === active.data.id;
+  if (active.type === 'edge') return edge.from?.id === active.data.from?.id && edge.to?.id === active.data.to?.id;
   return false;
 }
 
@@ -366,6 +366,10 @@ const dimmedNodeIds = computed(() => {
       else if (store.connections.some(c => (c.from === targetId && c.to === s.id) || (c.to === targetId && c.from === s.id))) {
         isHL = true;
       }
+    } else if (activeHL.type === 'edge') {
+      // edge hover 시 연결된 양쪽 노드 강조
+      const edge = activeHL.data;
+      if (edge.from?.id === s.id || edge.to?.id === s.id) isHL = true;
     }
 
     if (!isHL) ids.add(s.id);
