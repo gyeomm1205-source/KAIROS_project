@@ -122,7 +122,7 @@
       <div v-else class="error-container">
         <i class="fas fa-exclamation-triangle text-2xl mb-md"></i>
         <p>분석 데이터를 불러오지 못했습니다.</p>
-        <button @click="store.loadAnalysisResult('user-123')" class="btn-outline-small mt-md">재시도</button>
+        <button @click="store.loadAnalysisResult()" class="btn-outline-small mt-md">재시도</button>
       </div>
     </div>
 
@@ -185,10 +185,8 @@ const feedbackText = ref('')
 const isSubmitting = ref(false)
 
 onMounted(async () => {
-  // 백엔드 분석 결과가 없는 경우 localStorage에서 로드
-  if (!analysisResult.value) {
-    await store.loadAnalysisResult()
-  }
+  // localStorage 기준으로 항상 최신 분석 결과를 다시 반영
+  await store.loadAnalysisResult()
 })
 
 const closeFeedback = () => {
@@ -365,4 +363,3 @@ const submitFeedback = async () => {
 .fade-enter-active, .fade-leave-active { transition: opacity 0.3s ease; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>
-```

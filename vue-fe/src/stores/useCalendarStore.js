@@ -320,8 +320,8 @@ export const useCalendarStore = defineStore('calendar', () => {
           recommendedPositions: [
             { title: '프론트엔드 개발자', isHighMatch: true }, { title: '풀스택 개발자', isHighMatch: false }
           ],
-          summary: '최근 3개월간 React와 TypeScript 중심의 프론트엔드 학습을 꾸준히 진행하고 있습니다.'
-        }
+          summary: '..최근 3개월간 React와 TypeScript 중심의 프론트엔드 학습을 꾸준히 진행하고 있습니다.'
+        }      
       }
     } finally {
       isLoadingAI.value = false

@@ -31,7 +31,7 @@ export function getOnboardingMeta() {
  * @param {string} payload.githubTaskId - GitHub 수집 작업 ID
  * @param {string} [payload.velogTaskId] - Velog 수집 작업 ID (선택)
  *
- * @returns {Promise<{userId: number, status: 'SURVEYED', considerPersonalSchedule: boolean, taskId: string}>}
+ * @returns {Promise<{userId: number, status: 'SURVEYED', considerPersonalSchedule: boolean}>}
  */
 export function submitSurvey(payload) {
   return springApi.post('/api/v1/onboarding/survey', payload)
