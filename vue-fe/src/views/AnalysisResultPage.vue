@@ -185,9 +185,9 @@ const feedbackText = ref('')
 const isSubmitting = ref(false)
 
 onMounted(async () => {
-  // 실제 백엔드 연동: 데이터가 없으면 API 호출
+  // 백엔드 분석 결과가 없는 경우 localStorage에서 로드
   if (!analysisResult.value) {
-    await store.loadAnalysisResult('user-123') // 실제 유저 ID 매핑 필요
+    await store.loadAnalysisResult()
   }
 })
 
