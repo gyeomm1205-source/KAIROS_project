@@ -133,13 +133,13 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
 }
 .btn-add-schedule:hover { background: var(--text-primary); color: var(--bg-base); }
 
-.label-cluster { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; z-index: 25; position: relative; }
+.label-cluster { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; z-index: 25; position: relative; overflow: hidden; }
 .schedule-label-chip {
   font-size: 10px; font-weight: 800; padding: 4px 8px; border-radius: 4px;
   border: 1px solid var(--border); cursor: pointer; white-space: nowrap;
   font-family: 'Inter', sans-serif; width: 100%; box-sizing: border-box;
   overflow: hidden; text-overflow: ellipsis; text-align: left;
-  background: var(--bg-elevated);
+  background: var(--bg-elevated); min-width: 0;
   transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
 }
 .schedule-label-chip:hover { border-color: var(--text-primary); background: var(--bg-hover); transform: translateY(-1px); }

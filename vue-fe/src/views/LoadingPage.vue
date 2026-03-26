@@ -148,13 +148,13 @@ function statusClass(i) {
 }
 .loading-card {
   width: 100%; max-width: 560px;
-  background: var(--bg-surface); border: 1px solid var(--border); padding: 56px 48px; border-radius: 8px;
+  background: var(--bg-surface); border: 1px solid var(--border); padding: 56px 48px; border-radius: 16px;
   animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
 /* ── Stepper ── */
-.global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
+.global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 1000; }
 .page-stepper { display: flex; gap: 0; width: 100%; border: 1px solid var(--border); overflow: hidden; }
 .page-stepper .step {
   flex: 1; text-align: center; padding: 10px 4px;
@@ -177,7 +177,7 @@ function statusClass(i) {
   width: 72px; height: 72px; border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
   font-size: 28px; color: var(--text-primary); margin: 0 auto 28px;
-  animation: rotate 2s linear infinite;
+  animation: rotate 2s linear infinite; border-radius: 16px;
 }
 @keyframes rotate { from { border-color: var(--text-primary); } 50% { border-color: var(--border); } to { border-color: var(--text-primary); } }
 .loading-icon-wrap i { animation: none; }
