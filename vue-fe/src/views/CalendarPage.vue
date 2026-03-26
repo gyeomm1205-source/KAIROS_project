@@ -12,6 +12,7 @@
         @change-view="setView"
         @jump-to-date="jumpToDate"
         @toggle-legend="isLegendVisible = !isLegendVisible"
+        @import-external="handleImportExternal"
       />
 
       <!-- Flow Legend Chips -->
@@ -252,6 +253,7 @@ import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import { useThemeStore } from '@/stores/useThemeStore'
+import { importCalendar } from '@/api/aiApi'
 
 import AppSidebar        from '@/components/AppSidebar.vue'
 import CalendarHeader    from '@/components/CalendarHeader.vue'
@@ -335,8 +337,8 @@ function isEdgeHighlighted(edge) {
   const { hovered, clicked } = interactionState.value;
   const active = clicked || hovered;
   if (!active) return false;
-  // 노드 선택 시 연결된 선들 강조
   if (active.type === 'node') return edge.from.id === active.data.id || edge.to.id === active.data.id;
+  if (active.type === 'edge') return edge.from?.id === active.data.from?.id && edge.to?.id === active.data.to?.id;
   return false;
 }
 
@@ -366,6 +368,10 @@ const dimmedNodeIds = computed(() => {
       else if (store.connections.some(c => (c.from === targetId && c.to === s.id) || (c.to === targetId && c.from === s.id))) {
         isHL = true;
       }
+    } else if (activeHL.type === 'edge') {
+      // edge hover 시 연결된 양쪽 노드 강조
+      const edge = activeHL.data;
+      if (edge.from?.id === s.id || edge.to?.id === s.id) isHL = true;
     }
 
     if (!isHL) ids.add(s.id);
@@ -820,6 +826,15 @@ async function refreshCurrentCalendar() {
     { year: y, month: m },
     { year: next.y, month: next.m },
   ])
+}
+
+async function handleImportExternal() {
+  try {
+    await importCalendar()
+    await refreshCurrentCalendar()
+  } catch (e) {
+    console.error('Google Calendar 가져오기 실패:', e)
+  }
 }
 
 async function handleSaveSchedule(payload) {
