@@ -281,6 +281,14 @@ public class CalendarServiceImpl implements CalendarService {
                     // 줄기 연결선 렌더링용: 조회 기간 바깥의 인접 노드 날짜 산출
                     List<CurriculumNode> allNodes = curriculumNodeRepository
                             .findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
+                    LocalDate curriculumStartDate = allNodes.stream()
+                            .map(CurriculumNode::getScheduledDate)
+                            .min(Comparator.naturalOrder())
+                            .orElse(null);
+                    LocalDate curriculumEndDate = allNodes.stream()
+                            .map(CurriculumNode::getScheduledDate)
+                            .max(Comparator.naturalOrder())
+                            .orElse(null);
                     LocalDate prevNodeDate = allNodes.stream()
                             .map(CurriculumNode::getScheduledDate)
                             .filter(d -> d.isBefore(startDate))
@@ -303,6 +311,8 @@ public class CalendarServiceImpl implements CalendarService {
                             .curriculumId(curriculumId)
                             .displayName(displayName)
                             .status(curriculum.getStatus())
+                            .curriculumStartDate(curriculumStartDate)
+                            .curriculumEndDate(curriculumEndDate)
                             .prevNodeDate(prevNodeDate)
                             .nextNodeDate(nextNodeDate)
                             .totalNodeCount(allNodes.size())

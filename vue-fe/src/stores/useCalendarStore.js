@@ -50,6 +50,8 @@ export const useCalendarStore = defineStore('calendar', () => {
       isEnded: c.status !== 'ACTIVE',
       curriculumId: c.curriculumId,
       displayName: c.displayName || `커리큘럼 ${c.curriculumId}`,
+      curriculumStartDate: c.curriculumStartDate || null,
+      curriculumEndDate: c.curriculumEndDate || null,
       totalNodeCount: c.totalNodeCount ?? c.nodes?.length ?? 0,
     }))
 

@@ -18,6 +18,8 @@ public class CalendarCurriculumResponse {
     private Long curriculumId;
     private String displayName;
     private CurriculumStatus status;
+    private LocalDate curriculumStartDate;
+    private LocalDate curriculumEndDate;
     private LocalDate prevNodeDate;
     private LocalDate nextNodeDate;
     private Integer totalNodeCount;

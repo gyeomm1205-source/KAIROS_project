@@ -570,14 +570,13 @@ function formatMonthDay(dateStr) {
 function getTrackDisplayName(trackId) {
   const track = allTracks.value.find(t => t.id === trackId)
   if (!track) return ''
-  if (track.displayName) return track.displayName
   if (!track.curriculumId) return track.name || ''
 
   const curriculum = curricula.value.find(c => c.curriculumId === track.curriculumId)
   const nodes = [...(curriculum?.nodes || [])].sort((a, b) => (a.scheduledDate || '').localeCompare(b.scheduledDate || ''))
-  const firstTitle = nodes[0]?.title || track.name || `커리큘럼 ${track.curriculumId}`
-  const startDate = curriculum?.prevNodeDate || nodes[0]?.scheduledDate || ''
-  const endDate = curriculum?.nextNodeDate || nodes[nodes.length - 1]?.scheduledDate || ''
+  const firstTitle = track.displayName || nodes[0]?.title || track.name || `커리큘럼 ${track.curriculumId}`
+  const startDate = track.curriculumStartDate || curriculum?.curriculumStartDate || nodes[0]?.scheduledDate || ''
+  const endDate = track.curriculumEndDate || curriculum?.curriculumEndDate || nodes[nodes.length - 1]?.scheduledDate || ''
   const range = startDate && endDate ? `${formatMonthDay(startDate)}~${formatMonthDay(endDate)}` : ''
 
   return range ? `${firstTitle} · ${range}` : firstTitle
