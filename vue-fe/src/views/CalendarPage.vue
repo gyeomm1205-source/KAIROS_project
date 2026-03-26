@@ -332,6 +332,17 @@ const dimmedNodeIds = computed(() => {
   return ids;
 })
 
+function isSameWeek(dateStr1, dateStr2) {
+  const d1 = new Date(dateStr1)
+  const d2 = new Date(dateStr2)
+  const getWeekStart = (d) => {
+    const day = d.getDay()
+    const diff = d.getDate() - day
+    return new Date(d.getFullYear(), d.getMonth(), diff).getTime()
+  }
+  return getWeekStart(d1) === getWeekStart(d2)
+}
+
 // ============================================================================
 // 💡 SVG 기반 연결선 렌더링 (인터랙션 및 성능 최적화)
 // ============================================================================
@@ -364,9 +375,9 @@ const updateConnections = () => {
       const y2 = tRect.top - offsetTop;
 
       let d = "";
-      if (currentView.value === 'week') {
-        const midX = (x1 + x2) / 2;
-        d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+      const sameWeek = sFrom.day && sTo.day && isSameWeek(sFrom.day, sTo.day);
+      if (sameWeek) {
+        d = `M ${x1} ${y1} L ${x2} ${y2}`;
       } else {
         const midX = (x1 + x2) / 2;
         d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
