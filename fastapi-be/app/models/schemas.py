@@ -206,7 +206,9 @@ class TechDetail(_CamelModel):
     """profile_analyzer가 추출한 기술 상세."""
     tech_name: str
     proficiency_percentage: int = Field(ge=0, le=100)
-    usage_count: int
+    usage_count: int = 0
+    position_name: str | None = None
+    fit_level: str | None = None  # "HIGH" | "MID" | "LOW"
 
 
 class RecommendedPosition(_CamelModel):
