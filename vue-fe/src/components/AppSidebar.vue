@@ -9,7 +9,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <router-link to="/calendar" class="nav-item" active-class="active">
+      <router-link to="/calendar" class="nav-item" active-class="active" :class="{ pulse: calendarPulse }">
         <i class="fas fa-calendar-alt" /> CALENDAR
       </router-link>
       <router-link to="/recommend" class="nav-item" active-class="active">
@@ -61,24 +61,26 @@
     </div>
 
     <!-- LOGOUT MODAL -->
-    <Transition name="fade">
-      <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
-        <div class="modal-content base-panel">
-          <div class="modal-header" style="margin-bottom: 32px;">
-            <div class="flex-column">
-              <h3 class="modal-title">로그아웃 하시겠습니까?</h3>
+    <Teleport to="body">
+      <Transition name="fade">
+        <div v-if="showLogoutModal" class="modal-overlay" @click.self="showLogoutModal = false">
+          <div class="modal-content base-panel">
+            <div class="modal-header" style="margin-bottom: 32px;">
+              <div class="flex-column">
+                <h3 class="modal-title">로그아웃 하시겠습니까?</h3>
+              </div>
+              <button @click="showLogoutModal = false" class="btn-close-modal">
+                 <i class="fas fa-times"></i>
+              </button>
             </div>
-            <button @click="showLogoutModal = false" class="btn-close-modal">
-               <i class="fas fa-times"></i>
-            </button>
-          </div>
-          <div class="modal-actions">
-            <button class="btn-outline-small" @click="showLogoutModal = false">취소</button>
-            <button class="btn-primary-small btn-danger" @click="handleLogout">로그아웃</button>
+            <div class="modal-actions">
+              <button class="btn-outline-small" @click="showLogoutModal = false">취소</button>
+              <button class="btn-primary-small btn-danger" @click="handleLogout">로그아웃</button>
+            </div>
           </div>
         </div>
-      </div>
-    </Transition>
+      </Transition>
+    </Teleport>
 
     <Transition name="toast">
       <div v-if="showToast" class="sync-toast">
@@ -89,13 +91,25 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/useAuthStore'
 import { syncActivities } from '@/api/aiApi'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+
+const calendarPulse = ref(false)
+
+watch(() => route.path, (newPath, oldPath) => {
+  if (newPath === '/calendar' && oldPath !== '/calendar') {
+    setTimeout(() => {
+      calendarPulse.value = true
+      setTimeout(() => { calendarPulse.value = false }, 600)
+    }, 750)
+  }
+})
 
 const isGithubSyncing = ref(false)
 const isVelogSyncing = ref(false)
@@ -163,6 +177,13 @@ const handleLogout = () => {
 }
 .nav-item:hover { color: var(--text-primary); background: var(--bg-hover); }
 .nav-item.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
+@keyframes navPulse {
+  0%   { transform: scale(1); box-shadow: 0 0 0 0 var(--clr-primary); }
+  30%  { transform: scale(1.06); box-shadow: 0 0 0 6px transparent; }
+  65%  { transform: scale(0.97); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 transparent; }
+}
+.nav-item.pulse { animation: navPulse 0.55s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .nav-item i { font-size: 16px; width: 20px; text-align: center; }
 .nav-item:not(.active) .fa-calendar-alt { color: var(--clr-icon-calendar); }
 .nav-item:not(.active) .fa-compass { color: var(--clr-icon-ai); }

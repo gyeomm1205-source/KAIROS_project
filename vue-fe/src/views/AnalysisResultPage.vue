@@ -325,10 +325,10 @@ const submitFeedback = async () => {
 .action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
 .action-buttons { display: flex; gap: 12px; justify-content: center; }
 
-.btn-primary { padding: 16px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-primary { padding: 16px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 0; }
 .btn-primary:hover { background: transparent; color: var(--clr-primary); }
 
-.btn-outline { padding: 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-outline { padding: 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; font-family: inherit; border-radius: 0; }
 .btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
 /* Loading & Error */

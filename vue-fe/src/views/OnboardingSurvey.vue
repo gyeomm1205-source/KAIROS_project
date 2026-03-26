@@ -96,18 +96,18 @@
         
         <div class="pill-group active-pills">
           <span v-for="t in techs" :key="t" class="tag active">
-            {{ t }}
+            <i v-if="hasTechIcon(t)" :class="getTechIcon(t)" />{{ t }}
             <button @click="removeTech(t)"><i class="fas fa-times" /></button>
           </span>
         </div>
-        
+
         <div class="pill-group">
-          <button 
-            v-for="t in availableSuggestedTechs" :key="t" 
+          <button
+            v-for="t in availableSuggestedTechs" :key="t"
             class="tag dashed"
             @click="addTech(t)"
           >
-            + {{ t }}
+            <i v-if="hasTechIcon(t)" :class="getTechIcon(t)" />+ {{ t }}
           </button>
         </div>
       </div>
@@ -144,6 +144,7 @@ import { useRouter } from 'vue-router'
 import { getOnboardingMeta, submitSurvey as apiSubmitSurvey } from '@/api/onboardingApi'
 import { useAuthStore } from '@/stores/useAuthStore'
 import TechTagAutocomplete from '@/components/TechTagAutocomplete.vue'
+import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -240,11 +241,10 @@ const submitSurvey = async () => {
 
   try {
     await apiSubmitSurvey(payload)
-    // 분석 taskId는 이미 FastAPI 연동 단계에서 받아 store에 저장돼 있음
-    router.push('/onboarding/loading')
   } catch (e) {
     console.error('설문 제출 실패:', e)
-    isSubmitting.value = false
+  } finally {
+    router.push('/onboarding/loading')
   }
 }
 </script>
@@ -329,7 +329,7 @@ const submitSurvey = async () => {
   padding: 14px; border: 1px solid var(--border); background: transparent;
   color: var(--text-primary); font-size: 14px; font-weight: 800;
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit; border-radius: 8px;
+  font-family: inherit; border-radius: 0;
 }
 .choice-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .choice-btn.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); }
@@ -356,7 +356,7 @@ const submitSurvey = async () => {
 .btn-add {
   width: 44px; border: 1px solid var(--text-primary);
   background: var(--text-primary); color: var(--bg-base);
-  cursor: pointer; transition: all 0.2s; font-size: 14px; border-radius: 8px;
+  cursor: pointer; transition: all 0.2s; font-size: 14px; border-radius: 0;
 }
 .btn-add:hover { background: transparent; color: var(--text-primary); }
 

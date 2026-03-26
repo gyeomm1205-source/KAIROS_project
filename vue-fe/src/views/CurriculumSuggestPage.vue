@@ -289,6 +289,7 @@ const confirmAndGoCalendar = async () => {
   width: 100%; max-width: 800px; max-height: calc(100vh - 120px);
   background: var(--bg-surface); border: 1px solid var(--border);
   padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+  border-radius: 16px;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
@@ -321,7 +322,7 @@ const confirmAndGoCalendar = async () => {
 .setup-header h2 { font-size: 24px; font-weight: 900; color: var(--text-primary); margin-bottom: 12px; }
 .setup-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; }
 
-.base-panel { background: var(--bg-surface); border: 1px solid var(--border); transition: all 0.3s; }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); transition: all 0.3s; border-radius: 8px; }
 .panel-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
 .panel-header i { font-size: 18px; color: var(--text-primary); margin-right: 4px; }
 .panel-header h3 { font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: var(--text-muted); }
@@ -330,9 +331,9 @@ const confirmAndGoCalendar = async () => {
 .timeline-container { position: relative; padding-left: 20px; }
 .timeline-line { position: absolute; left: 23px; top: 10px; bottom: 10px; width: 2px; background: var(--border); }
 .timeline-item { position: relative; padding-bottom: 24px; padding-left: 24px; }
-.timeline-dot { position: absolute; left: -2px; top: 6px; width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; z-index: 2; }
+.timeline-dot { position: absolute; left: 0px; top: 6px; width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; z-index: 2; }
 .timeline-date { font-size: 11px; font-weight: 800; color: var(--text-muted); margin-bottom: 6px; }
-.timeline-card { border: 1px solid var(--border); padding: 14px; display: flex; justify-content: space-between; align-items: center; }
+.timeline-card { border: 1px solid var(--border); padding: 14px; display: flex; justify-content: space-between; align-items: center; border-radius: 6px; }
 .timeline-card:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .tc-title { font-size: 13px; font-weight: 700; color: var(--text-primary); }
 .tc-duration { font-size: 11px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 4px; }
@@ -359,14 +360,14 @@ const confirmAndGoCalendar = async () => {
 .action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
 .action-buttons { display: flex; gap: 12px; justify-content: center; }
 
-.btn-primary { padding: 16px 32px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-primary { padding: 16px 32px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; border-radius: 8px; }
 .btn-primary:hover { background: transparent; color: var(--clr-primary); }
-.btn-outline { padding: 16px 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-outline { padding: 16px 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; border-radius: 8px; }
 .btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
 /* Modal */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
-.modal-content { width: 100%; max-width: 480px; padding: 32px; background: var(--modal-bg); border: 1px solid var(--modal-border); box-shadow: var(--modal-shadow); }
+.modal-content { width: 100%; max-width: 480px; padding: 32px; background: var(--modal-bg); border: 1px solid var(--modal-border); box-shadow: var(--modal-shadow); border-radius: 12px; }
 .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; border-bottom: none; padding-bottom: 0; }
 .btn-close-modal { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s; margin-top: -4px; margin-right: -4px; }
 .btn-close-modal:hover { color: var(--text-primary); }
@@ -374,8 +375,8 @@ const confirmAndGoCalendar = async () => {
 .modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.btn-primary-small { padding: 10px 20px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; border-radius: 6px; }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; border-radius: 6px; }
 
 /* Fly Anim */
 .fly-overlay { position: fixed; inset: 0; z-index: 9999; pointer-events: none; display: flex; align-items: center; justify-content: center; }

@@ -73,7 +73,7 @@ onUnmounted(() => {
 .g-cur-dot {
   position: fixed; top: 0; left: 0;
   width: 8px; height: 8px;
-  background: var(--clr-primary);
+  background: #000000;
   border-radius: 50%;
   pointer-events: none;
   z-index: 99999;
@@ -82,7 +82,7 @@ onUnmounted(() => {
 .g-cur-ring {
   position: fixed; top: 0; left: 0;
   width: 22px; height: 22px;
-  border: 2px solid var(--clr-primary);
+  border: 2px solid #000000;
   border-radius: 50%;
   pointer-events: none;
   z-index: 99998;
