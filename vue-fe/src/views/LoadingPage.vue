@@ -87,7 +87,7 @@ async function pollTaskStatus(taskId) {
       if (data.data) {
         localStorage.setItem('analysisResult', JSON.stringify(data.data))
       }
-
+      console.log('데이터 도착', data.data)
       setTimeout(() => router.push('/onboarding/result'), 600)
     } else if (data.status === 'failed') {
       clearInterval(pollTimer)
