@@ -73,7 +73,7 @@ onUnmounted(() => {
 .g-cur-dot {
   position: fixed; top: 0; left: 0;
   width: 8px; height: 8px;
-  background: var(--text-primary);
+  background: var(--clr-primary);
   border-radius: 50%;
   pointer-events: none;
   z-index: 99999;
@@ -82,7 +82,7 @@ onUnmounted(() => {
 .g-cur-ring {
   position: fixed; top: 0; left: 0;
   width: 22px; height: 22px;
-  border: 2px solid var(--text-primary);
+  border: 2px solid var(--clr-primary);
   border-radius: 50%;
   pointer-events: none;
   z-index: 99998;
@@ -104,6 +104,9 @@ onUnmounted(() => {
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-7ExtraBold.woff') format('woff'); font-weight: 700; font-display: swap; }
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-8Heavy.woff') format('woff'); font-weight: 800; font-display: swap; }
 @font-face { font-family: 'Escoredream'; src: url('https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_six@1.2/S-CoreDream-9Black.woff') format('woff'); font-weight: 900; font-display: swap; }
+
+/* ── 기술 스택 아이콘 (Devicon) ── */
+i.tech-icon { font-size: 14px; vertical-align: middle; line-height: 1; margin-right: 4px; flex-shrink: 0; }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -127,7 +130,29 @@ onUnmounted(() => {
   --accent-glow:  rgba(255,255,255,0.1);
   --scrollbar-thumb: rgba(255,255,255,0.2);
   --scrollbar-track: #000000;
-  
+
+  /* ── 컬러 시스템 ── */
+  --clr-primary:         #60A5FA;
+  --clr-primary-hover:   #3B82F6;
+  --clr-primary-subtle:  rgba(96,165,250,0.10);
+  --clr-label:           #38BDF8;
+  --clr-label-subtle:    rgba(56,189,248,0.10);
+  --clr-accent-text:     #93C5FD;
+  --clr-success:         #34D399;
+  --clr-success-subtle:  rgba(52,211,153,0.10);
+  --clr-warning:         #FBBF24;
+  --clr-warning-subtle:  rgba(251,191,36,0.10);
+  --clr-danger:          #F87171;
+  --clr-danger-subtle:   rgba(248,113,113,0.08);
+  --clr-icon-calendar:   #38BDF8;
+  --clr-icon-ai:         #A78BFA;
+  --clr-icon-github:     #e6edf3;
+  --clr-icon-velog:      #20C997;
+  --clr-icon-growth:     #FBBF24;
+  --clr-icon-history:    #FB923C;
+  --clr-icon-sync:       #60A5FA;
+  --clr-icon-alert:      #F87171;
+
   /* ── 모달 전용 ── */
   --modal-bg:            #000000;
   --modal-border:        rgba(255,255,255,0.15);
@@ -156,7 +181,29 @@ onUnmounted(() => {
   --accent-glow:  rgba(0,0,0,0.1);
   --scrollbar-thumb: rgba(0,0,0,0.2);
   --scrollbar-track: #ffffff;
-  
+
+  /* ── 컬러 시스템 ── */
+  --clr-primary:         #2563EB;
+  --clr-primary-hover:   #1D4ED8;
+  --clr-primary-subtle:  rgba(37,99,235,0.08);
+  --clr-label:           #0EA5E9;
+  --clr-label-subtle:    rgba(14,165,233,0.10);
+  --clr-accent-text:     #2563EB;
+  --clr-success:         #10B981;
+  --clr-success-subtle:  rgba(16,185,129,0.10);
+  --clr-warning:         #F59E0B;
+  --clr-warning-subtle:  rgba(245,158,11,0.10);
+  --clr-danger:          #EF4444;
+  --clr-danger-subtle:   rgba(239,68,68,0.08);
+  --clr-icon-calendar:   #0EA5E9;
+  --clr-icon-ai:         #8B5CF6;
+  --clr-icon-github:     #1f2328;
+  --clr-icon-velog:      #20C997;
+  --clr-icon-growth:     #F59E0B;
+  --clr-icon-history:    #EA580C;
+  --clr-icon-sync:       #2563EB;
+  --clr-icon-alert:      #EF4444;
+
   /* ── 모달 전용 ── */
   --modal-bg:            #ffffff;
   --modal-border:        rgba(0,0,0,0.15);
@@ -215,6 +262,8 @@ body {
   color: var(--text-primary);
   font-weight: 400;
   line-height: 1.5;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .app-root { width: 100%; min-height: 100vh; }
@@ -222,10 +271,10 @@ body {
 /* 전역 스크롤바 - 직각으로 변경 */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--scrollbar-track); }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 0; }
+::-webkit-scrollbar-thumb { background: var(--clr-primary-subtle); border-radius: 0; }
 
-/* 전역 선택 색상 - 흑백 반전 */
-::selection { background: var(--text-primary); color: var(--bg-base); }
+/* 전역 선택 색상 */
+::selection { background: var(--clr-primary); color: var(--bg-base); }
 
 /* ────────────────────────────────────
    GLOBAL UTILITIES (Monochrome & Locomotive)
@@ -261,5 +310,10 @@ body {
 .section-sub { font-size: 18px; color: var(--text-muted); font-weight: 500; }
 .border-y { border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 
+/* 전역 input/textarea 포커스 */
+input:focus, textarea:focus { border-color: var(--clr-primary) !important; outline: none; }
+
+/* OnboardingConnect 연동 완료 표시 */
+.text-blue-600 { color: var(--clr-success) !important; }
 
 </style>

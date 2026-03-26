@@ -18,6 +18,7 @@
         <div class="google-icon">G</div>
         CONTINUE WITH GOOGLE
       </button>
+
     </div>
   </div>
 </template>
@@ -189,5 +190,6 @@ onMounted(() => {
 }
 .terminal-input::placeholder { color: var(--k-text-muted); font-family: 'Mulmaru', sans-serif; font-size: 13px; }
 .terminal-input:focus { outline: none; border-color: var(--k-acc-1-bg); background: var(--k-key-bg); color: var(--k-text); box-shadow: inset 0 2px 4px rgba(0,0,0,0.2), 0 0 10px rgba(209, 154, 102, 0.2); }
+
 
 </style>

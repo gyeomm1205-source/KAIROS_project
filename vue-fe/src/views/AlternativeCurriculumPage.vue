@@ -304,8 +304,8 @@ const confirmAndGoCalendar = async () => {
   border-right: 1px solid var(--border);
 }
 .page-stepper .step:last-child { border-right: none; }
-.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); }
-.page-stepper .step.done { color: var(--text-primary); }
+.page-stepper .step.active { background: var(--clr-primary); color: var(--bg-base); }
+.page-stepper .step.done { color: var(--clr-success); }
 
 .header-top { margin-bottom: 24px; }
 .btn-back {
@@ -358,8 +358,8 @@ const confirmAndGoCalendar = async () => {
 .action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
 .action-buttons { display: flex; gap: 12px; justify-content: center; }
 
-.btn-primary { padding: 16px 32px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
-.btn-primary:hover { background: transparent; color: var(--text-primary); }
+.btn-primary { padding: 16px 32px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
+.btn-primary:hover { background: transparent; color: var(--clr-primary); }
 .btn-outline { padding: 16px 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
@@ -373,7 +373,7 @@ const confirmAndGoCalendar = async () => {
 .modal-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 600; margin-bottom: 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 .btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 
 /* Fly Anim */

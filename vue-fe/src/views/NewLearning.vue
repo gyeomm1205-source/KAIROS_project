@@ -20,10 +20,11 @@
         <div class="base-panel form-panel mb-gap">
           <h3 class="field-label"><i class="fas fa-search" /> 학습 주제</h3>
           <p class="field-desc">배우고 싶은 기술이나 주제를 입력하세요</p>
-          <input
+          <TechTagAutocomplete
             v-model="topic"
             class="brutal-input mb-sm"
             placeholder="예: GraphQL, Docker, 디자인 시스템..."
+            @select="val => topic = val"
           />
           <div class="tag-group-small flex-wrap">
             <button
@@ -33,7 +34,7 @@
               :class="{ 'active': topic === st }"
               @click="topic = st"
             >
-              {{ st }}
+              <i v-if="hasTechIcon(st)" :class="getTechIcon(st)" class="tech-icon" />{{ st }}
             </button>
           </div>
         </div>
@@ -155,7 +156,7 @@
               
               <!-- AI 판단 요약 -->
               <div class="base-panel bg-surface p-md mb-gap">
-                <div class="info-title mb-md"><i class="fas fa-brain" /> AI가 사용자 상태를 이렇게 해석했어요</div>
+                <div class="info-title mb-md"><i class="fas fa-brain icon-ai" /> AI가 사용자 상태를 이렇게 해석했어요</div>
                 <div class="grid-3 col-gap gap-y">
                   <div class="stat-box bg-white">
                     <span class="stat-lbl">입력으로 본 상태</span>
@@ -193,10 +194,13 @@
                 <div class="grid-3 col-gap gap-y">
                   <div v-for="step in computedCurriculum" :key="step.phase" class="base-panel bg-surface p-md">
                     <div class="flex-between mb-sm">
-                      <span class="brutal-tag bg-white font-bold">{{ step.phase }}</span>
+                      <span class="brutal-tag bg-white font-bold flex-align gap-xs">
+                        <i v-if="hasTechIcon(displayTopic)" :class="getTechIcon(displayTopic)" class="tech-icon" />
+                        {{ step.phase }}
+                      </span>
                       <span class="text-xs text-muted">{{ step.duration }}</span>
                     </div>
-                    <div class="font-bold mb-xs text-sm">{{ step.title }}</div>
+                    <div class="font-bold mb-xs text-sm text-accent">{{ step.title }}</div>
                     <p class="text-xs text-muted mb-md pb-md border-b">{{ step.desc }}</p>
                     <div class="bg-white p-sm border-normal">
                       <div class="text-[10px] text-muted mb-xs">이 단계가 끝나면</div>
@@ -210,8 +214,8 @@
               <div class="grid-2 col-gap gap-y">
                 <!-- 액션 미션 -->
                 <div>
-                  <div class="flex-align mb-md">
-                    <i class="fas fa-lightbulb text-muted" /> <span class="font-bold text-md">액션 미션</span>
+                  <div class="flex-align gap-xs mb-md">
+                    <i class="fas fa-lightbulb icon-mission" /> <span class="font-bold text-md text-mission">액션 미션</span>
                   </div>
                   <div class="flex-col gap-sm">
                     <div v-for="mission in computedMissions" :key="mission.title" class="base-panel p-md bg-white">
@@ -221,7 +225,7 @@
                       </div>
                       <p class="text-xs text-muted mb-sm">{{ mission.desc }}</p>
                       <div class="text-xs text-muted flex-align gap-xs">
-                        <i class="fas fa-clock" /> {{ mission.time }}
+                        <i class="fas fa-clock icon-clock" /> {{ mission.time }}
                       </div>
                     </div>
                   </div>
@@ -229,8 +233,8 @@
 
                 <!-- 레퍼런스 -->
                 <div>
-                  <div class="flex-align mb-md">
-                    <i class="fas fa-book-open text-muted" /> <span class="font-bold text-md">기초 레퍼런스</span>
+                  <div class="flex-align gap-xs mb-md">
+                    <i class="fas fa-book-open icon-ref" /> <span class="font-bold text-md text-ref">기초 레퍼런스</span>
                   </div>
                   <div class="flex-col gap-sm">
                     <div v-for="ref in computedReferences" :key="ref.title" class="base-panel p-md bg-white">
@@ -240,7 +244,7 @@
                       </div>
                       <p class="text-xs text-muted mb-sm">{{ ref.reason }}</p>
                       <div class="text-xs text-muted flex-align gap-md">
-                        <div class="flex-align gap-xs"><i class="fas fa-history" /> {{ ref.freshness }}</div>
+                        <div class="flex-align gap-xs"><i class="fas fa-history icon-doc" /> {{ ref.freshness }}</div>
                         <div class="flex-align gap-xs cursor-pointer font-bold text-primary" @click="$router.push('/recommend/new-curriculum')">
                           <i class="fas fa-external-link-alt" /> 자료 보기
                         </div>
@@ -268,6 +272,8 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
+import TechTagAutocomplete from '@/components/TechTagAutocomplete.vue'
 
 const router = useRouter()
 
@@ -466,7 +472,7 @@ const computedReferences = computed(() => [
 .flex-align { display: flex; align-items: center; gap: 8px; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 .flex-col { display: flex; flex-direction: column; }
-.flex-wrap { display: flex; flex-wrap: wrap; }
+.flex-wrap { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
 .col-gap { gap: 12px; }
@@ -512,7 +518,8 @@ const computedReferences = computed(() => [
 .brutal-textarea { width: 100%; border: 1px solid var(--border); padding: 16px; font-size: 14px; font-weight: 600; background: transparent; color: var(--text-primary); outline: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; resize: none; font-family: inherit; }
 .brutal-textarea:focus { border-color: var(--text-primary); background: var(--bg-hover);}
 
-.brutal-tag { padding: 8px 16px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
+.brutal-tag { padding: 8px 16px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-muted); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; }
+.tech-icon { font-size: 13px; flex-shrink: 0; }
 .clickable-tag { cursor: pointer; }
 .clickable-tag:hover { background: var(--bg-hover); border-color: var(--text-primary); color: var(--text-primary); }
 .clickable-tag.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
@@ -528,6 +535,14 @@ const computedReferences = computed(() => [
 .info-box { background: transparent; border: 1px dashed var(--border); padding: 24px; text-align: left; border-radius: 8px; }
 .question-icon { width: 32px; height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px; flex-shrink: 0; border-radius: 50%; }
 .info-title { font-size: 14px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; }
+.icon-ai      { color: var(--clr-icon-ai); }
+.icon-mission { color: #FBBF24; }
+.icon-ref     { color: #86EFAC; }
+.icon-clock   { color: #FB923C; }
+.icon-doc     { color: #60A5FA; }
+.text-mission { color: #FBBF24; }
+.text-ref     { color: #86EFAC; }
+.text-accent  { color: var(--clr-primary); }
 .info-text { font-size: 12px; color: var(--text-muted); line-height: 1.6; font-weight: 600; }
 
 .btn-primary-block { width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 16px; font-size: 14px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; letter-spacing: 0.1em; }

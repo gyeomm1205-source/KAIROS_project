@@ -40,9 +40,11 @@
           </div>
 
           <div class="flex-align gap-lg mt-md flex-wrap">
-            <div class="info-item"><i class="fas fa-clock" /><span>총 소요: 약 3시간 50분 (5일)</span></div>
+            <div class="info-item"><i class="fas fa-clock icon-clock" /><span>총 소요: 약 3시간 50분 (5일)</span></div>
             <div class="flex-align gap-sm flex-wrap">
-              <span v-for="t in ['Docker', 'DevOps', 'Node.js']" :key="t" class="brutal-tag inline-tag"><i class="fas fa-tag text-[10px]" /> {{ t }}</span>
+              <span v-for="t in ['Docker', 'DevOps', 'Node.js']" :key="t" class="brutal-tag inline-tag">
+                <i v-if="hasTechIcon(t)" :class="getTechIcon(t)" class="tech-icon" />{{ t }}
+              </span>
             </div>
           </div>
         </div>
@@ -52,7 +54,7 @@
           <!-- Left: Action Missions -->
           <div>
             <h3 class="flex-align gap-sm font-bold text-md mb-md">
-              <i class="fas fa-brain text-muted" /> 액션 미션
+              <i class="fas fa-brain icon-brain" /> 액션 미션
             </h3>
             <div class="flex-col gap-sm">
               <div v-for="(m, i) in missions" :key="i" class="brutal-panel p-md shadow-normal">
@@ -64,7 +66,7 @@
                       <span class="brutal-tag inline-tag text-[10px]">{{ m.tag }}</span>
                     </div>
                     <p class="text-xs text-muted mb-sm font-bold line-clamp-2">{{ m.desc }}</p>
-                    <div class="info-item"><i class="fas fa-clock" /><span>{{ m.time }}</span></div>
+                    <div class="info-item"><i class="fas fa-clock icon-clock" /><span>{{ m.time }}</span></div>
                   </div>
                 </div>
               </div>
@@ -74,7 +76,7 @@
           <!-- Right: References -->
           <div class="flex-col">
             <h3 class="flex-align gap-sm font-bold text-md mb-md">
-              <i class="fas fa-book-open text-muted" /> 기초 레퍼런스
+              <i class="fas fa-book-open icon-ref" /> 기초 레퍼런스
             </h3>
             <div class="flex-col gap-sm">
               <div v-for="(r, i) in references" :key="i" class="brutal-panel p-md shadow-normal">
@@ -133,6 +135,7 @@ import { useRouter } from 'vue-router'
 import { postCurriculaConfirm } from '@/api/aiApi'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const store = useCalendarStore()
@@ -254,11 +257,11 @@ const confirmAndGoCalendar = async () => {
 .flex-1 { flex: 1; }
 
 .bg-surface { background: transparent; }
-.border-muted { border: 1px solid var(--border); }
+.border-muted { border: 1px solid var(--border); border-radius: 8px; }
 .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
 /* Box shadows & Panels */
-.brutal-panel { background: transparent; border: 1px solid var(--border); display: flex; flex-direction: column; border-radius: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.brutal-panel { background: transparent; border: 1px solid var(--border); display: flex; flex-direction: column; border-radius: 8px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .card-panel { padding: 32px; }
 .card-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .shadow-normal { box-shadow: none; }
@@ -266,7 +269,10 @@ const confirmAndGoCalendar = async () => {
 .shadow-heavy { box-shadow: none; border-top: 1px solid var(--border); border-bottom: none; border-left: none; border-right: none;}
 .shadow-heavy:hover { border-color: var(--text-primary); }
 
-.icon-box-muted { width: 48px; height: 48px; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--text-muted); border: 1px solid var(--border); }
+.icon-box-muted { width: 48px; height: 48px; background: transparent; display: flex; align-items: center; justify-content: center; font-size: 20px; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); border-radius: 8px; flex-shrink: 0; }
+.icon-brain { color: #F9A8D4; }
+.icon-ref   { color: #86EFAC; }
+.icon-clock { color: #FB923C; }
 .day-badge { width: 44px; height: 44px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; color: var(--text-primary); flex-shrink: 0; border-radius: 50%;}
 .h-line { width: 16px; height: 1px; background: var(--border); }
 
@@ -276,6 +282,7 @@ const confirmAndGoCalendar = async () => {
 
 .brutal-tag { padding: 4px 10px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; color: var(--text-primary); border-radius: 40px;}
 .inline-tag { display: inline-flex; align-items: center; gap: 4px;}
+.tech-icon { font-size: 13px; flex-shrink: 0; }
 
 .btn-primary { background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 14px 24px; font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; gap: 8px; border-radius: 40px; letter-spacing: 0.05em;}
 .btn-primary:hover { background: var(--text-primary); color: var(--bg-base); }

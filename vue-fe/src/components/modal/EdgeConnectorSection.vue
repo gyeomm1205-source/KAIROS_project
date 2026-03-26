@@ -228,7 +228,7 @@ const filteredChildren = computed(() => groupByTrack(props.children, childSearch
 .tag-actions { display: flex; align-items: center; gap: 6px; margin-left: 6px; }
 .tag-action-btn { background: var(--bg-hover); border: 1px solid var(--border); padding: 5px; font-size: 10px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; border-radius: 8px; transition: 0.2s; }
 .tag-action-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-surface); }
-.tag-action-btn.remove:hover { color: #f44336; border-color: #f44336; }
+.tag-action-btn.remove:hover { color: var(--clr-danger); border-color: var(--clr-danger); }
 
 /* Searchable Select */
 .searchable-select { display: flex; flex-direction: column; gap: 10px; position: relative; }
