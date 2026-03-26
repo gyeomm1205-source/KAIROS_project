@@ -182,6 +182,9 @@
               }"
               @click.stop="handleWeekCellClick(day)"
             >
+              <button class="btn-add-week mech-key" @click.stop="openCreateModal(day)">
+                <i class="fas fa-plus" />
+              </button>
               <div class="week-cards">
                 <WeekScheduleCard
                   v-for="s in store.getSchedulesForDay(day)" :key="s.id"
@@ -193,9 +196,6 @@
                   @mouseleave="onNodeHover(null)"
                 />
               </div>
-              <button class="btn-add-week mech-key" @click.stop="openCreateModal(day)">
-                <i class="fas fa-plus" />
-              </button>
             </div>
           </div>
         </div>
@@ -800,8 +800,8 @@ function onWeekWheel(e) {
 .grid-cols-7 { grid-template-columns: repeat(7, 1fr); }
 .day-header { padding: 14px 0; text-align: center; font-size: 13px; font-weight: 900; color: var(--text-primary); letter-spacing: 0.05em; border-right: 1px solid var(--border); box-sizing: border-box; }
 .day-header:last-child { border-right: none; }
-.day-header--sat { color: #2563eb !important; }
-.day-header--sun { color: #dc2626 !important; }
+.day-header--sat { color: var(--clr-primary) !important; }
+.day-header--sun { color: var(--clr-danger) !important; }
 .line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
 .conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; pointer-events: stroke; }
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
@@ -814,7 +814,7 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 /* ── Floating Action Bar ── */
 .floating-action-bar {
   position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
-  background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); border-radius: 8px;
+  background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); border-radius: 8px;
   padding: 10px 24px; display: flex; align-items: center; gap: 16px;
   box-shadow: 0 10px 30px rgba(0,0,0,0.2); z-index: 200; font-weight: 900; letter-spacing: 0.05em;
 }
@@ -830,21 +830,21 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 .sticky-header { position: sticky; top: 0; z-index: 90; }
 .week-grid-cols { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 
-.week-col-header { padding: 18px 0 14px; text-align: center; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-mid); }
+.week-col-header { padding: 18px 0 14px; text-align: center; border-right: 1px solid var(--border); display: flex; flex-direction: column; align-items: center; gap: 6px; border-bottom: 1px solid var(--border-mid); position: relative; }
 .week-col-header:last-child { border-right: none; }
 .week-col-label { font-size: 11px; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
 .week-col-date { font-size: 22px; font-weight: 900; color: var(--text-primary); display: flex; align-items: center; gap: 8px; }
-.week-holiday-name { font-size: 10px; font-weight: 800; color: #dc2626; margin-top: 4px; letter-spacing: -0.05em; }
+.week-holiday-name { font-size: 10px; font-weight: 800; color: var(--clr-danger); margin-top: 4px; letter-spacing: -0.05em; }
 
-.day-header--sat .week-col-label, .day-header--sat .week-col-date { color: #2563eb !important; }
-.day-header--sun .week-col-label, .day-header--sun .week-col-date { color: #dc2626 !important; }
-.day-header--holiday .week-col-label, .day-header--holiday .week-col-date { color: #dc2626 !important; }
+.day-header--sat .week-col-label, .day-header--sat .week-col-date { color: var(--clr-primary) !important; }
+.day-header--sun .week-col-label, .day-header--sun .week-col-date { color: var(--clr-danger) !important; }
+.day-header--holiday .week-col-label, .day-header--holiday .week-col-date { color: var(--clr-danger) !important; }
 
-.week-col-header:has(.is-today) .week-col-label,
-.week-col-header:has(.is-today) .week-col-date,
-.week-col-header:has(.is-today) .week-holiday-name { color: var(--bg-base) !important; }
-.week-col-header:has(.is-today) { background: var(--bg-surface); color: var(--text-primary); }
-.week-today-tag { font-size: 10px; background: var(--text-primary); border: none; padding: 2px 8px; color: var(--bg-base); font-weight: 900; letter-spacing: 0.05em; border-radius: 4px; }
+.week-col-header:has(.is-today) .week-col-label { color: var(--clr-icon-calendar) !important; }
+.week-col-header:has(.is-today) .week-col-date { color: var(--clr-icon-calendar) !important; }
+.week-col-header:has(.is-today) .week-holiday-name { color: var(--clr-icon-calendar) !important; }
+.week-col-header:has(.is-today) { background: transparent; border-bottom-color: var(--clr-icon-calendar); }
+.week-today-tag { font-size: 10px; background: var(--clr-icon-calendar); border: none; padding: 2px 8px; color: var(--bg-base); font-weight: 900; letter-spacing: 0.05em; border-radius: 4px; }
 
 /* 그래프 구역 */
 .week-graph-zone { position: relative; border-bottom: 2px solid var(--border); flex-shrink: 0; background: transparent; z-index: 10; }
@@ -855,32 +855,46 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
 /* 라벨 구역 */
 .week-lane-labels { position: absolute; inset: 0; pointer-events: none; z-index: 45; }
-.week-lane-label { 
-  position: absolute; left: 12px; transform: translateY(-50%); margin-top: 0; 
-  display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; 
-  border-radius: 8px; border: 1px solid var(--border); background: var(--bg-elevated); 
-  font-size: 10px; font-weight: 800; color: var(--text-primary); 
-  cursor: pointer; transition: all 0.2s cubic-bezier(0.16,1,0.3,1); pointer-events: auto; text-transform: uppercase;
-  max-width: calc((100% / 12) - 12px); 
+.week-lane-label:not(:hover) { justify-content: center; gap: 0; }
+.week-lane-label {
+  position: absolute; left: 8px; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 6px;
+  width: 16px; height: 16px; padding: 0; border-radius: 50%;
+  border: 1px solid transparent; background: transparent;
+  font-size: 10px; font-weight: 800;
+  cursor: pointer; pointer-events: auto; text-transform: uppercase;
+  overflow: hidden; max-width: 16px;
+  transition: max-width 0.25s cubic-bezier(0.16,1,0.3,1),
+              width 0.25s cubic-bezier(0.16,1,0.3,1),
+              height 0.25s cubic-bezier(0.16,1,0.3,1),
+              padding 0.25s cubic-bezier(0.16,1,0.3,1),
+              border-radius 0.25s cubic-bezier(0.16,1,0.3,1),
+              border-color 0.2s, background 0.2s, box-shadow 0.2s;
 }
-.week-lane-label:hover { border-color: var(--text-primary); z-index: 100; max-width: max-content; transform: translateY(-50%) scale(1.05); box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-.lane-dot { width: 6px; height: 6px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); flex-shrink: 0; }
-.lane-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Inter', sans-serif; }
-.lane-hl-badge { font-size: 9px; margin-left: 4px; flex-shrink: 0; }
+.week-lane-label:hover {
+  width: auto; height: auto; max-width: 240px; padding: 3px 10px; border-radius: 8px;
+  border-color: currentColor; background: var(--bg-elevated);
+  z-index: 100; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+}
+.lane-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+.lane-name { width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Inter', sans-serif; opacity: 0; transition: opacity 0.1s 0.1s, width 0.25s cubic-bezier(0.16,1,0.3,1), max-width 0.25s cubic-bezier(0.16,1,0.3,1); }
+.week-lane-label:hover .lane-name { opacity: 1; width: auto; max-width: 180px; }
+.lane-hl-badge { width: 0; overflow: hidden; font-size: 9px; flex-shrink: 0; opacity: 0; transition: opacity 0.1s 0.1s, width 0.25s cubic-bezier(0.16,1,0.3,1); }
+.week-lane-label:hover .lane-hl-badge { opacity: 1; width: auto; }
 
 /* 하단 카드 존 */
 .week-card-zone { flex: 1; background: transparent; min-height: 100%; }
 
-.week-cell { border-right: 1px solid var(--border); padding: 16px 8px 48px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: background 0.1s; cursor: pointer; min-height: 100%; }
+.week-cell { border-right: 1px solid var(--border); padding: 44px 8px 16px; display: flex; flex-direction: column; gap: 12px; position: relative; transition: background 0.1s; cursor: pointer; min-height: 100%; }
 .week-cell:last-child { border-right: none; }
 .week-cell:hover { background: var(--bg-hover); }
-.week-cell--today { background: var(--bg-base) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; z-index: 5; }
+.week-cell--today { background: var(--bg-base) !important; outline: 2px solid var(--clr-icon-calendar); outline-offset: -2px; z-index: 5; }
 .week-cell--selected { outline: 2px solid var(--text-primary); outline-offset: -2px; background: transparent !important; }
 .week-cards { display: flex; flex-direction: column; gap: 8px; }
 
-.btn-add-week { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: 32px; height: 32px; border-radius: 8px; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
+.btn-add-week { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 8px; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
 .week-cell:hover .btn-add-week { opacity: 1; }
-.btn-add-week:hover { background: var(--text-primary); color: var(--bg-base); transform: scale(1.1); box-shadow: 2px 2px 0 var(--text-primary); }
+.btn-add-week:hover { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); transform: translateX(-50%) scale(1.1); }
 
 @keyframes targetFlash { 0% { background-color: var(--text-primary); color: var(--bg-base); box-shadow: inset 0 0 0 4px var(--bg-base); } 100% { background-color: transparent; box-shadow: inset 0 0 0 0px transparent; } }
 :deep(.flash-target) { animation: targetFlash 0.8s ease-out; border-radius: 0; }

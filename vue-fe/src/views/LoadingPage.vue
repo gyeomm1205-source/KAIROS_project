@@ -146,7 +146,7 @@ function statusClass(i) {
 }
 .loading-card {
   width: 100%; max-width: 560px;
-  background: var(--bg-surface); border: 1px solid var(--border); padding: 56px 48px;
+  background: var(--bg-surface); border: 1px solid var(--border); padding: 56px 48px; border-radius: 8px;
   animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
@@ -162,8 +162,8 @@ function statusClass(i) {
   border-right: 1px solid var(--border);
 }
 .page-stepper .step:last-child { border-right: none; }
-.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
-.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+.page-stepper .step.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
+.page-stepper .step.done { color: var(--clr-success); background: transparent; }
 @media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
 /* ── Loading header ── */
@@ -211,7 +211,7 @@ function statusClass(i) {
   margin-left: 48px; /* 32px box + 16px gap */
   width: calc(100% - 48px);
 }
-.progress-fill { height: 100%; background: var(--text-primary); transition: width 0.15s ease-out; }
+.progress-fill { height: 100%; background: var(--clr-primary); transition: width 0.15s ease-out; }
 
 .loading-wait-text { font-size: 13px; font-weight: 600; color: var(--text-muted); line-height: 1.6; text-align: center; margin-bottom: 32px; }
 </style>

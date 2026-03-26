@@ -112,10 +112,10 @@ function handleDblClick() { emit('day-detail', props.dateStr) }
 
 .cell--selected { background: rgba(0,0,0,0.03) !important; outline: 2px solid var(--text-primary); outline-offset: -2px; }
 .theme-dark .cell--selected { background: rgba(255,255,255,0.04) !important; }
-.cell--sat .date-label:not(.date--holiday) { color: #2563eb !important; font-weight: 800; }
-.cell--sun .date-label:not(.date--holiday) { color: #dc2626 !important; font-weight: 800; }
-.date--holiday { color: #dc2626 !important; font-weight: 900 !important; }
-.holiday-name { font-size: 10px; font-weight: 800; color: #dc2626; font-family: 'Escoredream', sans-serif; margin-top: 2px; }
+.cell--sat .date-label:not(.date--holiday) { color: var(--clr-primary) !important; font-weight: 800; }
+.cell--sun .date-label:not(.date--holiday) { color: var(--clr-danger) !important; font-weight: 800; }
+.date--holiday { color: var(--clr-danger) !important; font-weight: 900 !important; }
+.holiday-name { font-size: 10px; font-weight: 800; color: var(--clr-danger); font-family: 'Escoredream', sans-serif; margin-top: 2px; }
 .cell--other-month { background: var(--bg-surface) !important; cursor: default; }
 .cell--other-month:hover { background: var(--bg-surface) !important; }
 .cell--other-month .date-label { opacity: 0.3; font-weight: 600; }

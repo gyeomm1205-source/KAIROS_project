@@ -94,5 +94,5 @@ const trackName  = computed(() => track.value?.name  || '')
   transition: all 0.15s;
 }
 .card-btn:hover      { background: var(--accent); color: #fff; }
-.card-btn--del:hover { background: #ef4444; color: #fff; }
+.card-btn--del:hover { background: var(--clr-danger); color: #fff; }
 </style>

@@ -39,7 +39,7 @@
             </div>
             <div class="tech-tags">
               <span v-for="t in analysisResult.recentTechs" :key="t" class="outline-badge">
-                {{ t }}
+                <i :class="getTechIcon(t)" class="tech-icon" />{{ t }}
               </span>
             </div>
           </div>
@@ -172,6 +172,7 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import { postProfileFeedback } from '@/api/aiApi'
+import { getTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const store = useCalendarStore()
@@ -258,8 +259,8 @@ const submitFeedback = async () => {
   border-right: 1px solid var(--border);
 }
 .page-stepper .step:last-child { border-right: none; }
-.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
-.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+.page-stepper .step.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
+.page-stepper .step.done { color: var(--clr-success); background: transparent; }
 @media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
 /* ── Header ── */
@@ -280,11 +281,14 @@ const submitFeedback = async () => {
 .analysis-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
 @media (max-width: 768px) { .analysis-grid { grid-template-columns: 1fr; } }
 
-.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 8px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 .analysis-grid .base-panel:hover, .summary-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
 .panel-header { display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 24px; }
 .panel-header i { font-size: 14px; color: var(--text-primary); margin-right: 4px; }
+.panel-header .fa-code { color: var(--clr-icon-github); }
+.panel-header .fa-compass { color: var(--clr-icon-ai); }
+.panel-header .fa-chart-bar { color: var(--clr-icon-growth); }
 .panel-header h3 { font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: var(--text-muted); text-transform: uppercase; }
 
 /* Tech Tags */
@@ -300,7 +304,7 @@ const submitFeedback = async () => {
 .skill-name { font-size: 13px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.02em; }
 .skill-percent { font-size: 11px; font-weight: 800; color: var(--text-muted); font-family: 'Space Grotesk', monospace; }
 .progress-bar-bg { height: 2px; background: var(--border); overflow: hidden; }
-.progress-bar-fill { height: 100%; background: var(--text-primary); transition: width 1s ease-out; }
+.progress-bar-fill { height: 100%; background: var(--clr-primary); transition: width 1s ease-out; }
 
 /* Repeated List */
 .repeated-list { display: flex; flex-direction: column; gap: 8px; }
@@ -312,7 +316,7 @@ const submitFeedback = async () => {
 .position-item { display: flex; justify-content: space-between; align-items: center; }
 .pos-title { font-size: 12px; font-weight: 700; color: var(--text-primary); }
 .match-badge { font-size: 9px; font-weight: 900; padding: 3px 8px; border: 1px solid var(--border); border-radius: 40px; color: var(--text-muted); }
-.match-badge.high { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.match-badge.high { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
 
 /* Summary */
 .summary-text { font-size: 13px; line-height: 1.7; color: var(--text-secondary); font-weight: 500; }
@@ -323,8 +327,8 @@ const submitFeedback = async () => {
 .action-desc { font-size: 14px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; }
 .action-buttons { display: flex; gap: 12px; justify-content: center; }
 
-.btn-primary { padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
-.btn-primary:hover { background: transparent; color: var(--text-primary); }
+.btn-primary { padding: 16px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 900; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-primary:hover { background: transparent; color: var(--clr-primary); }
 
 .btn-outline { padding: 16px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; cursor: pointer; transition: all 0.2s; font-family: inherit; }
 .btn-outline:hover { border-color: var(--text-primary); background: var(--bg-hover); }
@@ -346,8 +350,8 @@ const submitFeedback = async () => {
 .base-textarea:focus { border-color: var(--text-primary); background: var(--bg-hover); }
 .modal-footer { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; }
 
-.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
-.btn-primary-small:hover:not(:disabled) { background: transparent; color: var(--text-primary); }
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small:hover:not(:disabled) { background: transparent; color: var(--clr-primary); }
 .btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 
 /* Utils & Transitions */

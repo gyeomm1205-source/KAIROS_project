@@ -153,11 +153,11 @@ defineEmits(['edit', 'delete', 'close'])
 
 /* 삭제 버튼 포인트 컬러 유지 */
 .tooltip-btn--delete {
-  border-color: #ef4444; color: #ef4444;
+  border-color: var(--clr-danger); color: var(--clr-danger);
 }
 .tooltip-btn--delete:hover {
-  background: #ef4444; color: var(--bg-base);
-  transform: translate(-2px, -2px); box-shadow: 4px 4px 0 #ef4444;
+  background: var(--clr-danger); color: var(--bg-base);
+  transform: translate(-2px, -2px); box-shadow: 4px 4px 0 var(--clr-danger);
 }
 
 .tooltip-fade-enter-active, .tooltip-fade-leave-active { transition: all 0.1s ease; }

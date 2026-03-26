@@ -59,7 +59,7 @@
                   <!-- Current (darker) -->
                   <polygon
                     :points="skillRadar.map((s, i) => getPoint(i, s.curr / 100)).join(' ')"
-                    fill="rgba(25,25,25,0.1)" stroke="var(--text-primary)" stroke-width="2"
+                    fill="rgba(25,25,25,0.1)" stroke="var(--clr-primary)" stroke-width="2"
                   />
                   <!-- Dots -->
                   <circle
@@ -67,7 +67,7 @@
                     :key="'dot-'+i"
                     :cx="getPointCoords(i, s.curr / 100).x"
                     :cy="getPointCoords(i, s.curr / 100).y"
-                    r="4" fill="var(--text-primary)"
+                    r="4" fill="var(--clr-primary)"
                   />
                   <!-- Labels -->
                   <text
@@ -101,7 +101,7 @@
               <div class="flex-col gap-sm">
                 <div v-for="(s, i) in topSkills" :key="s.name" class="flex-align gap-md">
                   <span class="text-xs text-muted font-bold w-4 text-right">{{ i + 1 }}</span>
-                  <span class="text-sm font-bold w-20 truncate">{{ s.name }}</span>
+                  <span class="text-sm font-bold skill-name truncate">{{ s.name }}</span>
                   <div class="track-bg flex-1 relative">
                     <div class="track-fill" :style="{ width: `${(s.count / 18) * 100}%` }"></div>
                     <span class="absolute right-2 top-0 text-[10px] text-muted font-bold lh-full">{{ s.count }}회</span>
@@ -332,6 +332,7 @@ onMounted(async () => {
 .text-muted { color: var(--text-muted); }
 .text-primary { color: var(--text-primary); }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.skill-name { width: 80px; flex-shrink: 0; }
 .lh-lg { line-height: 1.6; }
 .lh-full { line-height: 24px; }
 .shrink-0 { flex-shrink: 0; }
@@ -350,7 +351,7 @@ onMounted(async () => {
 .btn-back:hover { color: var(--text-primary); }
 
 .icon-box-small { width: 32px; height: 32px; background: var(--bg-surface); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--text-muted); }
-.stat-value { font-size: 24px; font-weight: 900; color: var(--text-primary); font-family: monospace; }
+.stat-value { font-size: 24px; font-weight: 900; color: var(--clr-accent-text); font-family: 'Escoredream', system-ui, sans-serif; }
 .stat-sub { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
 /* Bars & Tracks */
@@ -359,10 +360,10 @@ onMounted(async () => {
 
 .bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
 .bar-segment { height: 100%; transition: width 0.3s; }
-.color-1 { background: var(--text-primary); } 
-.color-2 { background: var(--text-secondary); opacity: 0.7; } 
-.color-3 { background: var(--text-muted); opacity: 0.5; } 
-.color-4 { background: var(--text-faint); opacity: 0.3; }
+.color-1 { background: var(--clr-primary); }
+.color-2 { background: var(--clr-icon-velog); }
+.color-3 { background: var(--clr-icon-ai); }
+.color-4 { background: var(--clr-warning); }
 
 .legend-box { width: 12px; height: 12px; border-radius: 2px; }
 .legend-line { width: 16px; height: 2px; }

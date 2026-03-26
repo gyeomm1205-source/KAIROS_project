@@ -49,6 +49,7 @@
 
         <div class="nav-controls">
           <button class="nav-btn" @click="$emit('navigate', 'prev')"><i class="fas fa-chevron-left" /></button>
+          <button class="nav-btn nav-btn--today" @click="$emit('jump-to-date', new Date())">TODAY</button>
           <button class="nav-btn" @click="$emit('navigate', 'next')"><i class="fas fa-chevron-right" /></button>
         </div>
       </div>
@@ -185,12 +186,15 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .nav-controls { display: flex; align-items: center; gap: 6px; }
 .nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: transparent; border-radius: 4px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.1s; }
 .nav-btn--text { width: auto; padding: 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; }
+.nav-btn--today { width: auto; padding: 0 14px; font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: var(--clr-primary); border-color: var(--clr-primary); }
+.nav-btn--today:hover { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
 .nav-btn:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
 .view-switcher { display: flex; gap: 4px; background: transparent; border: 1px solid var(--border); padding: 4px; border-radius: 4px; }
 .view-btn { padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 4px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.1s; }
-.view-btn:hover { color: var(--text-primary); border-color: var(--border); }
+.view-btn:hover { color: var(--text-primary); border-color: var(--border); background: var(--bg-hover); }
 .view-btn--active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.view-btn--active:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
 .btn-manage, .btn-study-cal {
   display: flex; align-items: center; gap: 8px;

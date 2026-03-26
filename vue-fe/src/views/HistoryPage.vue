@@ -127,7 +127,7 @@
               <span class="type-badge"><i :class="typeConfig[item.type].icon" /> {{ typeConfig[item.type].label }}</span>
             </div>
             <div class="row-tags">
-              <span v-for="tag in item.tags" :key="tag" class="small-tag"><i class="fas fa-tag text-[8px]" /> {{ tag }}</span>
+              <span v-for="tag in item.tags" :key="tag" class="small-tag"><i :class="getTechIcon(tag)" class="tech-icon" /> {{ tag }}</span>
             </div>
             <div class="row-actions">
               <button 
@@ -156,6 +156,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useHistoryStore } from '@/stores/useHistoryStore'
+import { getTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const store = useHistoryStore()
@@ -273,7 +274,8 @@ const monthOptions = computed(() => {
 /* Header Stats */
 .stat-item { display: flex; align-items: center; gap: 12px; }
 .stat-lbl { font-size: 13px; color: var(--text-muted); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;}
-.stat-val { font-size: 18px; font-weight: 800; color: var(--text-primary); letter-spacing: 0.05em;}
+.stat-val { font-size: 18px; font-weight: 800; color: var(--clr-accent-text); letter-spacing: 0.05em;}
+.btn-outline-small .fa-chart-line { color: var(--clr-icon-growth); }
 
 .border-dark { border-color: var(--border) !important; color: var(--text-primary) !important; }
 .btn-outline-small { background: transparent; color: var(--text-primary); border: 1px solid var(--border); padding: 10px 16px; font-size: 13px; font-weight: 800; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; border-radius: 40px; letter-spacing: 0.05em;}

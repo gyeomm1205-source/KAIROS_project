@@ -26,14 +26,19 @@
     <div class="sync-section">
       <div class="sync-title">MANUAL SYNC</div>
       
-      <button class="btn-sync" :disabled="isGithubSyncing" @click="handleSync('github')">
+      <button class="btn-sync btn-sync-github" :disabled="isGithubSyncing" @click="handleSync('github')">
         <i v-if="!isGithubSyncing" class="fab fa-github" />
         <i v-else class="fas fa-spinner fa-spin" />
         GITHUB SYNC
       </button>
-      
-      <button class="btn-sync" :disabled="isVelogSyncing" @click="handleSync('velog')">
-        <i v-if="!isVelogSyncing" class="fas fa-v" />
+
+      <button class="btn-sync btn-sync-velog" :disabled="isVelogSyncing" @click="handleSync('velog')">
+        <span v-if="!isVelogSyncing" class="velog-icon">
+          <svg width="16" height="16" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="7" fill="#20C997"/>
+            <path d="M8 11L15 26H21L28 11H23L18 22L13 11H8Z" fill="white"/>
+          </svg>
+        </span>
         <i v-else class="fas fa-spinner fa-spin" />
         VELOG SYNC
       </button>
@@ -157,8 +162,11 @@ const handleLogout = () => {
   width: 100%; text-align: left; font-family: inherit; border-radius: 8px;
 }
 .nav-item:hover { color: var(--text-primary); background: var(--bg-hover); }
-.nav-item.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--border); }
+.nav-item.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
 .nav-item i { font-size: 16px; width: 20px; text-align: center; }
+.nav-item:not(.active) .fa-calendar-alt { color: var(--clr-icon-calendar); }
+.nav-item:not(.active) .fa-compass { color: var(--clr-icon-ai); }
+.nav-item:not(.active) .fa-history { color: var(--clr-icon-history); }
 
 .nav-toggle { justify-content: space-between; }
 .nav-toggle-left { display: flex; align-items: center; gap: 16px; }
@@ -199,7 +207,13 @@ const handleLogout = () => {
   cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); 
   font-family: inherit; letter-spacing: 0.1em; 
 }
-.btn-sync:hover:not(:disabled) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.btn-sync-github i { color: var(--clr-icon-github); }
+.btn-sync-github:hover:not(:disabled) { border-color: var(--clr-icon-github); color: var(--clr-icon-github); background: var(--bg-hover); }
+
+.btn-sync-velog .velog-icon { display: flex; align-items: center; }
+.btn-sync-velog:hover:not(:disabled) { border-color: var(--clr-icon-velog); color: var(--clr-icon-velog); background: var(--bg-hover); }
+
+.btn-sync .fa-spinner { color: var(--clr-icon-sync); }
 .btn-sync:disabled { opacity: 0.5; cursor: not-allowed; }
 
 /* 푸터 & 유저 섹션 */
@@ -228,9 +242,9 @@ const handleLogout = () => {
   border: 1px solid var(--border); background: var(--bg-base); 
   color: var(--text-muted); cursor: pointer; transition: all 0.2s; 
 }
-.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+.btn-logout:hover { border-color: var(--clr-danger); color: var(--clr-danger); background: var(--clr-danger-subtle); }
 
-.btn-logout:hover { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.05); }
+.btn-logout:hover { border-color: var(--clr-danger); color: var(--clr-danger); background: var(--clr-danger-subtle); }
 
 /* 모달 공통 스타일에 맞춤 (Global 혹은 Local 선언) */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
@@ -246,8 +260,8 @@ const handleLogout = () => {
 
 .btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 .btn-primary-small:hover { background: transparent; color: var(--text-primary); }
-.btn-primary-small.btn-danger { background: #dc2626; border-color: #dc2626; color: white; }
-.btn-primary-small.btn-danger:hover { background: transparent; color: #dc2626; }
+.btn-primary-small.btn-danger { background: var(--clr-danger); border-color: var(--clr-danger); color: white; }
+.btn-primary-small.btn-danger:hover { background: transparent; color: var(--clr-danger); }
 .btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
 .btn-outline-small:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 

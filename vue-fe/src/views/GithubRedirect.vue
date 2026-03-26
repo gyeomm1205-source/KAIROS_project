@@ -122,7 +122,7 @@ onMounted(async () => {
 .redirect-status { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--text-muted); }
 .redirect-status i { font-size: 24px; }
 .redirect-status p { font-size: 14px; font-weight: 600; }
-.redirect-error { display: flex; flex-direction: column; align-items: center; gap: 12px; color: #ef4444; text-align: center; }
+.redirect-error { display: flex; flex-direction: column; align-items: center; gap: 12px; color: var(--clr-danger); text-align: center; }
 .redirect-error i { font-size: 24px; }
 .redirect-error p { font-size: 14px; font-weight: 600; }
 .btn-back {

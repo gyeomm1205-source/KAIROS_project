@@ -86,12 +86,10 @@
         <label class="section-title">기술 스택 <span class="required-mark">*</span></label>
         <p class="section-desc">사용 중인 기술을 추가하세요.</p>
         <div class="input-row">
-          <input
+          <TechTagAutocomplete
             v-model="techInput"
-            type="text"
-            class="text-input"
             placeholder="기술 스택 입력 후 Enter"
-            @keydown.enter.prevent="addTech(techInput)"
+            @select="addTech"
           />
           <button class="btn-add" @click="addTech(techInput)"><i class="fas fa-plus" /></button>
         </div>
@@ -145,6 +143,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { getOnboardingMeta, submitSurvey as apiSubmitSurvey } from '@/api/onboardingApi'
 import { useAuthStore } from '@/stores/useAuthStore'
+import TechTagAutocomplete from '@/components/TechTagAutocomplete.vue'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -258,7 +257,8 @@ const submitSurvey = async () => {
 .setup-card {
   width: 100%; max-width: 540px; max-height: calc(100vh - 100px);
   background: var(--bg-surface); border: 1px solid var(--border);
-  padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+  padding: 40px; border-radius: 8px;
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
 
@@ -276,8 +276,8 @@ const submitSurvey = async () => {
   border-right: 1px solid var(--border);
 }
 .page-stepper .step:last-child { border-right: none; }
-.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
-.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+.page-stepper .step.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
+.page-stepper .step.done { color: var(--clr-success); background: transparent; }
 @media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
 /* ── Back button ── */
@@ -328,7 +328,7 @@ const submitSurvey = async () => {
   padding: 14px; border: 1px solid var(--border); background: transparent;
   color: var(--text-primary); font-size: 14px; font-weight: 800;
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit;
+  font-family: inherit; border-radius: 8px;
 }
 .choice-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .choice-btn.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); }
@@ -349,13 +349,13 @@ const submitSurvey = async () => {
   flex: 1; padding: 12px 16px; border: 1px solid var(--border);
   background: transparent; color: var(--text-primary);
   font-size: 14px; font-weight: 700; outline: none;
-  transition: border-color 0.2s; font-family: inherit;
+  transition: border-color 0.2s; font-family: inherit; border-radius: 8px;
 }
 .text-input:focus { border-color: var(--text-primary); }
 .btn-add {
   width: 44px; border: 1px solid var(--text-primary);
   background: var(--text-primary); color: var(--bg-base);
-  cursor: pointer; transition: all 0.2s; font-size: 14px;
+  cursor: pointer; transition: all 0.2s; font-size: 14px; border-radius: 8px;
 }
 .btn-add:hover { background: transparent; color: var(--text-primary); }
 
@@ -382,8 +382,8 @@ const submitSurvey = async () => {
 
 /* ── Primary button ── */
 .btn-primary {
-  width: 100%; padding: 16px; border: 1px solid var(--text-primary);
-  background: var(--text-primary); color: var(--bg-base);
+  width: 100%; padding: 16px; border: 1px solid var(--clr-primary);
+  background: var(--clr-primary); color: var(--bg-base);
   font-weight: 900; font-size: 14px; letter-spacing: 0.1em;
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: inherit;
@@ -392,5 +392,5 @@ const submitSurvey = async () => {
   background: transparent; border-color: var(--border);
   color: var(--text-faint); cursor: not-allowed;
 }
-.btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
+.btn-primary:not(:disabled):hover { background: transparent; color: var(--clr-primary); }
 </style>

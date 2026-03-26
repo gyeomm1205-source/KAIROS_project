@@ -12,7 +12,12 @@
         <template v-if="!selectedActivity">
           <div class="title-section">
             <h2>추천</h2>
-            <p>최근 7일간 활동을 기반으로 맞춤 추천을 제공합니다. 확인할 활동을 선택하세요.</p>
+            <div class="title-section-row">
+              <p>최근 7일간 활동을 기반으로 맞춤 추천을 제공합니다. 확인할 활동을 선택하세요.</p>
+              <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
+                <i class="fas fa-plus" /> 신규 학습 시작
+              </button>
+            </div>
           </div>
 
           <div class="recommend-grid">
@@ -35,7 +40,9 @@
                   <div class="activity-meta">
                     <span class="activity-date"><i class="fas fa-calendar-alt" /> {{ activity.date }}</span>
                     <div class="tag-group-small">
-                      <span v-for="tag in activity.tags" :key="tag" class="small-tag">{{ tag }}</span>
+                      <span v-for="tag in activity.tags" :key="tag" class="small-tag">
+                        <i v-if="hasTechIcon(tag)" :class="getTechIcon(tag)" class="tech-icon" />{{ tag }}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -58,7 +65,7 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">React Server Components 심화 학습</h3>
-                    <button class="btn-primary-small-invert" @click="showCurriculumModal = true">
+                    <button class="btn-primary-small" @click="showCurriculumModal = true">
                       <i class="fas fa-book-open" /> 커리큘럼 추천받기
                     </button>
                   </div>
@@ -67,9 +74,6 @@
               </div>
               <div class="flex-align gap-sm">
                 <span class="pill-tag badge-dark">AI 추천</span>
-                <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
-                  <i class="fas fa-plus" /> 신규 학습 시작
-                </button>
               </div>
             </div>
 
@@ -101,10 +105,10 @@
               </div>
               <div class="tag-group">
                 <span class="pill-tag tag-white" v-for="tag in ['React', 'SSR', 'Next.js']" :key="tag">
-                  <i class="fas fa-tag" style="font-size: 10px;" /> {{ tag }}
+                  <i v-if="hasTechIcon(tag)" :class="getTechIcon(tag)" class="tech-icon" />{{ tag }}
                 </span>
               </div>
-              <button class="btn-outline-invert ml-auto" @click="showReasonModal = true">
+              <button class="btn-reason ml-auto" @click="showReasonModal = true">
                 <i class="fas fa-info-circle" /> 추천 근거 보기
               </button>
             </div>
@@ -232,12 +236,15 @@
 
                   <div class="ref-list space-y">
                     <div v-for="ref in store.references" :key="ref.title" class="base-panel p-md option-btn">
-                      <div class="flex-between mb-sm">
-                        <div class="flex-align gap-sm"><i class="fas fa-file-alt text-muted" /><span class="font-bold">{{ ref.title }}</span></div>
-                        <span class="pill-tag outline-badge">{{ ref.type }}</span>
+                      <div class="ref-card-top mb-sm">
+                        <div class="flex-align gap-sm ref-title-row">
+                          <i class="fas fa-file-alt text-muted ref-icon" />
+                          <span class="font-bold ref-title">{{ ref.title }}</span>
+                        </div>
+                        <span class="ref-type-badge">{{ ref.type }}</span>
                       </div>
-                      <p class="text-muted text-sm ml-lg mb-sm">{{ ref.reason }}</p>
-                      <div class="flex-between ml-lg mt-md">
+                      <p class="text-muted text-sm ref-desc mb-sm">{{ ref.reason }}</p>
+                      <div class="ref-card-bottom">
                         <div class="flex-align gap-md text-muted text-xs">
                           <span>{{ ref.freshness }}</span>
                           <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
@@ -276,24 +283,60 @@
       </div>
     </div>
 
-    <!-- 모달: 커리큘럼 추천 -->
+    <!-- 모달: 커리큘럼 추천 (2개 옵션 나란히) -->
     <div v-if="showCurriculumModal" class="modal-overlay" @click.self="showCurriculumModal = false">
-      <div class="base-modal shadow-heavy">
+      <div class="base-modal curriculum-dual-modal shadow-heavy">
         <div class="modal-header">
           <h3><i class="fas fa-book-open" /> 추천 커리큘럼</h3>
           <button class="btn-close" @click="showCurriculumModal = false"><i class="fas fa-times"/></button>
         </div>
-        <div class="reason-content custom-scroll">
-          <div v-for="i in 3" :key="i" class="reason-item shadow-normal">
-            <div class="flex-between mb-xs">
-              <span class="font-bold text-sm">{{ i }}일차</span>
-              <span class="text-muted text-xs"><i class="fas fa-clock"/> 1시간 30분</span>
+        <div class="curriculum-dual-body">
+          <!-- 옵션 A -->
+          <div class="curriculum-option">
+            <div class="curriculum-option-header">
+              <span class="option-badge badge-a">옵션 A</span>
+              <h4 class="option-title">단기 집중 코스</h4>
+              <span class="option-meta"><i class="fas fa-clock"/> 3일 · 약 5시간</span>
             </div>
-            <h4 class="mb-xs">RSC의 핵심 개념 {{ i }}</h4>
-            <p class="text-muted text-sm">Server Component와 Client Component의 경계선을 이해합니다.</p>
+            <div class="curriculum-items">
+              <div v-for="(item, i) in curriculumA" :key="i" class="reason-item shadow-normal">
+                <div class="flex-between mb-xs">
+                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                </div>
+                <h4 class="mb-xs">{{ item.title }}</h4>
+                <p class="text-muted text-sm">{{ item.desc }}</p>
+              </div>
+            </div>
+            <div class="curriculum-option-footer">
+              <button class="btn-primary w-full" @click="showCurriculumModal = false">이 커리큘럼 선택</button>
+            </div>
+          </div>
+
+          <div class="curriculum-divider"></div>
+
+          <!-- 옵션 B -->
+          <div class="curriculum-option">
+            <div class="curriculum-option-header">
+              <span class="option-badge badge-b">옵션 B</span>
+              <h4 class="option-title">심화 마스터 코스</h4>
+              <span class="option-meta"><i class="fas fa-clock"/> 5일 · 약 9시간</span>
+            </div>
+            <div class="curriculum-items">
+              <div v-for="(item, i) in curriculumB" :key="i" class="reason-item shadow-normal">
+                <div class="flex-between mb-xs">
+                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                </div>
+                <h4 class="mb-xs">{{ item.title }}</h4>
+                <p class="text-muted text-sm">{{ item.desc }}</p>
+              </div>
+            </div>
+            <div class="curriculum-option-footer">
+              <button class="btn-outline-invert w-full" @click="showCurriculumModal = false">이 커리큘럼 선택</button>
+            </div>
           </div>
         </div>
-        <div class="modal-actions mt-md"><button class="btn-primary" @click="showCurriculumModal = false">확인</button></div>
       </div>
     </div>
 
@@ -305,6 +348,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecommendStore } from '@/stores/useRecommendStore'
 import AppSidebar from '@/components/AppSidebar.vue'
+import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const store = useRecommendStore()
@@ -323,6 +367,20 @@ const activityTypeConfig = {
 const selectedActivity = ref(null)
 const showReasonModal = ref(false)
 const showCurriculumModal = ref(false)
+
+const curriculumA = [
+  { title: 'RSC 핵심 개념 이해', desc: 'Server Component와 Client Component의 차이와 경계선을 익힙니다.', duration: '1시간 30분' },
+  { title: '데이터 패칭 패턴 실습', desc: 'fetch, cache, revalidate 패턴을 직접 구현해봅니다.', duration: '2시간' },
+  { title: 'RSC 실전 적용', desc: '기존 Next.js 프로젝트에 RSC를 점진적으로 도입합니다.', duration: '1시간 30분' },
+]
+
+const curriculumB = [
+  { title: 'RSC 이론 기반 다지기', desc: 'React 렌더링 모델과 RSC의 설계 철학을 이해합니다.', duration: '1시간 30분' },
+  { title: 'Streaming & Suspense', desc: 'Progressive rendering과 Suspense 경계를 활용합니다.', duration: '2시간' },
+  { title: '고급 데이터 패칭 전략', desc: 'Server Action, cache 태깅, on-demand revalidation을 익힙니다.', duration: '2시간' },
+  { title: '성능 최적화 심화', desc: 'Bundle 분석, PPR, 렌더링 결정 기준을 학습합니다.', duration: '1시간 30분' },
+  { title: '프로덕션 마이그레이션', desc: '실제 App Router 마이그레이션 전략과 트레이드오프를 정리합니다.', duration: '2시간' },
+]
 
 const activeMission = ref(null)
 const quizStep = ref("intro") // 'intro' | 'question' | 'result'
@@ -408,11 +466,13 @@ const quizCorrectCount = computed(() => {
   display: flex; align-items: center; gap: 12px; 
 }
 .header-title i { font-size: 18px; width: 24px; text-align: center; }
+.header-title .fa-compass { color: var(--clr-icon-ai); }
 
 .content-inner { max-width: 1000px; margin: 0 auto; padding: 48px 32px; width: 100%; }
 .title-section { margin-bottom: 32px; }
 .title-section h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; letter-spacing: 0.05em; }
 .title-section p { font-size: 14px; font-weight: 600; color: var(--text-muted); }
+.title-section-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 
 /* Buttons & Tags */
 .btn-back { background: transparent; border: none; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 32px; padding: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -422,7 +482,7 @@ const quizCorrectCount = computed(() => {
 .base-panel:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
 .pill-tag { padding: 4px 10px; border: 1px solid var(--border); background: transparent; font-size: 11px; font-weight: 700; border-radius: 4px; }
-.badge-dark { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+.badge-dark { background: var(--clr-icon-ai); color: var(--bg-base); border-color: var(--clr-icon-ai); }
 .tag-white { border-color: var(--border); color: var(--text-primary); background: transparent; }
 
 /* Common Utilities */
@@ -456,18 +516,20 @@ const quizCorrectCount = computed(() => {
 
 /* Buttons Set */
 button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer; border-radius: 8px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); letter-spacing: 0.05em;}
-.btn-primary { background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); padding: 14px 24px; font-weight: 700; font-size: 13px;}
-.btn-primary:hover { background: transparent; color: var(--text-primary); }
+.btn-primary { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); padding: 14px 24px; font-weight: 700; font-size: 13px;}
+.btn-primary:hover { background: transparent; color: var(--clr-primary); }
 
-.btn-primary-small { background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); padding: 8px 16px; font-size: 12px; font-weight: 700; }
-.btn-primary-small:hover { background: transparent; color: var(--text-primary); }
-.btn-dark { background: var(--text-primary); color: var(--bg-base); }
+.btn-primary-small { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); padding: 8px 16px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border-radius: 4px; }
+.btn-primary-small:hover { background: transparent; color: var(--clr-primary); }
+.btn-dark { background: transparent; color: var(--clr-primary); border-color: var(--clr-primary); }
 
 .btn-primary-small-invert { background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 8px 16px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border-radius: 4px;}
 .btn-primary-small-invert:hover { background: var(--bg-hover); }
+.btn-reason { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); padding: 10px 18px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px; border-radius: 8px; }
+.btn-reason:hover { background: transparent; color: var(--clr-primary); }
 
-.btn-primary-block { width: 100%; display: block; background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); padding: 16px; font-size: 14px; font-weight: 700; border-radius: 8px;}
-.btn-primary-block:hover:not(:disabled) { background: transparent; color: var(--text-primary); }
+.btn-primary-block { width: 100%; display: block; background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); padding: 16px; font-size: 14px; font-weight: 700; border-radius: 8px;}
+.btn-primary-block:hover:not(:disabled) { background: transparent; color: var(--clr-primary); }
 .btn-primary-block:disabled { background: transparent; border-color: var(--border); color: var(--text-faint); cursor: not-allowed; }
 
 .btn-outline-small { background: transparent; color: var(--text-primary); border: 1px solid var(--border); padding: 8px 16px; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; border-radius: 4px;}
@@ -492,19 +554,20 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .activity-card:hover .arrow-icon { color: var(--text-primary); transform: translateX(2px); }
 .activity-top { display: flex; align-items: center; gap: 20px; }
 .activity-icon-wrap { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; font-size: 18px; border: 1px solid var(--border); flex-shrink: 0; border-radius: 4px; background: transparent; color: var(--text-primary);}
-.type-study { border-color: var(--border); }
-.type-dev { border-color: var(--border); }
-.type-blog { border-color: var(--border); }
-.type-review { border-color: var(--border); font-weight: 700;}
+.type-study  { border-color: #86EFAC; color: #86EFAC; }
+.type-dev    { border-color: var(--border); }
+.type-blog   { border-color: #60A5FA; color: #60A5FA; }
+.type-review { border-color: #FB923C; color: #FB923C; font-weight: 700; }
 
 .activity-info { flex: 1; min-width: 0; }
 .activity-header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
 .activity-title { font-size: 15px; font-weight: 700; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.05em;}
-.active-tag { background: transparent; color: var(--text-primary); padding: 3px 8px; font-size: 9px; border-color: var(--text-primary); }
+.active-tag { background: transparent; color: var(--clr-warning); padding: 3px 8px; font-size: 9px; border-color: var(--clr-warning); }
 .done-tag { background: transparent; color: var(--text-muted); padding: 3px 8px; font-size: 9px; border-color: var(--border); }
 .activity-meta { display: flex; align-items: center; gap: 16px; }
 .activity-date { font-size: 12px; color: var(--text-muted); font-weight: 500; display: flex; align-items: center; gap: 6px; }
-.tag-group-small { display: flex; gap: 4px; }
+.tag-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.tag-group-small { display: flex; gap: 8px; flex-wrap: wrap; }
 .small-tag { padding: 3px 8px; background: transparent; border: 1px solid var(--border); font-size: 10px; color: var(--text-muted); font-weight: 500; border-radius: 4px;}
 .arrow-icon { font-size: 18px; color: var(--border); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
@@ -512,6 +575,9 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .highlight-panel { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--text-primary); padding: 36px; border-radius: 8px; }
 .panel-header-flex { display: flex; justify-content: space-between; align-items: flex-start; }
 .icon-box-white { width: 44px; height: 44px; background: transparent; color: var(--text-primary); display: flex; align-items: center; justify-content: center; font-size: 20px; border: 1px solid var(--border); border-radius: 4px;}
+.icon-box-white .fa-lightbulb { color: var(--clr-icon-ai); }
+.info-title .fa-brain { color: #F9A8D4; }
+.info-text .fa-chart-line { color: var(--clr-icon-growth); }
 .panel-title-group { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
 .panel-title { font-size: 19px; font-weight: 700; margin: 0; letter-spacing: 0.05em; }
 .panel-sub { font-size: 12px; font-weight: 500; color: var(--text-muted); }
@@ -546,13 +612,24 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .mission-card.active { border-color: var(--text-primary); background: var(--bg-surface); }
 .mission-icon { width: 44px; height: 44px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 18px; color: var(--text-primary); flex-shrink: 0; border-radius: 4px;}
 .mission-card.active .mission-icon { border-color: var(--text-primary); }
+.mission-icon:has(.fa-brain) { border-color: #F9A8D4; color: #F9A8D4; }
+.mission-icon:has(.fa-pen-nib) { border-color: var(--clr-icon-velog); color: var(--clr-icon-velog); }
 .mission-content { flex: 1; min-width: 0; }
 .mission-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .mission-title { font-size: 15px; font-weight: 700; letter-spacing: 0.05em;}
 .small-badge { font-size: 9px; padding: 3px 8px; border-radius: 4px;}
 .mission-desc { font-size: 12px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px; font-weight: 500; }
 .mission-footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-top: auto; }
-.outline-badge { border-color: var(--border); color: var(--text-muted); background: transparent; padding: 3px 8px; font-size: 9px; font-weight: 600; border-radius: 4px; margin-left: 0px; }
+.outline-badge { border-color: var(--border); color: var(--text-muted); background: transparent; padding: 3px 8px; font-size: 9px; font-weight: 600; border-radius: 4px; }
+
+/* Ref card layout */
+.ref-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ref-title-row { flex: 1; min-width: 0; align-items: flex-start; }
+.ref-icon { flex-shrink: 0; margin-top: 2px; }
+.ref-title { font-size: 13px; line-height: 1.4; word-break: keep-all; }
+.ref-type-badge { flex-shrink: 0; padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px; font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
+.ref-desc { padding-left: 20px; line-height: 1.6; }
+.ref-card-bottom { display: flex; align-items: center; justify-content: space-between; padding-left: 20px; }
 
 /* Active Panel (Sticky) */
 .active-panel { position: sticky; top: 84px; }
@@ -572,7 +649,7 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .lbl-light { font-size: 11px; color: var(--text-muted); font-weight: 500; }
 .lbl-bold { font-size: 11px; font-weight: 700; color: var(--text-primary); }
 .track-bg { height: 4px; background: var(--bg-hover); border: none; width: 100%; border-radius: 2px; overflow: hidden; }
-.track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.track-fill { height: 100%; background: var(--clr-primary); transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
 
 .quiz-q { font-size: 16px; font-weight: 700; line-height: 1.6; margin-bottom: 24px; margin-top: 0; color: var(--text-primary); letter-spacing: 0.05em;}
 .options-list { display: flex; flex-direction: column; gap: 12px; }
@@ -590,6 +667,23 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 /* Modal specific */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .base-modal { width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border); padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; border-radius: 8px; overflow-y: auto; }
+
+/* Dual curriculum modal */
+.curriculum-dual-modal { max-width: 960px; overflow: hidden; }
+.curriculum-dual-modal .reason-content { display: none; }
+.curriculum-dual-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; height: 480px; }
+.curriculum-option { display: flex; flex-direction: column; padding: 4px; min-height: 0; }
+.curriculum-option-header { flex-shrink: 0; margin-bottom: 16px; }
+.option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 8px; }
+.badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
+.badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
+.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
+.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }
+.curriculum-items::-webkit-scrollbar { display: none; }
+.curriculum-option-footer { flex-shrink: 0; padding-top: 16px; border-top: 1px solid var(--border); margin-top: 16px; }
+.curriculum-divider { width: 1px; background: var(--border); margin: 0 24px; }
+.w-full { width: 100%; justify-content: center; }
 @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; border-bottom: 1px solid var(--border); padding-bottom: 24px; }
 .modal-header h3 { font-size: 20px; font-weight: 800; display: flex; align-items: center; gap: 12px; margin: 0; letter-spacing: 0.05em; color: var(--text-primary);}

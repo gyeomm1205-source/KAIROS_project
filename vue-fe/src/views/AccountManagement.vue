@@ -19,7 +19,11 @@
             <div class="panel-header flex-between p-md pb-sm border-b">
               <div class="flex-align gap-md">
                 <div class="icon-box">
-                  <i :class="acc.icon" />
+                  <svg v-if="acc.name === 'Velog'" width="22" height="22" viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg">
+                    <rect width="36" height="36" rx="7" fill="#20C997"/>
+                    <path d="M8 11L15 26H21L28 11H23L18 22L13 11H8Z" fill="white"/>
+                  </svg>
+                  <i v-else :class="acc.icon" />
                 </div>
                 <div>
                   <div class="flex-align gap-sm mb-xs">
@@ -258,7 +262,9 @@ onMounted(async () => {
 
 /* Icons */
 .icon-box { width: 48px; height: 48px; background: transparent; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 24px; color: var(--text-primary); border-radius: 8px; }
-.icon-box.warning { border-color: var(--text-muted); color: var(--text-muted); }
+.icon-box:has(.fa-github) { border-color: var(--clr-icon-github); color: var(--clr-icon-github); }
+.icon-box:has(svg) { border-color: var(--clr-icon-velog); }
+.icon-box.warning { border-color: var(--clr-warning); color: var(--clr-warning); }
 .spin-hover { transition: transform 0.3s; cursor: pointer; }
 .spin-hover:hover { transform: rotate(180deg); color: var(--text-primary); }
 
@@ -268,7 +274,10 @@ onMounted(async () => {
 .acc-desc { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 
 .status-badge { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; font-size: 10px; font-weight: 900; border-radius: 40px; }
-.status-badge.connected { background: transparent; border: 1px solid var(--text-primary); color: var(--text-primary); }
+.status-badge.connected { background: transparent; border: 1px solid var(--clr-success); color: var(--clr-success); }
+.status-badge.connected i { color: var(--clr-success); }
+.header-title .fa-link { color: var(--clr-icon-sync); }
+.sync-info-box i { color: var(--clr-icon-sync); }
 .status-badge.readonly { background: transparent; border: 1px solid var(--text-muted); color: var(--text-muted); }
 
 .sync-info-box { display: flex; align-items: center; gap: 8px; padding: 10px 12px; background: transparent; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; font-weight: 700; color: var(--text-muted); }

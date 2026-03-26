@@ -40,12 +40,13 @@
                 </div>
 
                 <!-- 트랙 -->
-                <div class="field" ref="trackFieldRef">
+                <div class="field">
                   <label class="field-label">TRACK <span class="req-dot">*</span></label>
                   <div
+                    ref="trackTriggerRef"
                     class="track-trigger"
                     :class="{ open: dropdownOpen, error: trackError }"
-                    @click.stop="dropdownOpen = !dropdownOpen"
+                    @click.stop="toggleDropdown"
                   >
                     <span v-if="localForm.track" class="track-selected">
                       <span class="track-dot" :style="{ background: selectedTrackColor }" />
@@ -56,8 +57,9 @@
                   </div>
 
                   <!-- 드롭다운 -->
+                  <Teleport to="body">
                   <Transition name="dd-fade">
-                    <div v-if="dropdownOpen" class="track-dropdown" @click.stop>
+                    <div v-if="dropdownOpen" class="track-dropdown" :style="dropdownStyle" @click.stop>
                       <div v-if="store.activeTracks.length" class="dd-group">
                         <div class="dd-group-label">USER TRACKS</div>
                         <div
@@ -86,6 +88,7 @@
                       </div>
                     </div>
                   </Transition>
+                  </Teleport>
                 </div>
               </div>
 
@@ -185,6 +188,7 @@
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import EdgeConnectorSection from '@/components/modal/EdgeConnectorSection.vue'
+import { normalizeTechName } from '@/utils/techIcons'
 
 const props = defineProps({
   modelValue:  Boolean,
@@ -202,6 +206,8 @@ const trackError = ref(false)
 const dropdownOpen = ref(false)
 const showDeleteConfirm = ref(false)
 const trackFieldRef = ref(null)
+const trackTriggerRef = ref(null)
+const dropdownStyle = ref({})
 
 function defaultForm() {
   const t = new Date()
@@ -225,9 +231,23 @@ watch(() => props.initialForm, (val) => {
   showDeleteConfirm.value = false
 }, { immediate: true })
 
+function toggleDropdown() {
+  if (!dropdownOpen.value && trackTriggerRef.value) {
+    const rect = trackTriggerRef.value.getBoundingClientRect()
+    dropdownStyle.value = {
+      position: 'fixed',
+      top: rect.bottom + 4 + 'px',
+      left: rect.left + 'px',
+      width: rect.width + 'px',
+      zIndex: 9999,
+    }
+  }
+  dropdownOpen.value = !dropdownOpen.value
+}
+
 // 드롭다운 외부 클릭 닫기
 function onDocClick(e) {
-  if (trackFieldRef.value && !trackFieldRef.value.contains(e.target)) {
+  if (trackTriggerRef.value && !trackTriggerRef.value.contains(e.target)) {
     dropdownOpen.value = false
   }
 }
@@ -261,7 +281,7 @@ function handleSave() {
   if (!valid) return
 
   const tags = (typeof localForm.value.tags === 'string')
-    ? localForm.value.tags.split(',').map(t => t.trim()).filter(Boolean)
+    ? localForm.value.tags.split(',').map(t => normalizeTechName(t)).filter(Boolean)
     : []
 
   emit('save', {
@@ -323,7 +343,7 @@ function confirmDelete() {
 .mode-tag {
   font-size: 9px; font-weight: 900; letter-spacing: 0.15em;
   padding: 3px 8px; border-radius: 8px;
-  background: var(--text-primary); color: var(--bg-base);
+  background: var(--clr-primary); color: var(--bg-base);
 }
 .header-title {
   font-size: 15px; font-weight: 900; letter-spacing: 0.08em;
@@ -371,7 +391,7 @@ function confirmDelete() {
   color: var(--text-faint); text-transform: uppercase;
   display: flex; align-items: center; gap: 6px;
 }
-.req-dot { color: var(--text-primary); font-size: 11px; line-height: 1; }
+.req-dot { color: var(--clr-danger); font-size: 11px; line-height: 1; }
 .opt-badge {
   font-size: 8px; font-weight: 700; letter-spacing: 0.05em;
   padding: 1px 6px; border: 1px solid var(--border); border-radius: 8px;
@@ -399,13 +419,13 @@ function confirmDelete() {
 .field-input:focus { border-color: var(--text-primary); }
 .field-input:focus + .icon-left,
 .input-wrap:focus-within .icon-left { color: var(--text-primary); }
-.field-input.error { border-color: #ef4444; }
+.field-input.error { border-color: var(--clr-danger); }
 
 /* date/time 아이콘 있을 때 왼쪽 패딩 */
 .input-wrap .field-input { padding-left: 34px; }
 
 .error-msg {
-  font-size: 11px; font-weight: 700; color: #ef4444;
+  font-size: 11px; font-weight: 700; color: var(--clr-danger);
   display: flex; align-items: center; gap: 4px;
 }
 .field-hint { font-size: 10px; color: var(--text-faint); font-weight: 600; }
@@ -425,8 +445,8 @@ input::-webkit-calendar-picker-indicator {
   transition: border-color 0.2s;
   min-height: 41px;
 }
-.track-trigger:hover, .track-trigger.open { border-color: var(--text-primary); }
-.track-trigger.error { border-color: #ef4444; }
+.track-trigger:hover, .track-trigger.open { border-color: var(--clr-primary); }
+.track-trigger.error { border-color: var(--clr-danger); }
 
 .track-selected { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--text-primary); }
 .track-placeholder { font-size: 13px; font-weight: 600; color: var(--text-faint); }
@@ -435,10 +455,8 @@ input::-webkit-calendar-picker-indicator {
 .track-trigger.open .chevron { transform: rotate(180deg); }
 
 .track-dropdown {
-  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
   background: var(--bg-base);
   border: 1px solid var(--text-primary); border-radius: 8px;
-  z-index: 300;
   max-height: 220px; overflow-y: auto;
 }
 .dd-group { padding: 6px 0; }
@@ -455,7 +473,7 @@ input::-webkit-calendar-picker-indicator {
   cursor: pointer; transition: background 0.15s;
 }
 .dd-item:hover { background: var(--bg-hover); }
-.dd-item.active { background: var(--text-primary); color: var(--bg-base); }
+.dd-item.active { background: var(--clr-primary); color: var(--bg-base); }
 .dd-item.active .track-dot { box-shadow: 0 0 0 1px var(--bg-base); }
 .dd-check { margin-left: auto; font-size: 11px; }
 
@@ -478,7 +496,7 @@ input::-webkit-calendar-picker-indicator {
   cursor: pointer; transition: all 0.2s;
   font-family: inherit;
 }
-.btn-delete:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,0.05); }
+.btn-delete:hover { border-color: var(--clr-danger); color: var(--clr-danger); background: var(--clr-danger-subtle); }
 
 .btn-cancel {
   padding: 10px 20px;
@@ -494,8 +512,8 @@ input::-webkit-calendar-picker-indicator {
 .btn-save {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 24px;
-  background: var(--text-primary);
-  border: 1px solid var(--text-primary);
+  background: var(--clr-primary);
+  border: 1px solid var(--clr-primary);
   color: var(--bg-base);
   font-size: 12px; font-weight: 900; letter-spacing: 0.06em;
   cursor: pointer; transition: all 0.2s;
@@ -515,9 +533,9 @@ input::-webkit-calendar-picker-indicator {
 }
 .confirm-icon {
   width: 48px; height: 48px; margin: 0 auto 16px;
-  border: 1px solid #ef4444; border-radius: 8px;
+  border: 1px solid var(--clr-danger); border-radius: 8px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 20px; color: #ef4444;
+  font-size: 20px; color: var(--clr-danger);
 }
 .confirm-title {
   font-size: 16px; font-weight: 900; letter-spacing: 0.02em;
@@ -530,8 +548,8 @@ input::-webkit-calendar-picker-indicator {
 .btn-confirm-delete {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 24px;
-  background: #ef4444;
-  border: 1px solid #ef4444; border-radius: 8px;
+  background: var(--clr-danger);
+  border: 1px solid var(--clr-danger); border-radius: 8px;
   color: #fff;
   font-size: 12px; font-weight: 900; letter-spacing: 0.06em;
   cursor: pointer; transition: all 0.2s;

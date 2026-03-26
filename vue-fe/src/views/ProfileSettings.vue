@@ -54,17 +54,16 @@
             
             <div class="flex-wrap gap-sm mt-md mb-md">
               <span v-for="tag in techStacks" :key="tag" class="tech-tag">
-                {{ tag }}
+                <i :class="getTechIcon(tag)" class="tech-icon" />{{ tag }}
                 <button @click="removeTag(tag)"><i class="fas fa-times" /></button>
               </span>
             </div>
 
             <div class="flex-align gap-sm">
-              <input
+              <TechTagAutocomplete
                 v-model="newTag"
-                @keydown.enter="addTag"
                 placeholder="기술명 입력 후 Enter"
-                class="text-input flex-1"
+                @select="val => { if (!techStacks.includes(val)) techStacks.push(val) }"
               />
               <button class="btn-primary-small" @click="addTag">
                 <i class="fas fa-plus" /> 추가
@@ -122,8 +121,8 @@
 
           <!-- Actions -->
           <div class="flex-align gap-md mt-md">
-            <button class="btn-outline flex-1" @click="$router.push('/mypage')">취소</button>
             <button class="btn-primary flex-1" @click="saveProfile" :disabled="isSaving">{{ isSaving ? '저장 중...' : '저장' }}</button>
+            <button class="btn-outline flex-1" @click="$router.push('/mypage')">취소</button>
           </div>
         </div>
       </div>
@@ -135,7 +134,9 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
+import TechTagAutocomplete from '@/components/TechTagAutocomplete.vue'
 import { getMe, updateProfile } from '@/api/usersApi'
+import { getTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const isSaving = ref(false)
@@ -298,8 +299,8 @@ const saveProfile = async () => {
 .btn-primary-small { background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); padding: 10px 16px; border-radius: 40px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
 .btn-primary-small:hover { background: var(--text-primary); color: var(--bg-base); }
 
-.btn-primary { background: transparent; color: var(--text-primary); border: 1px solid var(--text-primary); border-radius: 40px; padding: 16px; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; letter-spacing: 0.1em; text-align: center; }
-.btn-primary:hover { background: var(--text-primary); color: var(--bg-base); }
+.btn-primary { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); border-radius: 40px; padding: 16px; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; letter-spacing: 0.1em; text-align: center; }
+.btn-primary:hover { opacity: 0.85; }
 
 .btn-outline { background: transparent; color: var(--text-primary); border: 1px solid var(--border); border-radius: 40px; padding: 16px; font-size: 14px; font-weight: 800; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; letter-spacing: 0.1em; text-align: center; }
 .btn-outline:hover { background: var(--bg-hover); border-color: var(--text-primary); color: var(--text-primary); }

@@ -155,11 +155,11 @@ async function handleVelogConnect() {
 
 <style scoped>
 .auth-root { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg-base); padding: 72px 24px 24px; font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative; }
-.auth-card { 
-  width: 100%; max-width: 520px; max-height: calc(100vh - 100px); 
-  overflow-y: auto; background: var(--bg-surface); 
-  border: 1px solid var(--border); padding: 40px; 
-  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; 
+.auth-card {
+  width: 100%; max-width: 520px; max-height: calc(100vh - 100px);
+  overflow-y: auto; background: var(--bg-surface);
+  border: 1px solid var(--border); padding: 40px; border-radius: 8px;
+  animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
@@ -176,8 +176,8 @@ async function handleVelogConnect() {
   border-right: 1px solid var(--border);
 }
 .page-stepper .step:last-child { border-right: none; }
-.page-stepper .step.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
-.page-stepper .step.done { color: var(--text-primary); background: transparent; }
+.page-stepper .step.active { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
+.page-stepper .step.done { color: var(--clr-success); background: transparent; }
 @media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
 .header-top { margin-bottom: 24px; }
@@ -190,14 +190,14 @@ async function handleVelogConnect() {
 .btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 
 .auth-header { text-align: center; margin-bottom: 32px; }
-.auth-icon { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 16px; background: transparent; color: var(--text-primary); }
+.auth-icon { width: 48px; height: 48px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 20px; margin: 0 auto 16px; background: transparent; color: var(--text-primary); border-radius: 8px; }
 .auth-header h2 { font-size: 24px; font-weight: 900; letter-spacing: 0.05em; margin-bottom: 8px; color: var(--text-primary); }
 .auth-header p { font-size: 13px; font-weight: 700; color: var(--text-muted); line-height: 1.5; }
 
 .auth-section { margin-bottom: 24px; }
 .section-label { font-size: 12px; font-weight: 900; letter-spacing: 0.1em; color: var(--text-muted); margin-bottom: 12px; border-bottom: 1px solid var(--border); padding-bottom: 4px; display: inline-block; }
 
-.link-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 14px 16px; background: transparent; cursor: pointer; margin-bottom: 12px; color: var(--text-primary); font-weight: 700; font-size: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+.link-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 14px 16px; background: transparent; cursor: pointer; margin-bottom: 12px; color: var(--text-primary); font-weight: 700; font-size: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
 .link-btn:hover:not(.is-connected):not(:disabled) { background: var(--bg-hover); border-color: var(--text-primary); }
 .link-btn:hover:not(.is-connected):not(:disabled) .link-icon { border-color: var(--text-primary); }
 .link-btn.is-connected { background: transparent; border-color: rgba(255,255,255,0.2); color: var(--text-secondary); cursor: default; }
@@ -207,9 +207,9 @@ async function handleVelogConnect() {
 .link-btn-left { display: flex; align-items: center; gap: 12px; }
 .link-icon { width: 32px; height: 32px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all 0.3s; }
 
-.btn-primary { width: 100%; padding: 16px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; margin-top: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
+.btn-primary { width: 100%; padding: 16px; border: 1px solid var(--clr-primary); background: var(--clr-primary); color: var(--bg-base); font-weight: 800; font-size: 14px; letter-spacing: 0.1em; margin-top: 12px; cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); font-family: inherit; }
 .btn-primary:disabled { background: transparent; border-color: var(--border); color: var(--text-muted); cursor: not-allowed; }
-.btn-primary:not(:disabled):hover { background: transparent; color: var(--text-primary); }
+.btn-primary:not(:disabled):hover { background: transparent; color: var(--clr-primary); }
 
 
 </style>

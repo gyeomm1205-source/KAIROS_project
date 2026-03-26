@@ -13,51 +13,57 @@
         <button class="btn-close" @click="handleClose"><i class="fas fa-times" /></button>
       </div>
 
-      <!-- 바디 (스크롤) -->
-      <div class="modal-body custom-scroll">
-        <!-- 흐름 정보 카드 -->
-        <div class="info-card">
-          <div class="card-track"><i class="fas fa-code-branch" /> {{ data.flowName }}</div>
-          <h4 class="card-subject">{{ data.subject }}</h4>
-        </div>
+      <!-- 바디 -->
+      <div class="modal-body" :class="{ 'modal-body--split': showSteps }">
 
-        <!-- 한 줄 요약 -->
-        <div class="info-card">
-          <div class="card-label"><i class="fas fa-sparkles" /> 한 줄 요약</div>
-          <p class="summary-text">{{ data.summary }}</p>
-        </div>
-
-        <!-- 3단계 확장 버튼 -->
-        <button v-if="!showSteps" class="btn-expand" @click="showSteps = true; currentStep = 0">
-          <i class="fas fa-brain" /> AI 사고과정 3단계 자세히 보기 <i class="fas fa-chevron-right" />
-        </button>
-
-        <!-- 3단계 상세 -->
-        <div v-if="showSteps" class="info-card step-card">
-          <!-- 단계 표시 -->
-          <div class="step-indicator">
-            <div class="step-dots">
-              <template v-for="(sec, i) in sections" :key="sec.id">
-                <button
-                  class="step-dot"
-                  :class="{ 'active': i === currentStep, 'past': i < currentStep }"
-                  @click="currentStep = i"
-                >{{ sec.id }}</button>
-                <div v-if="i < sections.length - 1" class="step-line" :class="{ 'past': i < currentStep }" />
-              </template>
-            </div>
-            <span class="step-count">{{ currentStep + 1 }} / 3단계</span>
+        <!-- 왼쪽: info-cards -->
+        <div class="body-left custom-scroll">
+          <!-- 흐름 정보 카드 -->
+          <div class="info-card">
+            <div class="card-track"><i class="fas fa-code-branch" /> {{ data.flowName }}</div>
+            <h4 class="card-subject">{{ data.subject }}</h4>
           </div>
 
-          <!-- 단계 컨텐츠 -->
-          <div class="step-content">
-            <div class="step-title-row">
-              <i class="fas fa-sparkles" />
-              <span class="step-title">{{ sections[currentStep].title }}</span>
+          <!-- 한 줄 요약 -->
+          <div class="info-card">
+            <div class="card-label"><i class="fas fa-sparkles" /> 한 줄 요약</div>
+            <p class="summary-text">{{ data.summary }}</p>
+          </div>
+
+          <!-- 3단계 확장 버튼 (단일 컬럼일 때만) -->
+          <button v-if="!showSteps" class="btn-expand" @click="showSteps = true; currentStep = 0">
+            <i class="fas fa-brain" /> AI 사고과정 3단계 자세히 보기 <i class="fas fa-chevron-right" />
+          </button>
+        </div>
+
+        <!-- 오른쪽: step-card (2열일 때만) -->
+        <div v-if="showSteps" class="body-right">
+          <div class="info-card step-card">
+            <!-- 단계 표시 -->
+            <div class="step-indicator">
+              <div class="step-dots">
+                <template v-for="(sec, i) in sections" :key="sec.id">
+                  <button
+                    class="step-dot"
+                    :class="{ 'active': i === currentStep, 'past': i < currentStep }"
+                    @click="currentStep = i"
+                  >{{ sec.id }}</button>
+                  <div v-if="i < sections.length - 1" class="step-line" :class="{ 'past': i < currentStep }" />
+                </template>
+              </div>
+              <span class="step-count">{{ currentStep + 1 }} / 3단계</span>
             </div>
-            <p class="step-desc">{{ sections[currentStep].description }}</p>
-            <div class="step-items">
-              <div v-for="(item, idx) in sections[currentStep].items" :key="idx" class="step-item">{{ item }}</div>
+
+            <!-- 단계 컨텐츠 -->
+            <div class="step-content custom-scroll">
+              <div class="step-title-row">
+                <i class="fas fa-sparkles" />
+                <span class="step-title">{{ sections[currentStep].title }}</span>
+              </div>
+              <p class="step-desc">{{ sections[currentStep].description }}</p>
+              <div class="step-items">
+                <div v-for="(item, idx) in sections[currentStep].items" :key="idx" class="step-item">{{ item }}</div>
+              </div>
             </div>
 
             <!-- 이전/다음 네비게이션 -->
@@ -87,6 +93,7 @@
             </div>
           </div>
         </div>
+
       </div>
 
       <!-- 푸터 -->
@@ -157,7 +164,9 @@ function handleClose() {
   border-radius: 8px;
   overflow: hidden;
   display: flex; flex-direction: column;
+  transition: max-width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
+.modal-box:has(.modal-body--split) { max-width: 860px; }
 
 /* 헤더 */
 .modal-header {
@@ -182,13 +191,32 @@ function handleClose() {
 }
 .btn-close:hover { color: var(--text-primary); }
 
-/* 바디 (스크롤) */
+/* 바디 */
 .modal-body {
-  padding: 20px 24px;
-  display: flex; flex-direction: column; gap: 16px;
   flex: 1; min-height: 0;
+  display: flex;
+}
+.modal-body--split { gap: 0; }
+
+.body-left {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column; gap: 16px;
+  padding: 20px 24px;
   overflow-y: auto;
 }
+.modal-body--split .body-left {
+  border-right: 1px solid var(--border);
+  max-width: 320px; flex-shrink: 0;
+}
+
+.body-right {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  padding: 20px 24px;
+  overflow: hidden;
+}
+.body-right .step-card { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
 .custom-scroll { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
 .custom-scroll::-webkit-scrollbar { width: 4px; }
 .custom-scroll::-webkit-scrollbar-thumb { background: var(--border); }
@@ -247,16 +275,13 @@ function handleClose() {
 .step-line.past { background: var(--text-muted); }
 .step-count { margin-left: auto; font-size: 11px; font-weight: 700; color: var(--text-faint); }
 
-.step-content { padding: 20px; }
+.step-content { padding: 20px; flex: 1; overflow-y: auto; min-height: 0; }
 .step-title-row { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
 .step-title { font-size: 13px; font-weight: 900; color: var(--text-primary); }
 .step-title-row i { font-size: 12px; color: var(--text-muted); }
 .step-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; line-height: 1.5; margin-bottom: 16px; }
 
-.step-items { 
-  display: flex; flex-direction: column; gap: 8px; 
-  max-height: 280px; overflow-y: auto; padding-right: 4px;
-}
+.step-items { display: flex; flex-direction: column; gap: 8px; }
 .step-item {
   border: 1px solid var(--border);
   background: var(--bg-surface);
@@ -268,8 +293,9 @@ function handleClose() {
 /* 단계 네비게이션 */
 .step-nav {
   display: flex; align-items: center; justify-content: space-between;
-  margin-top: 16px; padding-top: 14px;
+  padding: 14px 20px;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 .btn-step-nav {
   display: flex; align-items: center; gap: 6px;
