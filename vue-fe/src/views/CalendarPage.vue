@@ -868,7 +868,7 @@ function onWeekWheel(e) {
 .day-header:last-child { border-right: none; }
 .day-header--sat { color: var(--clr-primary) !important; }
 .day-header--sun { color: var(--clr-danger) !important; }
-.line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+.line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 6; }
 .conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; pointer-events: stroke; }
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
