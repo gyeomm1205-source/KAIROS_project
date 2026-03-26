@@ -142,7 +142,7 @@ async def profile_analyze_worker(task_id: str, req: ProfileAnalyzeRequest):
 
         # 3. Spring Boot Webhook 호출
         # spring_url = os.getenv("SPRING_SERVER_URL", "http://localhost:8080")
-
+        print(f"🎯 Spring Boot가 넘겨준 콜백 주소: {req.callbackUrl}")
         try:
             async with httpx.AsyncClient() as client:
                 resp = await client.post(req.callbackUrl, json=payload, timeout=30.0)

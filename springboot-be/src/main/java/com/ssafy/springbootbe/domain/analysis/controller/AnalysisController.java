@@ -19,6 +19,8 @@ public class AnalysisController {
 
     @PostMapping("/complete")
     public ResponseEntity<AnalysisCompleteResponse> complete(@RequestBody AnalysisCompleteRequest request) {
+        System.out.println("🚀 [웹훅 도착] FastAPI에서 응답이 컨트롤러까지 무사히 넘어왔습니다!");
         return ResponseEntity.ok(analysisService.complete(request));
     }
 }
+
