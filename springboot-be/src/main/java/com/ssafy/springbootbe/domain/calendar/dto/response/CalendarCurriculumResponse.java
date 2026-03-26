@@ -19,5 +19,6 @@ public class CalendarCurriculumResponse {
     private CurriculumStatus status;
     private LocalDate prevNodeDate;
     private LocalDate nextNodeDate;
+    private Integer totalNodeCount;
     private List<CalendarNodeResponse> nodes;
 }

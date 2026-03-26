@@ -20,7 +20,7 @@
           <div v-for="track in flowChipTracks" :key="track.id" class="flow-chip">
             <div class="flow-chip-bar" :style="{ background: track.color }" />
             <div>
-              <div class="flow-chip-name">{{ track.name }}</div>
+              <div class="flow-chip-name">{{ getTrackDisplayName(track.id) }}</div>
               <div class="flow-chip-sub">{{ getTrackScheduleCount(track.id) }}개 활동</div>
             </div>
           </div>
@@ -129,7 +129,7 @@
                 @mouseleave="onTrackHover(null)"
               >
                 <span class="lane-dot" :style="{ background: track.color }" />
-                <span class="lane-name" :title="track.name">{{ getShortTrackName(track.name) }}</span>
+                <span class="lane-name" :title="getTrackDisplayName(track.id)">{{ getShortTrackName(getTrackDisplayName(track.id)) }}</span>
                 <span v-if="track.isHighlight" class="lane-hl-badge">✦</span>
               </div>
             </div>
@@ -244,7 +244,7 @@ const DAY_LABELS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
 const store = useCalendarStore()
 const themeStore = useThemeStore()
-const { schedules, connections, allTracks } = storeToRefs(store)
+const { schedules, connections, allTracks, curricula } = storeToRefs(store)
 
 const today = new Date()
 const todayStr = toDateStr(today)
@@ -560,7 +560,35 @@ function navigate(dir) {
 }
 
 const flowChipTracks = computed(() => allTracks.value.filter(t => !t.isHighlight && !t.isEnded))
+function formatMonthDay(dateStr) {
+  if (!dateStr) return ''
+  const [year, month, day] = dateStr.split('-')
+  if (!year || !month || !day) return ''
+  return `${Number(month)}/${Number(day)}`
+}
+
+function getTrackDisplayName(trackId) {
+  const track = allTracks.value.find(t => t.id === trackId)
+  if (!track) return ''
+  if (!track.curriculumId) return track.name || ''
+
+  const curriculum = curricula.value.find(c => c.curriculumId === track.curriculumId)
+  const nodes = [...(curriculum?.nodes || [])].sort((a, b) => (a.scheduledDate || '').localeCompare(b.scheduledDate || ''))
+  const firstTitle = nodes[0]?.title || track.name || `커리큘럼 ${track.curriculumId}`
+  const startDate = curriculum?.prevNodeDate || nodes[0]?.scheduledDate || ''
+  const endDate = curriculum?.nextNodeDate || nodes[nodes.length - 1]?.scheduledDate || ''
+  const range = startDate && endDate ? `${formatMonthDay(startDate)}~${formatMonthDay(endDate)}` : ''
+
+  return range ? `${firstTitle} · ${range}` : firstTitle
+}
+
 function getTrackScheduleCount(trackId) {
+  const track = allTracks.value.find(t => t.id === trackId)
+  if (track?.curriculumId) {
+    const curriculum = curricula.value.find(c => c.curriculumId === track.curriculumId)
+    return curriculum?.totalNodeCount ?? curriculum?.nodes?.length ?? 0
+  }
+
   return schedules.value.filter(s => s.track === trackId).length
 }
 
@@ -710,10 +738,15 @@ function jumpToDate(date) {
   nextTick(tryScroll);
 }
 
+async function refreshCurrentCalendar() {
+  await store.fetchCalendar(currentYear.value, currentMonth.value)
+}
+
 async function handleSaveSchedule(payload) {
   const { parentIds, childIds, ...data } = payload
   if (modalMode.value === 'create') { const newId = await store.createSchedule(data); store.updateConnectionsForSchedule(newId, parentIds || [], childIds || []) } 
   else { await store.updateSchedule(editTargetId.value, data); store.updateConnectionsForSchedule(editTargetId.value, parentIds || [], childIds || []) }
+  await refreshCurrentCalendar()
   isScheduleModalOpen.value = false
 }
 function handleModalJump(dateStr) {
@@ -721,9 +754,9 @@ function handleModalJump(dateStr) {
   jumpToDate(dateStr)
 }
 
-async function handleDeleteSchedule(id) { if (!confirm('이 일정을 삭제하시겠습니까?')) return; await store.deleteSchedule(id); activeTooltipId.value = null }
-async function handleDeleteFromModal(id) { if (!id) return; await store.deleteSchedule(id); activeTooltipId.value = null; isScheduleModalOpen.value = false }
-function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; selectedSchedules.value.forEach(id => store.deleteSchedule(id)); selectedSchedules.value = [] }
+async function handleDeleteSchedule(id) { if (!confirm('이 일정을 삭제하시겠습니까?')) return; await store.deleteSchedule(id); await refreshCurrentCalendar(); activeTooltipId.value = null }
+async function handleDeleteFromModal(id) { if (!id) return; await store.deleteSchedule(id); await refreshCurrentCalendar(); activeTooltipId.value = null; isScheduleModalOpen.value = false }
+async function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; await Promise.all(selectedSchedules.value.map(id => store.deleteSchedule(id))); await refreshCurrentCalendar(); selectedSchedules.value = [] }
 
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
 watch([currentYear, currentMonth], ([y, m]) => store.fetchCalendar(y, m))

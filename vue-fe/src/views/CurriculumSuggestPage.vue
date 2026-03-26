@@ -51,7 +51,7 @@
 
           <div class="summary-badge-wrap mt-md">
             <div class="outline-badge">
-              <i class="fas fa-flag-checkered mr-2" /> 총 6개 학습 · 약 12시간 소요 예상
+              <i class="fas fa-flag-checkered mr-2" /> 총 {{ totalLessonCount }}개 학습 · 약 {{ totalDurationLabel }} 소요 예상
             </div>
           </div>
         </section>
@@ -146,7 +146,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { postCurriculumGenerate, postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 import { useCalendarStore } from '@/stores/useCalendarStore'
@@ -165,6 +165,20 @@ const scheduleItems = ref([
   { date: "3월 16일 (월)", title: "Next.js App Router 심화", duration: "2시간 예상" },
   { date: "3월 17일 (화)", title: "API 설계 패턴 및 데이터 패칭 전략", duration: "1시간 30분 예상" },
 ])
+
+const curriculumNodes = computed(() => store.curriculumResult?.nodes || [])
+const totalLessonCount = computed(() => curriculumNodes.value.length)
+const totalDurationMinutes = computed(() => curriculumNodes.value.reduce((sum, node) => sum + (node.expectedMinutes || 0), 0))
+const totalDurationLabel = computed(() => {
+  const minutes = totalDurationMinutes.value
+  if (!minutes) return '0분'
+
+  const hours = Math.floor(minutes / 60)
+  const remainder = minutes % 60
+  if (hours === 0) return `${minutes}분`
+  if (remainder === 0) return `${hours}시간`
+  return `${hours}시간 ${remainder}분`
+})
 
 const reasonSections = ref([
   {

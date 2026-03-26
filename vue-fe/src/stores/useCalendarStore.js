@@ -393,7 +393,7 @@ export const useCalendarStore = defineStore('calendar', () => {
   }
 
   return {
-    tracks, allTracks, activeTracks, endedTracks, HIGHLIGHT_TRACKS, schedules, connections,
+    curricula, tracks, allTracks, activeTracks, endedTracks, HIGHLIGHT_TRACKS, schedules, connections,
     getSchedulesForDay, getTrackById, getHoliday, fetchHolidaysForYear,
     toggleTrackEnded, addTrack, updateTrackObj,
     createSchedule, updateSchedule, deleteSchedule, updateConnectionsForSchedule,
