@@ -739,7 +739,14 @@ function jumpToDate(date) {
 }
 
 async function refreshCurrentCalendar() {
-  await store.fetchCalendar(currentYear.value, currentMonth.value)
+  const y = currentYear.value, m = currentMonth.value
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  await store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ])
 }
 
 async function handleSaveSchedule(payload) {
@@ -759,10 +766,25 @@ async function handleDeleteFromModal(id) { if (!id) return; await store.deleteSc
 async function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; await Promise.all(selectedSchedules.value.map(id => store.deleteSchedule(id))); await refreshCurrentCalendar(); selectedSchedules.value = [] }
 
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
-watch([currentYear, currentMonth], ([y, m]) => store.fetchCalendar(y, m))
+watch([currentYear, currentMonth], ([y, m]) => {
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ])
+})
 onMounted(() => {
   store.fetchHolidaysForYear(currentYear.value);
-  store.fetchCalendar(currentYear.value, currentMonth.value);
+  const y = currentYear.value, m = currentMonth.value
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ]);
   nextTick(() => {
     // 🚀 Ensure we start at current month
     const now = new Date();
