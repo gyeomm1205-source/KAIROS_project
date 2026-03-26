@@ -165,6 +165,79 @@ export const useCalendarStore = defineStore('calendar', () => {
     }
   }
 
+  const fetchCalendarRange = async (ranges) => {
+    try {
+      const results = await Promise.all(
+        ranges.map(({ year, month }) => getCalendar({ year, month }))
+      )
+
+      const allCurricula = []
+      const allPersonal = []
+      const seenCurrIds = new Set()
+      const seenSchedIds = new Set()
+
+      results.forEach(({ data }) => {
+        ;(data.curricula || []).forEach(c => {
+          if (!seenCurrIds.has(c.curriculumId)) {
+            seenCurrIds.add(c.curriculumId)
+            allCurricula.push({ ...c, nodes: [...(c.nodes || [])] })
+          } else {
+            const existing = allCurricula.find(e => e.curriculumId === c.curriculumId)
+            const existingNodeIds = new Set(existing.nodes.map(n => n.curriculumNodeId))
+            ;(c.nodes || []).forEach(n => {
+              if (!existingNodeIds.has(n.curriculumNodeId)) existing.nodes.push(n)
+            })
+          }
+        })
+        ;(data.personalSchedules || []).forEach(ps => {
+          if (!seenSchedIds.has(ps.scheduleId)) {
+            seenSchedIds.add(ps.scheduleId)
+            allPersonal.push(ps)
+          }
+        })
+      })
+
+      curricula.value = allCurricula
+      personalSchedules.value = allPersonal
+
+      const newSchedules = []
+      allCurricula.forEach(c => {
+        (c.nodes || []).forEach(node => {
+          newSchedules.push({
+            id: `cn-${node.curriculumNodeId}`,
+            type: 'curriculum',
+            curriculumNodeId: node.curriculumNodeId,
+            curriculumId: c.curriculumId,
+            day: node.scheduledDate,
+            track: `cur-${c.curriculumId}`,
+            text: node.title,
+            tooltip: { title: node.title, time: null },
+            progressStatus: node.progressStatus,
+            expectedMinutes: node.expectedMinutes,
+          })
+        })
+      })
+      allPersonal.forEach(ps => {
+        newSchedules.push({
+          id: `ps-${ps.scheduleId}`,
+          type: 'personal',
+          scheduleId: ps.scheduleId,
+          day: ps.startDate,
+          endDay: ps.endDate,
+          track: 'personal',
+          text: ps.title,
+          tooltip: { title: ps.title, time: null },
+          googleEventId: ps.googleEventId,
+        })
+      })
+
+      schedules.value = newSchedules
+      useMock.value = false
+    } catch (e) {
+      console.error('calendar range 조회 실패 (Mock 유지):', e)
+    }
+  }
+
   // ----------------------------------------------------------------
   // 5. 기존 Actions (하위 호환 유지)
   // ----------------------------------------------------------------
@@ -401,7 +474,7 @@ export const useCalendarStore = defineStore('calendar', () => {
     getSchedulesForDay, getTrackById, getHoliday, fetchHolidaysForYear,
     toggleTrackEnded, addTrack, updateTrackObj,
     createSchedule, updateSchedule, deleteSchedule, updateConnectionsForSchedule,
-    fetchCalendar,
+    fetchCalendar, fetchCalendarRange,
     showConnections, lowIntensityLines,
     analysisResult, alternativeCurriculum, curriculumResult, curriculumPreviewKey, isLoadingAI,
     loadAnalysisResult, loadAlternativeCurriculum, addAiGeneratedSchedule

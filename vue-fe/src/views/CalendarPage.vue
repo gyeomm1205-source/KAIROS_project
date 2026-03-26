@@ -332,6 +332,17 @@ const dimmedNodeIds = computed(() => {
   return ids;
 })
 
+function isSameWeek(dateStr1, dateStr2) {
+  const d1 = new Date(dateStr1)
+  const d2 = new Date(dateStr2)
+  const getWeekStart = (d) => {
+    const day = d.getDay()
+    const diff = d.getDate() - day
+    return new Date(d.getFullYear(), d.getMonth(), diff).getTime()
+  }
+  return getWeekStart(d1) === getWeekStart(d2)
+}
+
 // ============================================================================
 // 💡 SVG 기반 연결선 렌더링 (인터랙션 및 성능 최적화)
 // ============================================================================
@@ -364,9 +375,9 @@ const updateConnections = () => {
       const y2 = tRect.top - offsetTop;
 
       let d = "";
-      if (currentView.value === 'week') {
-        const midX = (x1 + x2) / 2;
-        d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+      const sameWeek = sFrom.day && sTo.day && isSameWeek(sFrom.day, sTo.day);
+      if (sameWeek) {
+        d = `M ${x1} ${y1} L ${x2} ${y2}`;
       } else {
         const midX = (x1 + x2) / 2;
         d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
@@ -742,7 +753,14 @@ function jumpToDate(date) {
 }
 
 async function refreshCurrentCalendar() {
-  await store.fetchCalendar(currentYear.value, currentMonth.value)
+  const y = currentYear.value, m = currentMonth.value
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  await store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ])
 }
 
 async function handleSaveSchedule(payload) {
@@ -762,10 +780,25 @@ async function handleDeleteFromModal(id) { if (!id) return; await store.deleteSc
 async function deleteSelected() { if (!selectedSchedules.value.length) return; if (!confirm(`선택한 ${selectedSchedules.value.length}개의 일정을 삭제하시겠습니까?`)) return; await Promise.all(selectedSchedules.value.map(id => store.deleteSchedule(id))); await refreshCurrentCalendar(); selectedSchedules.value = [] }
 
 watch(currentYear, (y) => store.fetchHolidaysForYear(y))
-watch([currentYear, currentMonth], ([y, m]) => store.fetchCalendar(y, m))
+watch([currentYear, currentMonth], ([y, m]) => {
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ])
+})
 onMounted(() => {
   store.fetchHolidaysForYear(currentYear.value);
-  store.fetchCalendar(currentYear.value, currentMonth.value);
+  const y = currentYear.value, m = currentMonth.value
+  const prev = m === 1 ? { y: y - 1, m: 12 } : { y, m: m - 1 }
+  const next = m === 12 ? { y: y + 1, m: 1 } : { y, m: m + 1 }
+  store.fetchCalendarRange([
+    { year: prev.y, month: prev.m },
+    { year: y, month: m },
+    { year: next.y, month: next.m },
+  ]);
   nextTick(() => {
     // 🚀 Ensure we start at current month
     const now = new Date();
@@ -838,7 +871,7 @@ function onWeekWheel(e) {
 .day-header:last-child { border-right: none; }
 .day-header--sat { color: var(--clr-primary) !important; }
 .day-header--sun { color: var(--clr-danger) !important; }
-.line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 2; }
+.line-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 6; }
 .conn-path { fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); cursor: pointer; pointer-events: stroke; }
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
