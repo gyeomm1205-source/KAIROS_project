@@ -202,6 +202,54 @@ function formatDate(dateStr) {
   return `${d.getMonth() + 1}월 ${d.getDate()}일 (${days[d.getDay()]})`
 }
 
+function buildCurriculumAnalysisData(source) {
+  const summary = source?.summary || ''
+  const recommendedPositions = Array.isArray(source?.recommendedPositions) ? source.recommendedPositions : []
+
+  if (Array.isArray(source?.techDetails) && source.techDetails.length > 0) {
+    return {
+      summary,
+      techDetails: source.techDetails
+        .map((tech) => ({
+          techName: tech.techName,
+          proficiencyPercentage: tech.proficiencyPercentage ?? 0,
+          usageCount: tech.usageCount ?? 0,
+        }))
+        .filter((tech) => tech.techName),
+      recommendedPositions: recommendedPositions
+        .map((position) => ({
+          positionName: position.positionName || position.title || '',
+          fitLevel: position.fitLevel || (position.isHighMatch ? 'HIGH' : 'LOW'),
+        }))
+        .filter((position) => position.positionName),
+    }
+  }
+
+  const skillLevels = Array.isArray(source?.skillLevels) ? source.skillLevels : []
+  const repeatedTechs = Array.isArray(source?.repeatedTechs) ? source.repeatedTechs : []
+  const repeatedCountMap = new Map(repeatedTechs.map((item) => [item.name, item.count ?? 0]))
+
+  return {
+    summary,
+    techDetails: skillLevels
+      .map((tech) => {
+        const techName = tech.techName || tech.name || ''
+        return {
+          techName,
+          proficiencyPercentage: tech.proficiencyPercentage ?? tech.level ?? 0,
+          usageCount: repeatedCountMap.get(techName) ?? tech.count ?? 0,
+        }
+      })
+      .filter((tech) => tech.techName),
+    recommendedPositions: recommendedPositions
+      .map((position) => ({
+        positionName: position.positionName || position.title || '',
+        fitLevel: position.fitLevel || (position.isHighMatch ? 'HIGH' : 'LOW'),
+      }))
+      .filter((position) => position.positionName),
+  }
+}
+
 onMounted(async () => {
   try {
     const analysisRaw = localStorage.getItem('analysisResult')
@@ -210,10 +258,11 @@ onMounted(async () => {
       techDetails: [],
       recommendedPositions: []
     }
+    const curriculumAnalysisData = buildCurriculumAnalysisData(analysisData)
 
     let data
     try {
-      const res = await postCurriculumPreview({ analysisData })
+      const res = await postCurriculumPreview({ analysisData: curriculumAnalysisData })
       data = res.data
       if (data.curriculumPreviewKey) {
         store.curriculumPreviewKey = data.curriculumPreviewKey
@@ -223,7 +272,8 @@ onMounted(async () => {
       const res = await postCurriculumGenerate({
         userId: 1,
         curriculumType: 'ONBOARDING',
-        considerPersonalSchedule: false
+        considerPersonalSchedule: false,
+        analysisData: curriculumAnalysisData
       })
       data = res.data
     }
