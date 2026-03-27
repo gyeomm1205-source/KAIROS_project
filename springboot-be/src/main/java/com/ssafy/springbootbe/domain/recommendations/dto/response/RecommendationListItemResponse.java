@@ -18,6 +18,7 @@ public class RecommendationListItemResponse {
 
     private Long curriculumId;
     private CurriculumStatus status;
+    private String displayName;
     private LocalDate startDate;
     private LocalDate endDate;
     private List<TechStackInfo> techStacks;

@@ -45,6 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -60,6 +61,7 @@ import java.util.concurrent.TimeUnit;
 public class RecommendationsServiceImpl implements RecommendationsService {
 
     static final long RECOMMENDATION_TTL_HOURS = 24L;
+    private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("M/d");
     private static final String RECOMMENDATION_KEY_PREFIX = "recommendation:";
     private static final String RECOMMENDATION_QUIZ_KEY_PREFIX = "recommendation:quiz:";
     private static final String FAST_API_LEVEL_JUNIOR = "JUNIOR";
@@ -96,6 +98,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                 .map(curriculum -> RecommendationListItemResponse.builder()
                         .curriculumId(curriculum.getCurriculumId())
                         .status(curriculum.getStatus())
+                        .displayName(buildDisplayName(nodesByCurriculumId.get(curriculum.getCurriculumId()), curriculum.getCurriculumId()))
                         .startDate(findStartDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
                         .endDate(findEndDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
                         .techStacks(techStacks)
@@ -374,6 +377,26 @@ public class RecommendationsServiceImpl implements RecommendationsService {
             return null;
         }
         return nodes.getLast().getScheduledDate();
+    }
+
+    private String buildDisplayName(List<CurriculumNode> nodes, Long curriculumId) {
+        if (nodes == null || nodes.isEmpty()) {
+            return "커리큘럼 " + curriculumId;
+        }
+
+        LocalDate startDate = nodes.getFirst().getScheduledDate();
+        LocalDate endDate = nodes.getLast().getScheduledDate();
+        String title = nodes.getFirst().getTitle();
+
+        if (startDate == null || endDate == null) {
+            return title;
+        }
+
+        return title + " · " + formatMonthDay(startDate) + "~" + formatMonthDay(endDate);
+    }
+
+    private String formatMonthDay(LocalDate date) {
+        return date.format(MONTH_DAY_FORMATTER);
     }
 
     private boolean hasRecommendation(Long userId, Long curriculumId) {
