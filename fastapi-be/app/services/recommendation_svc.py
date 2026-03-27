@@ -380,7 +380,19 @@ async def run_daily_recommendation(request: DailyRecommendationRequest) -> Daily
 
     # 1. Qdrant 검색어 구성 및 검색
     query_text = _build_daily_query(request)
+    logger.info(
+        "[run_daily_recommendation] qdrant_query user_id=%s curriculum_id=%s query=%s",
+        request.user_id,
+        request.curriculum_id,
+        query_text,
+    )
     candidates = _retrieve_from_qdrant_raw(query_text, request.current_level)
+    logger.info(
+        "[run_daily_recommendation] qdrant_candidates user_id=%s curriculum_id=%s count=%d",
+        request.user_id,
+        request.curriculum_id,
+        len(candidates),
+    )
 
     if not candidates:
         logger.warning("[run_daily_recommendation] 후보 자료 없음 — 목 데이터 활용")
@@ -408,6 +420,9 @@ def _build_daily_query(request: DailyRecommendationRequest) -> str:
 
     if request.current_node_title:
         keywords.append(request.current_node_title)
+
+    if request.current_node_description:
+        keywords.append(request.current_node_description)
 
     # 1. skill_stats 상위 2개
     if request.skill_stats:
