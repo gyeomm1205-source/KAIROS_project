@@ -269,7 +269,7 @@ const handleLogout = () => {
 
 /* 모달 공통 스타일에 맞춤 (Global 혹은 Local 선언) */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(2px); padding: 20px; }
-.modal-content { width: 100%; max-width: 400px; padding: 32px; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+.modal-content { width: 100%; max-width: 400px; padding: 32px; background: var(--bg-surface); border: 1px solid var(--border); box-shadow: 0 20px 40px rgba(0,0,0,0.3); border-radius: 16px; }
 .modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; }
 .btn-close-modal { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; font-size: 16px; transition: color 0.2s; margin-top: -4px; margin-right: -4px; }
 .btn-close-modal:hover { color: var(--text-primary); }
@@ -279,11 +279,11 @@ const handleLogout = () => {
 .text-sm { font-size: 12px; line-height: 1.6; color: var(--text-secondary); }
 .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
 
-.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-primary-small { padding: 10px 20px; border: 1px solid var(--text-primary); background: var(--text-primary); color: var(--bg-base); font-weight: 800; font-size: 12px; cursor: pointer; transition: all 0.2s; border-radius: 8px; }
 .btn-primary-small:hover { background: transparent; color: var(--text-primary); }
 .btn-primary-small.btn-danger { background: var(--clr-danger); border-color: var(--clr-danger); color: white; }
 .btn-primary-small.btn-danger:hover { background: transparent; color: var(--clr-danger); }
-.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; }
+.btn-outline-small { padding: 10px 20px; border: 1px solid var(--border); background: transparent; color: var(--text-primary); font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; border-radius: 8px; }
 .btn-outline-small:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 
 /* 애니메이션 및 기타 */
