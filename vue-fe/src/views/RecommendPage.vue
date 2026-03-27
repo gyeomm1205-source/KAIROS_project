@@ -340,8 +340,7 @@
           <div class="curriculum-option">
             <div class="curriculum-option-header">
               <span class="option-badge badge-a">옵션 A</span>
-              <h4 class="option-title">단기 집중 코스</h4>
-              <p class="option-subtitle">약점 보완형 (부족한 기술 중심)</p>
+              <h4 class="option-title">약점 보완형 (부족한 기술 중심)</h4>
               <span class="option-meta"><i class="fas fa-clock"/> 3일 · 약 5시간</span>
             </div>
             <div class="curriculum-items">
@@ -364,8 +363,7 @@
           <div class="curriculum-option">
             <div class="curriculum-option-header">
               <span class="option-badge badge-b">옵션 B</span>
-              <h4 class="option-title">심화 마스터 코스</h4>
-              <p class="option-subtitle">강점 심화형 (잘하는 기술 심화)</p>
+              <h4 class="option-title">강점 심화형 (잘하는 기술 심화)</h4>
               <span class="option-meta"><i class="fas fa-clock"/> 5일 · 약 9시간</span>
             </div>
             <div class="curriculum-items">
@@ -938,9 +936,7 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 8px; }
 .badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
 .badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
-.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
-.option-subtitle { font-size: 12px; color: var(--text-muted); margin: 2px 0 4px; font-weight: 500; }
-.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }
 .curriculum-items::-webkit-scrollbar { display: none; }
 .curriculum-option-footer { flex-shrink: 0; border-top: 1px solid var(--border); margin-top: auto; padding-top: 16px; }
