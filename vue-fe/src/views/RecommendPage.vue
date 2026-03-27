@@ -14,9 +14,14 @@
             <h2>추천</h2>
             <div class="title-section-row">
               <p>최근 7일간 활동을 기반으로 맞춤 추천을 제공합니다. 확인할 활동을 선택하세요.</p>
-              <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
-                <i class="fas fa-plus" /> 신규 학습 시작
-              </button>
+              <div class="title-action-group">
+                <button class="btn-outline-small" @click="openCurriculumModal">
+                  <i class="fas fa-book-open" /> 커리큘럼 추천받기
+                </button>
+                <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
+                  <i class="fas fa-plus" /> 학습 맥락 직접 추가
+                </button>
+              </div>
             </div>
           </div>
 
@@ -65,9 +70,6 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
-                    <button class="btn-primary-small" @click="openCurriculumModal">
-                      <i class="fas fa-book-open" /> 커리큘럼 추천받기
-                    </button>
                   </div>
                   <span class="panel-sub">{{ recommendationSubLabel }}</span>
                 </div>
@@ -822,6 +824,7 @@ const quizCorrectCount = computed(() => {
 .title-section h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; letter-spacing: 0.05em; }
 .title-section p { font-size: 14px; font-weight: 600; color: var(--text-muted); }
 .title-section-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.title-action-group { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* Buttons & Tags */
 .btn-back { background: transparent; border: none; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 32px; padding: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
