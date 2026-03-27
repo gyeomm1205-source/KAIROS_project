@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import logging
 from datetime import datetime, timezone
 import uuid
 import httpx
@@ -21,6 +22,8 @@ from app.services.errors import AppError
 from app.services.qdrant_client import close_qdrant_client, get_qdrant_client, init_collections
 from app.services.profile_analyzer import start_github_collection, start_velog_and_analysis
 from pydantic import BaseModel
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -220,6 +223,11 @@ async def handle_app_error(request: Request, exc: AppError) -> JSONResponse:
 
 @app.exception_handler(RequestValidationError)
 async def handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.warning(
+        "Request validation error path=%s errors=%s",
+        request.url.path,
+        exc.errors(),
+    )
     body = ErrorResponse(
         code="COMMON-002",
         message="Invalid request value.",
