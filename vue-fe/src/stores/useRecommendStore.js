@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getRecommendations, getRecommendationDetail, getCalendar, postQuizSessionStart, postQuizAnswer, postQuizComplete } from '@/api/aiApi'
+import { getRecommendations, getRecommendationDetail, getCurriculumReason, getCalendar, postQuizSessionStart, postQuizAnswer, postQuizComplete } from '@/api/aiApi'
 
 export const useRecommendStore = defineStore('recommend', () => {
   const isLoading = ref(false)
@@ -65,6 +65,7 @@ export const useRecommendStore = defineStore('recommend', () => {
   ])
 
   const recommendationDetail = ref(null)
+  const curriculumReason = ref(null)
   const selectedCurriculumNodes = ref([])
 
   const recentFlow = ref([
@@ -237,6 +238,18 @@ export const useRecommendStore = defineStore('recommend', () => {
     }
   }
 
+  const loadCurriculumReason = async (curriculumId) => {
+    try {
+      const { data } = await getCurriculumReason(curriculumId)
+      curriculumReason.value = data
+      return data
+    } catch (e) {
+      console.error('curriculum reason 조회 실패:', e)
+      curriculumReason.value = null
+      return null
+    }
+  }
+
   const getMonthRange = (startDate, endDate) => {
     const start = startDate ? new Date(startDate) : new Date()
     const end = endDate ? new Date(endDate) : start
@@ -368,6 +381,7 @@ export const useRecommendStore = defineStore('recommend', () => {
     isLoading, isSubmitting,
     recentActivities,
     recommendationDetail,
+    curriculumReason,
     selectedCurriculumNodes,
     recentFlow,
     missions,
@@ -376,6 +390,7 @@ export const useRecommendStore = defineStore('recommend', () => {
     quizResults, quizTotalScore, quizCurriculumId,
     loadRecommendations,
     loadRecommendationDetail,
+    loadCurriculumReason,
     loadCurriculumNodes,
     startQuizSession, submitQuizAnswer, completeQuizSession,
   }
