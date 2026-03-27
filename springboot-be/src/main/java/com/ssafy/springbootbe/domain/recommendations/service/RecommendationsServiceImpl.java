@@ -308,7 +308,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         return activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(userId).stream()
                 .map(activity -> DailyRecommendationGenerateRequest.RecentActivity.builder()
                         .activityType(mapActivityType(activity.getActivityType()))
-                        .category(activity.getCategory() == null ? null : activity.getCategory().name())
+                        .category(activity.getCategory() == null ? "기타" : activity.getCategory().name())
                         .title(activity.getTitle())
                         .description(activity.getDescription())
                         .activityDate(activity.getActivityDate())

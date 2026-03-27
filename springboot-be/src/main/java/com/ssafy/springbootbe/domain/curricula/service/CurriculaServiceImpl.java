@@ -410,7 +410,7 @@ public class CurriculaServiceImpl implements CurriculaService {
         return activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(userId).stream()
                 .map(activity -> RecentActivityDto.builder()
                         .activityType(mapActivityType(activity.getActivityType()))
-                        .category(activity.getCategory() == null ? null : activity.getCategory().name())
+                        .category(activity.getCategory() == null ? "기타" : activity.getCategory().name())
                         .title(activity.getTitle())
                         .description(activity.getDescription())
                         .activityDate(activity.getActivityDate() == null ? null : activity.getActivityDate().toString())
