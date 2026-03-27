@@ -413,7 +413,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                         .category(activity.getCategory() == null ? null : activity.getCategory().name())
                         .title(activity.getTitle())
                         .description(activity.getDescription())
-                        .activityDate(activity.getActivityDate())
+                        .activityDate(activity.getActivityDate() == null ? null : activity.getActivityDate().toString())
                         .techStacks(activityHistoryTechStackRepository
                                 .findByActivityHistoryActivityHistoryId(activity.getActivityHistoryId()).stream()
                                 .map(techStack -> techStack.getTechStack().getTechName())
