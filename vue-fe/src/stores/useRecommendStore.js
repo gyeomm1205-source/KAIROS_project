@@ -21,6 +21,8 @@ export const useRecommendStore = defineStore('recommend', () => {
     return ''
   }
 
+  const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms))
+
   const recentActivities = ref([
     {
       id: "rsc",
@@ -151,7 +153,28 @@ export const useRecommendStore = defineStore('recommend', () => {
     isLoading.value = true
     try {
       references.value = []
-      const { data } = await getRecommendationDetail(curriculumId)
+      const maxAttempts = 3
+      let data = null
+
+      for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+        try {
+          const response = await getRecommendationDetail(curriculumId)
+          data = response.data
+          break
+        } catch (error) {
+          const status = error?.response?.status
+          if (status === 404 && attempt < maxAttempts) {
+            await sleep(1200)
+            continue
+          }
+          throw error
+        }
+      }
+
+      if (!data) {
+        throw new Error('recommendation detail 응답이 비어 있습니다.')
+      }
+
       recommendationDetail.value = data
 
       if (data.currentStatus?.topSkills?.length > 0) {
@@ -177,7 +200,7 @@ export const useRecommendStore = defineStore('recommend', () => {
       }
 
       if (data.references && data.references.length > 0) {
-        references.value = data.references.map(r => ({
+        references.value = data.references.slice(0, 2).map(r => ({
           title: r.title,
           reason: r.recommendationReason,
           type: r.referenceType,
