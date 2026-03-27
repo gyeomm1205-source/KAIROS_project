@@ -158,10 +158,11 @@ def _retrieve_from_qdrant(request: RecommendationRequest) -> list[dict[str, Any]
     try:
         client = get_qdrant_client()
         query_vector = embed_text(query_text)
-        results = client.search(
+        results = client.query_points(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_vector=query_vector,
+            query=query_vector,
             limit=_MAX_CANDIDATES,
+            with_payload=True,
         )
         candidates = [
             {
@@ -173,7 +174,7 @@ def _retrieve_from_qdrant(request: RecommendationRequest) -> list[dict[str, Any]
                 "recommendation_reason": "",  # LLM이 채워줌
                 "score":          hit.score,
             }
-            for hit in results
+            for hit in results.points
             if (hit.payload or {}).get("title")
         ]
         logger.info("[_retrieve_from_qdrant] %d개 후보 검색", len(candidates))
@@ -465,10 +466,11 @@ def _retrieve_from_qdrant_raw(query_text: str, level: UserLevel) -> list[dict[st
     try:
         client = get_qdrant_client()
         query_vector = embed_text(target_query)
-        results = client.search(
+        results = client.query_points(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_vector=query_vector,
+            query=query_vector,
             limit=_MAX_CANDIDATES,
+            with_payload=True,
         )
         candidates = [
             {
@@ -480,7 +482,7 @@ def _retrieve_from_qdrant_raw(query_text: str, level: UserLevel) -> list[dict[st
                 "recommendation_reason": "",
                 "score":          hit.score,
             }
-            for hit in results
+            for hit in results.points
             if (hit.payload or {}).get("title")
         ]
         return candidates
