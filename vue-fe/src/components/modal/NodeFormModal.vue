@@ -323,7 +323,7 @@ function confirmDelete() {
   width: 100%; max-width: 600px; max-height: 88vh;
   display: flex; flex-direction: column;
   background: var(--bg-base);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border); border-radius: 12px;
   overflow: hidden;
   animation: pop-in 0.32s cubic-bezier(0.16, 1, 0.3, 1);
 }
@@ -352,7 +352,7 @@ function confirmDelete() {
 .btn-icon {
   width: 32px; height: 32px;
   display: flex; align-items: center; justify-content: center;
-  background: transparent; border: 1px solid var(--border);
+  background: transparent; border: 1px solid var(--border); border-radius: 8px;
   color: var(--text-muted); font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
@@ -490,7 +490,7 @@ input::-webkit-calendar-picker-indicator {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 16px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border); border-radius: 8px;
   color: var(--text-muted);
   font-size: 12px; font-weight: 800; letter-spacing: 0.04em;
   cursor: pointer; transition: all 0.2s;
@@ -501,7 +501,7 @@ input::-webkit-calendar-picker-indicator {
 .btn-cancel {
   padding: 10px 20px;
   background: transparent;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border); border-radius: 8px;
   color: var(--text-muted);
   font-size: 12px; font-weight: 800; letter-spacing: 0.06em;
   cursor: pointer; transition: all 0.2s;
@@ -513,7 +513,7 @@ input::-webkit-calendar-picker-indicator {
   display: flex; align-items: center; gap: 6px;
   padding: 10px 24px;
   background: var(--clr-primary);
-  border: 1px solid var(--clr-primary);
+  border: 1px solid var(--clr-primary); border-radius: 8px;
   color: var(--bg-base);
   font-size: 12px; font-weight: 900; letter-spacing: 0.06em;
   cursor: pointer; transition: all 0.2s;
