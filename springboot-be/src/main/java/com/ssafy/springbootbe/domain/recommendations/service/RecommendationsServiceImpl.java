@@ -25,8 +25,10 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTec
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumTechStack;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import com.ssafy.springbootbe.persistence.schedule.repository.UserScheduleRepository;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
@@ -73,6 +75,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
     private final CurriculumRepository curriculumRepository;
     private final CurriculumNodeRepository curriculumNodeRepository;
+    private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final UserTechStackRepository userTechStackRepository;
     private final TechStackRepository techStackRepository;
     private final ActivityHistoryRepository activityHistoryRepository;
@@ -96,6 +99,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     public RecommendationListResponse findRecommendations(Long userId) {
         List<Curriculum> curricula = findCurricula(userId);
         Map<Long, List<CurriculumNode>> nodesByCurriculumId = aggregateCurriculumNodes(userId, curricula);
+        Map<Long, List<TechStackInfo>> techStacksByCurriculumId = aggregateCurriculumTechStacks(curricula);
 
         List<RecommendationListItemResponse> items = curricula.stream()
                 .map(curriculum -> {
@@ -113,7 +117,10 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                             ))
                             .startDate(findStartDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
                             .endDate(findEndDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
-                            .techStacks(buildCurriculumTechStacks(recommendationPayload))
+                            .techStacks(resolveCurriculumTechStacks(
+                                    techStacksByCurriculumId.get(curriculum.getCurriculumId()),
+                                    recommendationPayload
+                            ))
                             .hasRecommendation(recommendationPayload != null)
                             .build();
                 })
@@ -371,11 +378,34 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         }
     }
 
-    private List<TechStackInfo> buildCurriculumTechStacks(RecommendationCachePayload recommendationPayload) {
+    private Map<Long, List<TechStackInfo>> aggregateCurriculumTechStacks(List<Curriculum> curricula) {
+        if (curricula.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> curriculumIds = curricula.stream()
+                .map(Curriculum::getCurriculumId)
+                .toList();
+
+        Map<Long, List<TechStackInfo>> techStacksByCurriculumId = new HashMap<>();
+        for (CurriculumTechStack link : curriculumTechStackRepository.findByCurriculumCurriculumIdIn(curriculumIds)) {
+            techStacksByCurriculumId
+                    .computeIfAbsent(link.getCurriculum().getCurriculumId(), ignored -> new ArrayList<>())
+                    .add(TechStackInfo.from(link.getTechStack()));
+        }
+        return techStacksByCurriculumId;
+    }
+
+    private List<TechStackInfo> resolveCurriculumTechStacks(
+            List<TechStackInfo> persistedTechStacks,
+            RecommendationCachePayload recommendationPayload) {
+        if (persistedTechStacks != null && !persistedTechStacks.isEmpty()) {
+            return persistedTechStacks;
+        }
+
         if (recommendationPayload == null
                 || recommendationPayload.getCurrentStatus() == null
-                || recommendationPayload.getCurrentStatus().getTopSkills() == null
-                || recommendationPayload.getCurrentStatus().getTopSkills().isEmpty()) {
+                || recommendationPayload.getCurrentStatus().getTopSkills() == null) {
             return List.of();
         }
 

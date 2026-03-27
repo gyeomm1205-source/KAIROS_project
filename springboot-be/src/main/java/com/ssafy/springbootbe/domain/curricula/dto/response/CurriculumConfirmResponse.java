@@ -18,5 +18,6 @@ public class CurriculumConfirmResponse {
     private Long curriculumId;
     private CurriculumStatus status;
     private LocalDateTime createdAt;
+    private List<String> techStacks;
     private List<ConfirmNodeDto> nodes;
 }

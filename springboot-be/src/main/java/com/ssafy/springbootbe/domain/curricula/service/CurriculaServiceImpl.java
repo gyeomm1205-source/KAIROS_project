@@ -32,15 +32,18 @@ import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNodeCalendarSync;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumRecommendationReason;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumTechStack;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeCalendarSyncRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRecommendationReasonRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import com.ssafy.springbootbe.persistence.oauth.entity.OAuthAccount;
 import com.ssafy.springbootbe.persistence.oauth.repository.OAuthAccountRepository;
 import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
+import com.ssafy.springbootbe.persistence.techstack.repository.TechStackRepository;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import com.ssafy.springbootbe.persistence.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -70,9 +73,11 @@ public class CurriculaServiceImpl implements CurriculaService {
     private final CurriculumNodeRepository curriculumNodeRepository;
     private final CurriculumNodeCalendarSyncRepository curriculumNodeCalendarSyncRepository;
     private final CurriculumRecommendationReasonRepository curriculumRecommendationReasonRepository;
+    private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final UserRepository userRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
+    private final TechStackRepository techStackRepository;
     private final GoogleCalendarClientService googleCalendarClientService;
     private final OAuthTokenCryptoService oAuthTokenCryptoService;
     private final AIRestClient aiRestClient;
@@ -121,6 +126,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .curriculumPreviewKey(previewKey)
                 .duration(duration)
                 .recommendationReason(aiResponse.getRecommendationReason())
+                .techStacks(aiResponse.getTechStacks())
                 .nodes(aiResponse.getNodes())
                 .build();
     }
@@ -153,6 +159,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .duration(duration)
                 .build();
         curriculumRepository.save(curriculum);
+        saveCurriculumTechStacks(curriculum, aiResponse.getTechStacks());
 
         PreviewReasonDto reason = aiResponse.getRecommendationReason();
         if (reason != null) {
@@ -221,6 +228,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .curriculumId(curriculum.getCurriculumId())
                 .status(curriculum.getStatus())
                 .createdAt(curriculum.getCreatedAt())
+                .techStacks(aiResponse.getTechStacks())
                 .nodes(confirmNodes)
                 .build();
     }
@@ -399,6 +407,29 @@ public class CurriculaServiceImpl implements CurriculaService {
             redisService.save(previewKey, json, 30L, TimeUnit.MINUTES);
         } catch (JacksonException e) {
             throw new IllegalStateException("커리큘럼 미리보기 Redis 저장 실패", e);
+        }
+    }
+
+    private void saveCurriculumTechStacks(Curriculum curriculum, List<String> techStacks) {
+        if (techStacks == null || techStacks.isEmpty()) {
+            return;
+        }
+
+        List<CurriculumTechStack> links = techStacks.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .map(techStackRepository::findByTechNameIgnoreCase)
+                .flatMap(java.util.Optional::stream)
+                .map(techStack -> CurriculumTechStack.builder()
+                        .curriculum(curriculum)
+                        .techStack(techStack)
+                        .build())
+                .toList();
+
+        if (!links.isEmpty()) {
+            curriculumTechStackRepository.saveAll(links);
         }
     }
 }

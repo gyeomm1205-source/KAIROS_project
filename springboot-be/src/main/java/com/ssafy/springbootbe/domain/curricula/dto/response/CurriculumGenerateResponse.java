@@ -16,5 +16,6 @@ import java.util.List;
 public class CurriculumGenerateResponse {
 
     private PreviewReasonDto recommendationReason;
+    private List<String> techStacks;
     private List<PreviewNodeDto> nodes;
 }

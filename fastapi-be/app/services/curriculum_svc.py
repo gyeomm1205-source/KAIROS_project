@@ -67,6 +67,10 @@ class _CurriculumOutput(BaseModel):
     curriculum_rationale: str = Field(
         description="일정 배치 근거. 캘린더 이벤트 회피, 학습량 분산 등 1~2문장."
     )
+    tech_stacks: list[str] = Field(
+        default_factory=list,
+        description="이 커리큘럼이 주로 다루는 핵심 기술 스택 또는 개념 키워드 1~5개. 예: Docker, Kubernetes, React, RAG"
+    )
     nodes: list[_CurriculumNodeOutput] = Field(
         description="날짜별 학습 노드 목록. 시작일부터 순서대로."
     )
@@ -123,6 +127,10 @@ _ONBOARDING_USER_TEMPLATE = """\
 [노드 작성 기준]
 - title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
 - description: 위 분석 결과를 통해 파악된 사용자의 현재 수준에 딱 맞춰서, 이 학습 노드에서 수행해야 할 구체적인 실천 목표와 가이드를 2~3문장으로 제시하세요. 템플릿처럼 딱딱하게 쓰지 말고, 멘토가 조언하듯 자연스럽게 작성하세요.\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
 """
 
 # ── AUTO 프롬프트 ────────────────────────────────────────────────────────────
@@ -154,6 +162,10 @@ _AUTO_USER_TEMPLATE = """\
 [노드 작성 기준]
 - title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
 - description: 위 분석 결과를 통해 파악된 사용자의 현재 수준에 딱 맞춰서, 이 학습 노드에서 수행해야 할 구체적인 실천 목표와 가이드를 2~3문장으로 제시하세요. 템플릿처럼 딱딱하게 쓰지 말고, 멘토가 조언하듯 자연스럽게 작성하세요.\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
 """
 
 # ── MANUAL 프롬프트 ──────────────────────────────────────────────────────────
@@ -186,6 +198,10 @@ _MANUAL_USER_TEMPLATE = """\
   완전히 처음 접하는 사람에게 추천할 학습: (구체적 행동)
   가볍게 다루거나 공부해본 수준의 사람에게 추천할 학습: (구체적 행동)
   실제로 해당 기술을 써서 프로젝트를 진행해본 경험이 있는 사람에게 추천할 실습: (구체적 행동)\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
 """
 
 
@@ -389,6 +405,7 @@ def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
         user_context="프로필 기반으로 맞춤 커리큘럼을 구성했습니다.",
         ai_interpretation=f"{topic} 학습을 개념 → 실습 → 심화 순서로 편성했습니다.",
         curriculum_rationale="일정 제약을 반영해 학습 가능한 날짜에만 노드를 배치했습니다.",
+        tech_stacks=_derive_template_tech_stacks(request),
         nodes=nodes,
     )
 
@@ -410,7 +427,30 @@ def _assemble_response(output: _CurriculumOutput) -> CurriculumResponse:
         )
         for n in output.nodes
     ]
-    return CurriculumResponse(recommendation_reason=reason, nodes=nodes)
+    return CurriculumResponse(
+        recommendation_reason=reason,
+        tech_stacks=output.tech_stacks[:5],
+        nodes=nodes,
+    )
+    
+
+def _derive_template_tech_stacks(request: CurriculumRequest) -> list[str]:
+    tech_stacks: list[str] = []
+
+    if request.curriculum_type == CurriculumType.onboarding and request.analysis_data:
+        tech_stacks.extend(t.tech_name for t in request.analysis_data.tech_details[:5])
+    elif request.curriculum_type == CurriculumType.manual and request.manual_generation and request.manual_generation.topic:
+        tech_stacks.append(request.manual_generation.topic)
+
+    if not tech_stacks:
+        tech_stacks.extend(stat.skill for stat in request.user_tech_stacks[:5])
+
+    normalized: list[str] = []
+    for tech in tech_stacks:
+        value = (tech or "").strip()
+        if value and value not in normalized:
+            normalized.append(value)
+    return normalized[:5]
 
 
 # ---------------------------------------------------------------------------

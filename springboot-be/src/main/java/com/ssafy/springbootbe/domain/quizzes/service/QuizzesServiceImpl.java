@@ -32,7 +32,9 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRep
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumTechStack;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumTechStackRepository;
 import com.ssafy.springbootbe.persistence.quiz.entity.QuizQuestion;
 import com.ssafy.springbootbe.persistence.quiz.entity.QuizSession;
 import com.ssafy.springbootbe.persistence.quiz.repository.QuizQuestionRepository;
@@ -76,6 +78,7 @@ public class QuizzesServiceImpl implements QuizzesService {
     private static final String FAST_API_LEVEL_SENIOR = "SENIOR";
 
     private final CurriculumRepository curriculumRepository;
+    private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final QuizSessionRepository quizSessionRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final UserTechStackRepository userTechStackRepository;
@@ -257,6 +260,7 @@ public class QuizzesServiceImpl implements QuizzesService {
 
     private List<String> buildTargetTechStacks(Long userId, Long curriculumId) {
         LinkedHashSet<String> techStacks = new LinkedHashSet<>();
+        addCurriculumTechStacks(curriculumId, techStacks);
         addRecommendationTopSkills(userId, curriculumId, techStacks);
 
         if (techStacks.isEmpty()) {
@@ -310,6 +314,16 @@ public class QuizzesServiceImpl implements QuizzesService {
         } catch (RuntimeException e) {
             throw new QuizRedisException("추천 Redis 조회에 실패했습니다. curriculumId=" + curriculumId, e);
         }
+    }
+
+    private void addCurriculumTechStacks(Long curriculumId, LinkedHashSet<String> techStacks) {
+        curriculumTechStackRepository.findByCurriculumCurriculumId(curriculumId).stream()
+                .map(CurriculumTechStack::getTechStack)
+                .map(TechStack::getTechName)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .forEach(techStacks::add);
     }
 
     private String mapUserLevel(UserPosition position) {
@@ -676,6 +690,7 @@ public class QuizzesServiceImpl implements QuizzesService {
 
     private List<String> buildQuizRelatedTechStacks(Long userId, Long curriculumId) {
         LinkedHashSet<String> techStacks = new LinkedHashSet<>();
+        addCurriculumTechStacks(curriculumId, techStacks);
         addRecommendationTopSkills(userId, curriculumId, techStacks);
 
         if (techStacks.isEmpty()) {
