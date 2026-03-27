@@ -1034,9 +1034,7 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 8px; }
 .badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
 .badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
-.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
-.option-subtitle { font-size: 12px; color: var(--text-muted); margin: 2px 0 4px; font-weight: 500; }
-.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }
 .curriculum-items::-webkit-scrollbar { display: none; }
 .curriculum-option-footer { flex-shrink: 0; border-top: 1px solid var(--border); margin-top: auto; padding-top: 16px; }
