@@ -83,11 +83,20 @@
 
             <div class="flow-box">
               <div class="flow-title">{{ recommendationFlowTitle }}</div>
-              <div class="flow-track scroll-x">
+              <div ref="flowTrackRef" class="flow-track scroll-x">
                 <template v-for="(flow, index) in recommendationFlow" :key="index">
                   <div class="flow-item">
-                    <span v-if="flow.status === 'next'" class="flow-node dashed-node">{{ flow.label }}</span>
-                    <span v-else class="flow-node" :class="'status-' + flow.status">{{ flow.label }}</span>
+                    <span
+                      v-if="flow.status === 'next'"
+                      class="flow-node dashed-node"
+                      :data-flow-current="index === activeFlowIndex ? 'true' : null"
+                    >{{ flow.label }}</span>
+                    <span
+                      v-else
+                      class="flow-node"
+                      :class="'status-' + flow.status"
+                      :data-flow-current="index === activeFlowIndex ? 'true' : null"
+                    >{{ flow.label }}</span>
                     <span v-if="index < recommendationFlow.length - 1" class="flow-line"></span>
                   </div>
                 </template>
@@ -298,16 +307,16 @@
           <!-- 옵션 A -->
           <div class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-a">추천</span>
-              <h4 class="option-title">{{ selectedActivityCard?.title || '추천 학습 흐름' }}</h4>
-              <p class="option-subtitle">{{ recommendationSubLabel }}</p>
-              <span class="option-meta"><i class="fas fa-clock"/> {{ recommendationTimeLabel }}</span>
+              <span class="option-badge badge-a">옵션 A</span>
+              <h4 class="option-title">단기 집중 코스</h4>
+              <p class="option-subtitle">약점 보완형 (부족한 기술 중심)</p>
+              <span class="option-meta"><i class="fas fa-clock"/> 3일 · 약 5시간</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in recommendedNextNodes" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in curriculumA" :key="i" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
-                  <span class="font-bold text-sm">{{ i + 1 }}단계</span>
-                  <span class="text-muted text-xs"><i class="fas fa-sparkles"/> 추천 흐름</span>
+                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
                 <p class="text-muted text-sm">{{ item.desc }}</p>
@@ -322,16 +331,16 @@
 
           <div class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-b">레퍼런스</span>
-              <h4 class="option-title">글쓰기 참고 자료</h4>
-              <p class="option-subtitle">추천받은 레퍼런스를 바탕으로 학습 내용을 정리합니다</p>
-              <span class="option-meta"><i class="fas fa-book"/> {{ store.references.length }}개 자료</span>
+              <span class="option-badge badge-b">옵션 B</span>
+              <h4 class="option-title">심화 마스터 코스</h4>
+              <p class="option-subtitle">강점 심화형 (잘하는 기술 심화)</p>
+              <span class="option-meta"><i class="fas fa-clock"/> 5일 · 약 9시간</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in referencePreviewItems" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in curriculumB" :key="i" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
-                  <span class="font-bold text-sm">{{ item.type }}</span>
-                  <span class="text-muted text-xs"><i class="fas fa-link"/> 참고 자료</span>
+                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
                 <p class="text-muted text-sm">{{ item.desc }}</p>
@@ -349,7 +358,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecommendStore } from '@/stores/useRecommendStore'
 import AppSidebar from '@/components/AppSidebar.vue'
@@ -372,6 +381,21 @@ const activityTypeConfig = {
 const selectedActivity = ref(null)
 const showReasonModal = ref(false)
 const showCurriculumModal = ref(false)
+const flowTrackRef = ref(null)
+
+const curriculumA = [
+  { title: 'RSC 핵심 개념 이해', desc: 'Server Component와 Client Component의 차이와 경계선을 익힙니다.', duration: '1시간 30분' },
+  { title: '데이터 패칭 패턴 실습', desc: 'fetch, cache, revalidate 패턴을 직접 구현해봅니다.', duration: '2시간' },
+  { title: 'RSC 실전 적용', desc: '기존 Next.js 프로젝트에 RSC를 점진적으로 도입합니다.', duration: '1시간 30분' },
+]
+
+const curriculumB = [
+  { title: 'RSC 이론 기반 다지기', desc: 'React 렌더링 모델과 RSC의 설계 철학을 이해합니다.', duration: '1시간 30분' },
+  { title: 'Streaming & Suspense', desc: 'Progressive rendering과 Suspense 경계를 활용합니다.', duration: '2시간' },
+  { title: '고급 데이터 패칭 전략', desc: 'Server Action, cache 태깅, on-demand revalidation을 익힙니다.', duration: '2시간' },
+  { title: '성능 최적화 심화', desc: 'Bundle 분석, PPR, 렌더링 결정 기준을 학습합니다.', duration: '1시간 30분' },
+  { title: '프로덕션 마이그레이션', desc: '실제 App Router 마이그레이션 전략과 트레이드오프를 정리합니다.', duration: '2시간' },
+]
 
 const activeMission = ref(null)
 const quizStep = ref("intro") // 'intro' | 'question' | 'result'
@@ -393,32 +417,81 @@ const recommendationSubLabel = computed(() => {
   return '맞춤 추천 · 완료한 커리큘럼 회고 기반'
 })
 
-const recommendationSummary = computed(() =>
-  recommendationReason.value.summary
-  || currentStatus.value.summary
-  || '현재 커리큘럼과 연결되는 다음 학습 흐름을 추천합니다.'
-)
+const curriculumNodes = computed(() => store.selectedCurriculumNodes || [])
+
+const todayDateString = computed(() => {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month = String(today.getMonth() + 1).padStart(2, '0')
+  const day = String(today.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+})
+
+const formatFlowNodeLabel = (node) => {
+  if (!node?.scheduledDate) return node?.title || ''
+  const [, month, day] = node.scheduledDate.split('-')
+  return `${Number(month)}/${Number(day)} · ${node.title}`
+}
+
+const currentCurriculumIndex = computed(() => {
+  if (!curriculumNodes.value.length) return -1
+
+  const exactIndex = curriculumNodes.value.findIndex(node => node.scheduledDate === todayDateString.value)
+  if (exactIndex !== -1) return exactIndex
+
+  const upcomingIndex = curriculumNodes.value.findIndex(node => node.scheduledDate > todayDateString.value)
+  if (upcomingIndex !== -1) return upcomingIndex
+
+  return curriculumNodes.value.length - 1
+})
+
+const recommendationSummary = computed(() => {
+  if (curriculumNodes.value.length) {
+    const currentNode = curriculumNodes.value[currentCurriculumIndex.value] || curriculumNodes.value[0]
+    const currentDay = currentCurriculumIndex.value >= 0 ? currentCurriculumIndex.value + 1 : 1
+    const totalDays = curriculumNodes.value.length
+
+    if (todayDateString.value > (curriculumNodes.value[curriculumNodes.value.length - 1]?.scheduledDate || '')) {
+      return `이 커리큘럼은 총 ${totalDays}일 흐름으로 완료된 상태예요. 진행했던 학습 노드를 다시 확인하고 퀴즈나 레퍼런스로 복습을 이어갈 수 있습니다.`
+    }
+
+    return `현재 커리큘럼의 ${currentDay}일차 위치는 "${currentNode?.title || '학습 노드'}"입니다. 날짜 순서대로 이어지는 전체 흐름 안에서 지금 학습할 지점을 바로 확인할 수 있어요.`
+  }
+
+  return recommendationReason.value.summary
+    || currentStatus.value.summary
+    || '현재 커리큘럼 흐름을 불러오는 중입니다.'
+})
 
 const recommendationFlowTitle = computed(() =>
-  detailData.value.nextNodes?.length ? '추천 학습 흐름' : '현재 핵심 기술'
+  curriculumNodes.value.length ? '추천 학습 흐름' : '현재 핵심 기술'
 )
 
 const recommendationFlow = computed(() => {
+  if (curriculumNodes.value.length) {
+    const currentIndex = currentCurriculumIndex.value
+
+    return curriculumNodes.value.map((node, index) => {
+      let status = 'next'
+
+      if (todayDateString.value > (curriculumNodes.value[curriculumNodes.value.length - 1]?.scheduledDate || '')) {
+        status = 'done'
+      } else if (currentIndex === -1) {
+        status = index === 0 ? 'in-progress' : 'next'
+      } else if (index < currentIndex) {
+        status = 'done'
+      } else if (index === currentIndex) {
+        status = 'in-progress'
+      }
+
+      return {
+        label: formatFlowNodeLabel(node),
+        status,
+      }
+    })
+  }
+
   const flow = []
-
-  if (selectedActivityCard.value?.title) {
-    flow.push({
-      label: selectedActivityCard.value.title,
-      status: selectedActivityCard.value.status === 'done' ? 'done' : 'in-progress',
-    })
-  }
-
-  if (detailData.value.nextNodes?.length) {
-    detailData.value.nextNodes.forEach(node => {
-      flow.push({ label: node.title, status: 'next' })
-    })
-    return flow
-  }
 
   if (currentStatus.value.topSkills?.length) {
     currentStatus.value.topSkills.forEach((skill, index) => {
@@ -429,6 +502,15 @@ const recommendationFlow = computed(() => {
   return flow
 })
 
+const activeFlowIndex = computed(() => {
+  if (curriculumNodes.value.length) {
+    return currentCurriculumIndex.value >= 0 ? currentCurriculumIndex.value : 0
+  }
+
+  const inProgressIndex = recommendationFlow.value.findIndex(flow => flow.status === 'in-progress')
+  return inProgressIndex >= 0 ? inProgressIndex : 0
+})
+
 const recommendationTimeLabel = computed(() => {
   if (primaryQuiz.value?.expectedMinutes) return `추천 퀴즈 ${primaryQuiz.value.expectedMinutes}분`
   if (store.references.length) return `추천 자료 ${store.references.length}개`
@@ -436,6 +518,13 @@ const recommendationTimeLabel = computed(() => {
 })
 
 const recommendationStatusLabel = computed(() => {
+  if (curriculumNodes.value.length) {
+    if (todayDateString.value > (curriculumNodes.value[curriculumNodes.value.length - 1]?.scheduledDate || '')) {
+      return '전체 흐름 완료'
+    }
+    return `현재 ${currentCurriculumIndex.value + 1}일차 진행 위치`
+  }
+
   if (currentStatus.value.summary) return currentStatus.value.summary
   return selectedActivityCard.value?.status === 'done' ? '완료한 흐름 기반' : '진행 중인 흐름 기반'
 })
@@ -459,43 +548,47 @@ const quizExpectedMinutesLabel = computed(() =>
   primaryQuiz.value?.expectedMinutes ? `약 ${primaryQuiz.value.expectedMinutes}분` : '약 15분'
 )
 
-const recommendedNextNodes = computed(() => {
-  if (detailData.value.nextNodes?.length) {
-    return detailData.value.nextNodes.map(node => ({
-      title: node.title,
-      desc: recommendationReason.value.detail || currentStatus.value.detail || '현재 흐름에 맞춘 다음 학습 단계입니다.',
-    }))
-  }
-
-  return [{
-    title: selectedActivityCard.value?.title || '추천 학습 흐름',
-    desc: recommendationSummary.value,
-  }]
-})
-
-const referencePreviewItems = computed(() => {
-  if (store.references.length) {
-    return store.references.slice(0, 3).map(ref => ({
-      title: ref.title,
-      desc: ref.reason,
-      type: ref.type,
-    }))
-  }
-
-  return [{
-    title: '추천 레퍼런스 준비 중',
-    desc: '선택한 커리큘럼에 맞는 참고 자료를 불러오는 중입니다.',
-    type: '안내',
-  }]
-})
-
 const selectActivity = async (activityId) => {
   selectedActivity.value = activityId
-  await store.loadRecommendationDetail(activityId)
+  const activity = store.recentActivities.find(item => item.id === activityId)
+
+  await Promise.all([
+    store.loadRecommendationDetail(activityId),
+    store.loadCurriculumNodes(activityId, activity?.startDate, activity?.endDate),
+  ])
 }
+
+const scrollFlowToCurrent = async () => {
+  await nextTick()
+
+  const container = flowTrackRef.value
+  if (!container) return
+
+  const currentNode = container.querySelector('[data-flow-current="true"]')
+  if (!currentNode) {
+    container.scrollLeft = 0
+    return
+  }
+
+  const targetLeft =
+    currentNode.offsetLeft - container.clientWidth / 2 + currentNode.clientWidth / 2
+
+  container.scrollTo({
+    left: Math.max(0, targetLeft),
+    behavior: 'smooth',
+  })
+}
+
+watch(
+  () => [selectedActivity.value, recommendationFlow.value.length, activeFlowIndex.value],
+  () => {
+    scrollFlowToCurrent()
+  }
+)
 
 const handleBack = () => {
   selectedActivity.value = null
+  store.selectedCurriculumNodes = []
   closeMission()
 }
 
