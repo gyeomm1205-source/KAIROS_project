@@ -64,12 +64,12 @@
                 <div class="icon-box-white"><i class="fas fa-lightbulb" /></div>
                 <div>
                   <div class="panel-title-group">
-                    <h3 class="panel-title">React Server Components 심화 학습</h3>
+                    <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
                     <button class="btn-primary-small" @click="showCurriculumModal = true">
                       <i class="fas fa-book-open" /> 커리큘럼 추천받기
                     </button>
                   </div>
-                  <span class="panel-sub">맞춤 추천 · 최근 학습 흐름 기반</span>
+                  <span class="panel-sub">{{ recommendationSubLabel }}</span>
                 </div>
               </div>
               <div class="flex-align gap-sm">
@@ -78,33 +78,29 @@
             </div>
 
             <p class="panel-desc large-desc">
-              최근 React 상태관리 학습을 완료하고, Next.js App Router 기반 프로젝트를 진행하고 있습니다. 
-              현재 기술 흐름에서 자연스럽게 이어지는 React Server Components를 다음 학습 주제로 추천합니다.
+              {{ recommendationSummary }}
             </p>
 
             <div class="flow-box">
-              <div class="flow-title">최근 학습 흐름</div>
+              <div class="flow-title">{{ recommendationFlowTitle }}</div>
               <div class="flow-track scroll-x">
-                <template v-for="(flow, index) in store.recentFlow" :key="index">
+                <template v-for="(flow, index) in recommendationFlow" :key="index">
                   <div class="flow-item">
-                    <span class="flow-node" :class="'status-' + flow.status">{{ flow.label }}</span>
-                    <span v-if="index < store.recentFlow.length - 1" class="flow-line"></span>
+                    <span v-if="flow.status === 'next'" class="flow-node dashed-node">{{ flow.label }}</span>
+                    <span v-else class="flow-node" :class="'status-' + flow.status">{{ flow.label }}</span>
+                    <span v-if="index < recommendationFlow.length - 1" class="flow-line"></span>
                   </div>
                 </template>
-                <div class="flow-item">
-                  <span class="flow-line"></span>
-                  <span class="flow-node dashed-node">RSC 학습</span>
-                </div>
               </div>
             </div>
 
             <div class="flex-footer">
               <div class="info-group">
-                <span class="info-text"><i class="fas fa-clock" /> 예상 소요: 4시간 40분 (5일)</span>
-                <span class="info-text"><i class="fas fa-chart-line" /> 난이도: 중급</span>
+                <span class="info-text"><i class="fas fa-clock" /> {{ recommendationTimeLabel }}</span>
+                <span class="info-text"><i class="fas fa-chart-line" /> {{ recommendationStatusLabel }}</span>
               </div>
               <div class="tag-group">
-                <span class="pill-tag tag-white" v-for="tag in ['React', 'SSR', 'Next.js']" :key="tag">
+                <span class="pill-tag tag-white" v-for="tag in recommendationTags" :key="tag">
                   <i v-if="hasTechIcon(tag)" :class="getTechIcon(tag)" class="tech-icon" />{{ tag }}
                 </span>
               </div>
@@ -170,16 +166,16 @@
                   <template v-if="quizStep === 'intro'">
                     <div class="info-box mb-md">
                       <div class="info-title"><i class="fas fa-brain" /> 이전 학습 맥락 기반 복습 퀴즈</div>
-                      <p>최근 학습한 React Server Components와 렌더링 흐름을 다시 떠올릴 수 있게 핵심 개념 위주로 구성했습니다.</p>
+                      <p>{{ quizIntroDescription }}</p>
                     </div>
                     <div class="grid-2 col-gap mb-md">
                       <div class="stat-box">
                         <span class="stat-lbl">예상 소요 시간</span>
-                        <span class="stat-val">약 15분</span>
+                        <span class="stat-val">{{ quizExpectedMinutesLabel }}</span>
                       </div>
                       <div class="stat-box">
                         <span class="stat-lbl">문항 수</span>
-                        <span class="stat-val">총 2문제</span>
+                        <span class="stat-val">총 {{ store.quizQuestions.length }}문제</span>
                       </div>
                     </div>
                     <button class="btn-primary-block" :disabled="store.isLoading" @click="handleQuizStart">
@@ -249,7 +245,7 @@
                           <span>{{ ref.freshness }}</span>
                           <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
                         </div>
-                        <button class="btn-text-muted"><i class="fas fa-external-link-alt" /> 보기</button>
+                        <button class="btn-text-muted" @click="openReference(ref.url)"><i class="fas fa-external-link-alt" /> 보기</button>
                       </div>
                     </div>
                   </div>
@@ -270,13 +266,21 @@
           <button class="btn-close" @click="showReasonModal = false"><i class="fas fa-times"/></button>
         </div>
         <div class="reason-content custom-scroll">
-          <div class="reason-item shadow-normal">
-            <div class="reason-item-header"><i class="fab fa-github" /><h4>GitHub 활동 분석</h4></div>
-            <p>최근 2주간 React의 <code>useMemo</code>와 <code>useCallback</code>을 활용한 렌더링 최적화 커밋이 15건 이상 발생했습니다. 프론트엔드 최적화의 기초를 충분히 다진 것으로 판단되어, 다음 단계인 SSR(서버 사이드 렌더링) 및 Next.js 도입을 추천합니다.</p>
+          <div class="reason-item shadow-normal" v-if="reasonSummary">
+            <div class="reason-item-header"><i class="fas fa-lightbulb" /><h4>추천 요약</h4></div>
+            <p>{{ reasonSummary }}</p>
           </div>
-          <div class="reason-item shadow-normal">
-            <div class="reason-item-header"><i class="fas fa-bullseye" /><h4>설문 및 목표</h4></div>
-            <p>희망 포지션을 <strong>'프론트엔드 개발자'</strong>로 설정하셨으며, 최근 시장에서 Next.js App Router 경험이 필수적 요구사항으로 떠오르고 있습니다.</p>
+          <div class="reason-item shadow-normal" v-if="reasonDetail">
+            <div class="reason-item-header"><i class="fas fa-bullseye" /><h4>추천 상세</h4></div>
+            <p>{{ reasonDetail }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-if="currentStatusDetail">
+            <div class="reason-item-header"><i class="fas fa-chart-line" /><h4>현재 학습 상태</h4></div>
+            <p>{{ currentStatusDetail }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-if="recommendationTags.length">
+            <div class="reason-item-header"><i class="fas fa-tags" /><h4>핵심 기술</h4></div>
+            <p>{{ recommendationTags.join(', ') }}</p>
           </div>
         </div>
         <div class="modal-actions mt-md"><button class="btn-primary" @click="showReasonModal = false">확인</button></div>
@@ -294,16 +298,16 @@
           <!-- 옵션 A -->
           <div class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-a">옵션 A</span>
-              <h4 class="option-title">단기 집중 코스</h4>
-              <p class="option-subtitle">약점 보완형 (부족한 기술 중심)</p>
-              <span class="option-meta"><i class="fas fa-clock"/> 3일 · 약 5시간</span>
+              <span class="option-badge badge-a">추천</span>
+              <h4 class="option-title">{{ selectedActivityCard?.title || '추천 학습 흐름' }}</h4>
+              <p class="option-subtitle">{{ recommendationSubLabel }}</p>
+              <span class="option-meta"><i class="fas fa-clock"/> {{ recommendationTimeLabel }}</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in curriculumA" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in recommendedNextNodes" :key="i" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
-                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
-                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                  <span class="font-bold text-sm">{{ i + 1 }}단계</span>
+                  <span class="text-muted text-xs"><i class="fas fa-sparkles"/> 추천 흐름</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
                 <p class="text-muted text-sm">{{ item.desc }}</p>
@@ -316,19 +320,18 @@
 
           <div class="curriculum-divider"></div>
 
-          <!-- 옵션 B -->
           <div class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-b">옵션 B</span>
-              <h4 class="option-title">심화 마스터 코스</h4>
-              <p class="option-subtitle">강점 심화형 (잘하는 기술 심화)</p>
-              <span class="option-meta"><i class="fas fa-clock"/> 5일 · 약 9시간</span>
+              <span class="option-badge badge-b">레퍼런스</span>
+              <h4 class="option-title">글쓰기 참고 자료</h4>
+              <p class="option-subtitle">추천받은 레퍼런스를 바탕으로 학습 내용을 정리합니다</p>
+              <span class="option-meta"><i class="fas fa-book"/> {{ store.references.length }}개 자료</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in curriculumB" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in referencePreviewItems" :key="i" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
-                  <span class="font-bold text-sm">{{ i + 1 }}일차</span>
-                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                  <span class="font-bold text-sm">{{ item.type }}</span>
+                  <span class="text-muted text-xs"><i class="fas fa-link"/> 참고 자료</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
                 <p class="text-muted text-sm">{{ item.desc }}</p>
@@ -370,25 +373,121 @@ const selectedActivity = ref(null)
 const showReasonModal = ref(false)
 const showCurriculumModal = ref(false)
 
-const curriculumA = [
-  { title: 'RSC 핵심 개념 이해', desc: 'Server Component와 Client Component의 차이와 경계선을 익힙니다.', duration: '1시간 30분' },
-  { title: '데이터 패칭 패턴 실습', desc: 'fetch, cache, revalidate 패턴을 직접 구현해봅니다.', duration: '2시간' },
-  { title: 'RSC 실전 적용', desc: '기존 Next.js 프로젝트에 RSC를 점진적으로 도입합니다.', duration: '1시간 30분' },
-]
-
-const curriculumB = [
-  { title: 'RSC 이론 기반 다지기', desc: 'React 렌더링 모델과 RSC의 설계 철학을 이해합니다.', duration: '1시간 30분' },
-  { title: 'Streaming & Suspense', desc: 'Progressive rendering과 Suspense 경계를 활용합니다.', duration: '2시간' },
-  { title: '고급 데이터 패칭 전략', desc: 'Server Action, cache 태깅, on-demand revalidation을 익힙니다.', duration: '2시간' },
-  { title: '성능 최적화 심화', desc: 'Bundle 분석, PPR, 렌더링 결정 기준을 학습합니다.', duration: '1시간 30분' },
-  { title: '프로덕션 마이그레이션', desc: '실제 App Router 마이그레이션 전략과 트레이드오프를 정리합니다.', duration: '2시간' },
-]
-
 const activeMission = ref(null)
 const quizStep = ref("intro") // 'intro' | 'question' | 'result'
 const currentQuizIndex = ref(0)
 const selectedOption = ref(null)
 const quizAnswers = ref([])
+
+const selectedActivityCard = computed(() =>
+  store.recentActivities.find(activity => activity.id === selectedActivity.value) || null
+)
+
+const detailData = computed(() => store.recommendationDetail || {})
+const recommendationReason = computed(() => detailData.value.recommendationReason || {})
+const currentStatus = computed(() => detailData.value.currentStatus || {})
+const primaryQuiz = computed(() => detailData.value.quizzes?.[0] || null)
+
+const recommendationSubLabel = computed(() => {
+  if (selectedActivityCard.value?.status === 'in-progress') return '맞춤 추천 · 현재 진행 중인 커리큘럼 기반'
+  return '맞춤 추천 · 완료한 커리큘럼 회고 기반'
+})
+
+const recommendationSummary = computed(() =>
+  recommendationReason.value.summary
+  || currentStatus.value.summary
+  || '현재 커리큘럼과 연결되는 다음 학습 흐름을 추천합니다.'
+)
+
+const recommendationFlowTitle = computed(() =>
+  detailData.value.nextNodes?.length ? '추천 학습 흐름' : '현재 핵심 기술'
+)
+
+const recommendationFlow = computed(() => {
+  const flow = []
+
+  if (selectedActivityCard.value?.title) {
+    flow.push({
+      label: selectedActivityCard.value.title,
+      status: selectedActivityCard.value.status === 'done' ? 'done' : 'in-progress',
+    })
+  }
+
+  if (detailData.value.nextNodes?.length) {
+    detailData.value.nextNodes.forEach(node => {
+      flow.push({ label: node.title, status: 'next' })
+    })
+    return flow
+  }
+
+  if (currentStatus.value.topSkills?.length) {
+    currentStatus.value.topSkills.forEach((skill, index) => {
+      flow.push({ label: skill, status: index === 0 ? 'in-progress' : 'done' })
+    })
+  }
+
+  return flow
+})
+
+const recommendationTimeLabel = computed(() => {
+  if (primaryQuiz.value?.expectedMinutes) return `추천 퀴즈 ${primaryQuiz.value.expectedMinutes}분`
+  if (store.references.length) return `추천 자료 ${store.references.length}개`
+  return '추천 정보 준비 중'
+})
+
+const recommendationStatusLabel = computed(() => {
+  if (currentStatus.value.summary) return currentStatus.value.summary
+  return selectedActivityCard.value?.status === 'done' ? '완료한 흐름 기반' : '진행 중인 흐름 기반'
+})
+
+const recommendationTags = computed(() =>
+  selectedActivityCard.value?.tags?.length
+    ? selectedActivityCard.value.tags
+    : (currentStatus.value.topSkills || [])
+)
+
+const reasonSummary = computed(() => recommendationReason.value.summary || '')
+const reasonDetail = computed(() => recommendationReason.value.detail || '')
+const currentStatusDetail = computed(() => currentStatus.value.detail || '')
+
+const quizIntroDescription = computed(() =>
+  primaryQuiz.value?.description
+  || '현재 추천 흐름을 바탕으로 핵심 개념을 점검할 수 있는 퀴즈입니다.'
+)
+
+const quizExpectedMinutesLabel = computed(() =>
+  primaryQuiz.value?.expectedMinutes ? `약 ${primaryQuiz.value.expectedMinutes}분` : '약 15분'
+)
+
+const recommendedNextNodes = computed(() => {
+  if (detailData.value.nextNodes?.length) {
+    return detailData.value.nextNodes.map(node => ({
+      title: node.title,
+      desc: recommendationReason.value.detail || currentStatus.value.detail || '현재 흐름에 맞춘 다음 학습 단계입니다.',
+    }))
+  }
+
+  return [{
+    title: selectedActivityCard.value?.title || '추천 학습 흐름',
+    desc: recommendationSummary.value,
+  }]
+})
+
+const referencePreviewItems = computed(() => {
+  if (store.references.length) {
+    return store.references.slice(0, 3).map(ref => ({
+      title: ref.title,
+      desc: ref.reason,
+      type: ref.type,
+    }))
+  }
+
+  return [{
+    title: '추천 레퍼런스 준비 중',
+    desc: '선택한 커리큘럼에 맞는 참고 자료를 불러오는 중입니다.',
+    type: '안내',
+  }]
+})
 
 const selectActivity = async (activityId) => {
   selectedActivity.value = activityId
@@ -442,6 +541,11 @@ const handleQuizSubmit = async () => {
     await store.completeQuizSession()
     quizStep.value = 'result'
   }
+}
+
+const openReference = (url) => {
+  if (!url) return
+  window.open(url, '_blank', 'noopener,noreferrer')
 }
 
 const quizCorrectCount = computed(() => {

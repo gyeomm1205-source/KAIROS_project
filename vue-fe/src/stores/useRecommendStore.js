@@ -64,6 +64,8 @@ export const useRecommendStore = defineStore('recommend', () => {
     },
   ])
 
+  const recommendationDetail = ref(null)
+
   const recentFlow = ref([
     { label: "React 상태관리 학습", status: "done" },
     { label: "Zustand 실습", status: "done" },
@@ -164,6 +166,19 @@ export const useRecommendStore = defineStore('recommend', () => {
     isLoading.value = true
     try {
       const { data } = await getRecommendationDetail(curriculumId)
+      recommendationDetail.value = data
+
+      if (data.currentStatus?.topSkills?.length > 0) {
+        recentFlow.value = data.currentStatus.topSkills.map((skill, index) => ({
+          label: skill,
+          status: index === 0 ? 'in-progress' : 'done',
+        }))
+      } else if (data.nextNodes?.length > 0) {
+        recentFlow.value = data.nextNodes.map((node, index) => ({
+          label: node.title,
+          status: index === 0 ? 'in-progress' : 'done',
+        }))
+      }
 
       if (data.quizzes && data.quizzes.length > 0) {
         const quiz = data.quizzes[0]
@@ -181,13 +196,38 @@ export const useRecommendStore = defineStore('recommend', () => {
           reason: r.recommendationReason,
           type: r.referenceType,
           freshness: r.publishedAt || '',
-          techStacks: r.techStacks || []
+          techStacks: r.techStacks || [],
+          url: r.url || ''
         }))
       }
+
+      missions.value = [
+        {
+          key: "quiz",
+          icon: "fas fa-brain",
+          title: data.quizzes?.[0]?.title || "복습 퀴즈",
+          desc: data.quizzes?.[0]?.description || "추천 커리큘럼을 바탕으로 핵심 개념을 점검합니다",
+          time: data.quizzes?.[0]?.expectedMinutes ? `${data.quizzes[0].expectedMinutes}분` : "15분",
+          tag: "복습",
+          badge: data.quizzes?.length ? "AI 생성" : "추천",
+        },
+        {
+          key: "velog",
+          icon: "fas fa-pen-nib",
+          title: "velog 글 작성하기",
+          desc: data.references?.length
+            ? `추천 레퍼런스 ${data.references.length}개를 바탕으로 글 구조를 잡아봅니다`
+            : "글을 바로 써주기보다, 글 작성에 필요한 레퍼런스를 추천합니다",
+          time: data.references?.length ? `${Math.max(20, data.references.length * 10)}분` : "40분",
+          tag: "정리",
+          badge: "레퍼런스",
+        },
+      ]
 
       return data
     } catch (e) {
       console.error('recommendation detail 조회 실패 (Mock 유지):', e)
+      recommendationDetail.value = null
       return null
     } finally {
       isLoading.value = false
@@ -270,6 +310,7 @@ export const useRecommendStore = defineStore('recommend', () => {
   return {
     isLoading, isSubmitting,
     recentActivities,
+    recommendationDetail,
     recentFlow,
     missions,
     references,
