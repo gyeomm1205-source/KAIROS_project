@@ -246,6 +246,7 @@ def _assemble_response(
             reference_type=_map_source_type(c.get("source_type", "")),
             published_at=c.get("published_at"),
             url=c.get("url", ""),
+            tech_stacks=c.get("skill_tags", []),
         )
         for c in candidates[:5]
         if c.get("title") and c.get("url")

@@ -344,6 +344,7 @@ class RecommendationReference(_CamelModel):
     reference_type: str  # "OFFICIAL_DOCS" | "TECH_BLOG" | "WIKI" | "VIDEO"
     published_at: str | None = None
     url: str
+    tech_stacks: list[str] = Field(default_factory=list)
 
 
 class RecommendationResponse(_CamelModel):
