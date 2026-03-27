@@ -18,16 +18,21 @@ import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationQui
 import com.ssafy.springbootbe.domain.recommendations.exception.RecommendationRedisLookupException;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizGenerateAsyncRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.response.QuizGenerateAsyncResponse;
+import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
+import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistoryTechStack;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumTechStack;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumTechStackRepository;
 import com.ssafy.springbootbe.persistence.curriculum.type.CurriculumStatus;
 import com.ssafy.springbootbe.persistence.schedule.repository.UserScheduleRepository;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
+import com.ssafy.springbootbe.persistence.techstack.repository.TechStackRepository;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
@@ -45,6 +50,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -60,6 +66,7 @@ import java.util.concurrent.TimeUnit;
 public class RecommendationsServiceImpl implements RecommendationsService {
 
     static final long RECOMMENDATION_TTL_HOURS = 24L;
+    private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("M/d");
     private static final String RECOMMENDATION_KEY_PREFIX = "recommendation:";
     private static final String RECOMMENDATION_QUIZ_KEY_PREFIX = "recommendation:quiz:";
     private static final String FAST_API_LEVEL_JUNIOR = "JUNIOR";
@@ -68,7 +75,9 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
     private final CurriculumRepository curriculumRepository;
     private final CurriculumNodeRepository curriculumNodeRepository;
+    private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final UserTechStackRepository userTechStackRepository;
+    private final TechStackRepository techStackRepository;
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final UserScheduleRepository userScheduleRepository;
@@ -90,17 +99,31 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     public RecommendationListResponse findRecommendations(Long userId) {
         List<Curriculum> curricula = findCurricula(userId);
         Map<Long, List<CurriculumNode>> nodesByCurriculumId = aggregateCurriculumNodes(userId, curricula);
-        List<TechStackInfo> techStacks = buildRepresentativeTechStacks(userId);
+        Map<Long, List<TechStackInfo>> techStacksByCurriculumId = aggregateCurriculumTechStacks(curricula);
 
         List<RecommendationListItemResponse> items = curricula.stream()
-                .map(curriculum -> RecommendationListItemResponse.builder()
-                        .curriculumId(curriculum.getCurriculumId())
-                        .status(curriculum.getStatus())
-                        .startDate(findStartDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
-                        .endDate(findEndDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
-                        .techStacks(techStacks)
-                        .hasRecommendation(hasRecommendation(userId, curriculum.getCurriculumId()))
-                        .build())
+                .map(curriculum -> {
+                    RecommendationCachePayload recommendationPayload = findRecommendationPayloadOrNull(
+                            userId,
+                            curriculum.getCurriculumId()
+                    );
+
+                    return RecommendationListItemResponse.builder()
+                            .curriculumId(curriculum.getCurriculumId())
+                            .status(curriculum.getStatus())
+                            .displayName(buildDisplayName(
+                                    nodesByCurriculumId.get(curriculum.getCurriculumId()),
+                                    curriculum.getCurriculumId()
+                            ))
+                            .startDate(findStartDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
+                            .endDate(findEndDate(nodesByCurriculumId.get(curriculum.getCurriculumId())))
+                            .techStacks(resolveCurriculumTechStacks(
+                                    techStacksByCurriculumId.get(curriculum.getCurriculumId()),
+                                    recommendationPayload
+                            ))
+                            .hasRecommendation(recommendationPayload != null)
+                            .build();
+                })
                 .toList();
 
         return RecommendationListResponse.builder()
@@ -109,7 +132,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     }
 
     @Override
-    @Transactional(readOnly = true)
+    @Transactional
     public RecommendationDetailResponse findRecommendationDetail(Long userId, Long curriculumId) {
         Curriculum curriculum = findCurriculumOrThrow(curriculumId);
         validateCurriculumOwnership(userId, curriculum);
@@ -120,6 +143,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                 curriculum,
                 recommendationPayload
         );
+        saveReferenceActivityHistory(curriculum, recommendationPayload);
 
         return RecommendationDetailResponse.builder()
                 .curriculumId(curriculumId)
@@ -354,12 +378,53 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         }
     }
 
-    private List<TechStackInfo> buildRepresentativeTechStacks(Long userId) {
-        return userTechStackRepository.findByUserUserId(userId).stream()
-                .map(UserTechStack::getTechStack)
-                .sorted(Comparator.comparing(TechStack::getTechName))
-                .map(TechStackInfo::from)
+    private Map<Long, List<TechStackInfo>> aggregateCurriculumTechStacks(List<Curriculum> curricula) {
+        if (curricula.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> curriculumIds = curricula.stream()
+                .map(Curriculum::getCurriculumId)
                 .toList();
+
+        Map<Long, List<TechStackInfo>> techStacksByCurriculumId = new HashMap<>();
+        for (CurriculumTechStack link : curriculumTechStackRepository.findByCurriculumCurriculumIdIn(curriculumIds)) {
+            techStacksByCurriculumId
+                    .computeIfAbsent(link.getCurriculum().getCurriculumId(), ignored -> new ArrayList<>())
+                    .add(TechStackInfo.from(link.getTechStack()));
+        }
+        return techStacksByCurriculumId;
+    }
+
+    private List<TechStackInfo> resolveCurriculumTechStacks(
+            List<TechStackInfo> persistedTechStacks,
+            RecommendationCachePayload recommendationPayload) {
+        if (persistedTechStacks != null && !persistedTechStacks.isEmpty()) {
+            return persistedTechStacks;
+        }
+
+        if (recommendationPayload == null
+                || recommendationPayload.getCurrentStatus() == null
+                || recommendationPayload.getCurrentStatus().getTopSkills() == null) {
+            return List.of();
+        }
+
+        return recommendationPayload.getCurrentStatus().getTopSkills().stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .map(this::toTechStackInfo)
+                .limit(5)
+                .toList();
+    }
+
+    private TechStackInfo toTechStackInfo(String techName) {
+        return techStackRepository.findByTechNameIgnoreCase(techName)
+                .map(TechStackInfo::from)
+                .orElseGet(() -> TechStackInfo.builder()
+                        .techName(techName)
+                        .build());
     }
 
     private LocalDate findStartDate(List<CurriculumNode> nodes) {
@@ -376,9 +441,47 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         return nodes.getLast().getScheduledDate();
     }
 
+    private String buildDisplayName(List<CurriculumNode> nodes, Long curriculumId) {
+        if (nodes == null || nodes.isEmpty()) {
+            return "커리큘럼 " + curriculumId;
+        }
+
+        LocalDate startDate = nodes.getFirst().getScheduledDate();
+        LocalDate endDate = nodes.getLast().getScheduledDate();
+        String title = nodes.getFirst().getTitle();
+
+        if (startDate == null || endDate == null) {
+            return title;
+        }
+
+        return title + " · " + formatMonthDay(startDate) + "~" + formatMonthDay(endDate);
+    }
+
+    private String formatMonthDay(LocalDate date) {
+        return date.format(MONTH_DAY_FORMATTER);
+    }
+
     private boolean hasRecommendation(Long userId, Long curriculumId) {
         try {
             return redisService.hasKey(buildRecommendationKey(userId, curriculumId));
+        } catch (RuntimeException e) {
+            throw new RecommendationRedisLookupException(userId, curriculumId, e);
+        }
+    }
+
+    private RecommendationCachePayload findRecommendationPayloadOrNull(Long userId, Long curriculumId) {
+        try {
+            String payload = redisService.get(buildRecommendationKey(userId, curriculumId));
+            if (payload == null || payload.isBlank()) {
+                return null;
+            }
+
+            return objectMapper.readValue(payload, RecommendationCachePayload.class);
+        } catch (JacksonException e) {
+            throw new RecommendationPayloadParsingException(
+                    "추천 목록 Redis payload 파싱에 실패했습니다. curriculumId=" + curriculumId,
+                    e
+            );
         } catch (RuntimeException e) {
             throw new RecommendationRedisLookupException(userId, curriculumId, e);
         }
@@ -586,6 +689,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                         .referenceType(reference.getReferenceType())
                         .publishedAt(reference.getPublishedAt())
                         .url(reference.getUrl())
+                        .techStacks(reference.getTechStacks() == null ? List.of() : reference.getTechStacks())
                         .build())
                 .toList();
     }
@@ -601,5 +705,66 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                         .title(nextNode.getTitle())
                         .build())
                 .toList();
+    }
+
+    private void saveReferenceActivityHistory(Curriculum curriculum, RecommendationCachePayload recommendationPayload) {
+        if (recommendationPayload.getReferences() == null || recommendationPayload.getReferences().isEmpty()) {
+            return;
+        }
+
+        List<CurriculumNode> nodes = curriculumNodeRepository
+                .findByCurriculumCurriculumIdOrderByScheduledDate(curriculum.getCurriculumId());
+        String displayName = buildDisplayName(nodes, curriculum.getCurriculumId());
+        String title = "레퍼런스 추천 — " + displayName;
+
+        boolean alreadySavedToday = activityHistoryRepository
+                .findTopByUserUserIdAndActivityTypeAndTitleOrderByActivityDateDesc(
+                        curriculum.getUser().getUserId(),
+                        ActivityType.REFERENCE,
+                        title
+                )
+                .map(activity -> activity.getActivityDate() != null
+                        && activity.getActivityDate().toLocalDate().isEqual(LocalDate.now()))
+                .orElse(false);
+
+        if (alreadySavedToday) {
+            return;
+        }
+
+        String description = recommendationPayload.getReferences().stream()
+                .map(RecommendationCachePayload.ReferenceItem::getTitle)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .limit(3)
+                .reduce((first, second) -> first + ", " + second)
+                .orElse("추천 자료를 확인했습니다.");
+
+        ActivityHistory activityHistory = activityHistoryRepository.save(ActivityHistory.builder()
+                .user(curriculum.getUser())
+                .activityType(ActivityType.REFERENCE)
+                .title(title)
+                .description(description)
+                .activityDate(LocalDateTime.now())
+                .build());
+
+        List<ActivityHistoryTechStack> links = new ArrayList<>();
+        recommendationPayload.getReferences().stream()
+                .map(RecommendationCachePayload.ReferenceItem::getTechStacks)
+                .filter(Objects::nonNull)
+                .flatMap(List::stream)
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .forEach(techName -> techStackRepository.findByTechNameIgnoreCase(techName)
+                        .ifPresent(techStack -> links.add(ActivityHistoryTechStack.builder()
+                                .activityHistory(activityHistory)
+                                .techStack(techStack)
+                                .build())));
+
+        if (!links.isEmpty()) {
+            activityHistoryTechStackRepository.saveAll(links);
+        }
     }
 }

@@ -28,8 +28,12 @@ def embed_chunks(chunks: list[str]) -> list[list[float]]:
 
     for i in range(0, len(chunks), EMBEDDING_BATCH_SIZE):
         batch = chunks[i : i + EMBEDDING_BATCH_SIZE]
-        print(f"    [Embedder] 배치 {i // EMBEDDING_BATCH_SIZE + 1}: {len(batch)}개 임베딩 중...")
-        resp = client.embeddings.create(model=EMBEDDING_MODEL, input=batch)
+        
+        # JSON 직렬화 오류(400 Bad Request) 방지를 위한 텍스트 정제 (Null byte 및 깨진 유니코드 제거)
+        safe_batch = [str(text).encode('utf-8', 'ignore').decode('utf-8').replace('\x00', '') for text in batch]
+        
+        print(f"    [Embedder] 배치 {i // EMBEDDING_BATCH_SIZE + 1}: {len(safe_batch)}개 임베딩 중...")
+        resp = client.embeddings.create(model=EMBEDDING_MODEL, input=safe_batch)
         vectors.extend([item.embedding for item in resp.data])
 
     return vectors

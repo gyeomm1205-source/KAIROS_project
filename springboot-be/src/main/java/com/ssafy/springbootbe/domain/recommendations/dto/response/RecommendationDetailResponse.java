@@ -66,6 +66,7 @@ public class RecommendationDetailResponse {
         private String referenceType;
         private LocalDate publishedAt;
         private String url;
+        private List<String> techStacks;
     }
 
     @Getter

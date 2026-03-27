@@ -12,4 +12,6 @@ public interface TechStackRepository extends JpaRepository<TechStack, Long> {
     List<TechStack> findAllByOrderByTechNameAsc();
 
     Optional<TechStack> findByTechName(String techName);
+
+    Optional<TechStack> findByTechNameIgnoreCase(String techName);
 }

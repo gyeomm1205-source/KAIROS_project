@@ -57,10 +57,12 @@ def upload_document(
             vector=vector,
             payload={
                 "doc_id": f"{doc_prefix}_chunk_{i}",
+                "url": source["url"],
                 "source_url": source["url"],
                 "title": source.get("title", ""),
                 "summary": source.get("summary", ""),
                 "text": chunk,
+                "skill_tags": source.get("skill", []),
                 "skill": source.get("skill", []),
                 "topic": source.get("topic", ""),
                 "source_type": source.get("source_type", ""),

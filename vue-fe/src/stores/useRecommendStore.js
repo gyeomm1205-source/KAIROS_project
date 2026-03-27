@@ -5,6 +5,22 @@ import { getRecommendations, getRecommendationDetail, postQuizSessionStart, post
 export const useRecommendStore = defineStore('recommend', () => {
   const isLoading = ref(false)
 
+  const formatMonthDay = (value) => {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+    return `${date.getMonth() + 1}/${date.getDate()}`
+  }
+
+  const formatDateRange = (startDate, endDate) => {
+    const start = formatMonthDay(startDate)
+    const end = formatMonthDay(endDate)
+    if (start && end) return `${start}~${end}`
+    if (start) return start
+    if (end) return end
+    return ''
+  }
+
   const recentActivities = ref([
     {
       id: "rsc",
@@ -128,9 +144,10 @@ export const useRecommendStore = defineStore('recommend', () => {
       if (data.items && data.items.length > 0) {
         recentActivities.value = data.items.map(item => ({
           id: item.curriculumId,
-          title: item.techStacks?.map(t => t.techName).join(', ') || '커리큘럼',
+          title: item.displayName || item.techStacks?.map(t => t.techName).join(', ') || '커리큘럼',
+          displayName: item.displayName || '',
           type: 'study',
-          date: item.startDate || '',
+          date: formatDateRange(item.startDate, item.endDate),
           status: item.status === 'ACTIVE' ? 'in-progress' : 'done',
           tags: item.techStacks?.map(t => t.techName) || [],
           hasRecommendation: item.hasRecommendation
@@ -163,7 +180,8 @@ export const useRecommendStore = defineStore('recommend', () => {
           title: r.title,
           reason: r.recommendationReason,
           type: r.referenceType,
-          freshness: r.publishedAt || ''
+          freshness: r.publishedAt || '',
+          techStacks: r.techStacks || []
         }))
       }
 
