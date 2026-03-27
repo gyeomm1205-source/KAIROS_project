@@ -200,8 +200,9 @@ async function handleVelogConnect() {
 .link-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); padding: 14px 16px; background: transparent; cursor: pointer; margin-bottom: 12px; color: var(--text-primary); font-weight: 700; font-size: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 0; }
 .link-btn:hover:not(.is-connected):not(:disabled) { background: var(--bg-hover); border-color: var(--text-primary); }
 .link-btn:hover:not(.is-connected):not(:disabled) .link-icon { border-color: var(--text-primary); }
-.link-btn.is-connected { background: transparent; border-color: rgba(255,255,255,0.2); color: var(--text-secondary); cursor: default; }
-.link-btn.is-connected .link-icon { border-color: rgba(255,255,255,0.2); color: var(--text-secondary); }
+.link-btn.is-connected { background: transparent; border-color: var(--clr-success); color: var(--text-secondary); cursor: default; }
+.link-btn.is-connected .link-icon { border-color: var(--clr-success); color: var(--clr-success); }
+.link-btn.is-connected .fa-check { color: var(--clr-success); }
 .link-btn:disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(1); }
 
 .link-btn-left { display: flex; align-items: center; gap: 12px; }

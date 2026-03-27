@@ -1,6 +1,6 @@
 <template>
   <div class="setup-root">
-    
+
     <div class="global-stepper-wrap">
       <div class="page-stepper">
         <div class="step done">1. 계정 연동</div>
@@ -10,20 +10,26 @@
       </div>
     </div>
 
-    <div class="setup-card custom-scroll">
-      
+    <div class="setup-card">
+
       <div class="header-top">
-        <button @click="$router.push('/onboarding/connect')" class="btn-back">
+        <button @click="handleBack" class="btn-back">
           <i class="fas fa-arrow-left" /> BACK
         </button>
+        <span class="step-counter">{{ currentStep }} / {{ totalSteps }}</span>
+      </div>
+
+      <div class="step-progress">
+        <div class="step-progress-bar" :style="{ width: (currentStep / totalSteps * 100) + '%' }" />
       </div>
 
       <div class="setup-header">
-        <h2>맞춤 분석을 위한 기본 정보</h2>
-        <p>입력한 정보는 학습 추천에만 사용됩니다.</p>
+        <h2>{{ stepTitles[currentStep - 1].title }}</h2>
+        <p>{{ stepTitles[currentStep - 1].desc }}</p>
       </div>
 
-      <div class="form-section">
+      <!-- Step 1: 연동 정보 범위 선택 -->
+      <div v-if="currentStep === 1" class="form-section step-content">
         <label class="section-title">연동 정보 범위 선택</label>
         <p class="section-desc">추천과 분석에 포함할 활동 유형을 선택하세요.</p>
         <div class="scope-grid">
@@ -44,21 +50,22 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <!-- Step 2: 일정 반영 범위 -->
+      <div v-if="currentStep === 2" class="form-section step-content">
         <label class="section-title">일정 반영 범위</label>
         <p class="section-desc">
           커리큘럼 제작 시 개발/공부/취준 외 내용도 고려할까요?<br>
           (예: 친구 결혼식, 가족 일정 등 이미 잡혀 있는 개인 일정)
         </p>
         <div class="flex-row">
-          <button 
+          <button
             class="choice-btn flex-1"
             :class="{ active: scheduleInclusion === 'yes' }"
             @click="scheduleInclusion = 'yes'"
           >
             예
           </button>
-          <button 
+          <button
             class="choice-btn flex-1"
             :class="{ active: scheduleInclusion === 'no' }"
             @click="scheduleInclusion = 'no'"
@@ -68,7 +75,8 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <!-- Step 3: 현재 직업 -->
+      <div v-if="currentStep === 3" class="form-section step-content">
         <label class="section-title">현재 직업 <span class="required-mark">*</span></label>
         <p class="section-desc">하나를 선택해주세요.</p>
         <div class="job-list">
@@ -82,7 +90,8 @@
         </div>
       </div>
 
-      <div class="form-section">
+      <!-- Step 4: 기술 스택 -->
+      <div v-if="currentStep === 4" class="form-section step-content">
         <label class="section-title">기술 스택 <span class="required-mark">*</span></label>
         <p class="section-desc">사용 중인 기술을 추가하세요.</p>
         <div class="input-row">
@@ -93,7 +102,7 @@
           />
           <button class="btn-add" @click="addTech(techInput)"><i class="fas fa-plus" /></button>
         </div>
-        
+
         <div class="pill-group active-pills">
           <span v-for="t in techs" :key="t" class="tag active">
             <i v-if="hasTechIcon(t)" :class="getTechIcon(t)" />{{ t }}
@@ -112,7 +121,8 @@
         </div>
       </div>
 
-      <div class="form-section mb-8">
+      <!-- Step 5: 희망 포지션 -->
+      <div v-if="currentStep === 5" class="form-section step-content">
         <label class="section-title">희망 포지션</label>
         <p class="section-desc">복수 선택 가능합니다.</p>
         <div class="pill-group">
@@ -127,13 +137,31 @@
         </div>
       </div>
 
-      <button 
-        class="btn-primary" 
-        :disabled="!canProceed"
-        @click="submitSurvey"
-      >
-        NEXT STEP
-      </button>
+      <div class="btn-row">
+        <button
+          v-if="currentStep > 1"
+          class="btn-secondary"
+          @click="prevStep"
+        >
+          <i class="fas fa-arrow-left" /> 이전
+        </button>
+        <button
+          v-if="currentStep < totalSteps"
+          class="btn-primary"
+          :disabled="!canProceedStep"
+          @click="nextStep"
+        >
+          다음 <i class="fas fa-arrow-right" />
+        </button>
+        <button
+          v-if="currentStep === totalSteps"
+          class="btn-primary"
+          :disabled="!canProceedStep || isSubmitting"
+          @click="submitSurvey"
+        >
+          {{ isSubmitting ? '제출 중...' : '완료' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -165,6 +193,17 @@ const scopeOptions = [
 ]
 const jobOptions = ["학생", "취업 준비생", "주니어 개발자", "시니어 개발자", "기타"]
 
+const totalSteps = 5
+const currentStep = ref(1)
+
+const stepTitles = [
+  { title: '연동 정보 범위 선택', desc: '추천과 분석에 포함할 활동 유형을 선택하세요.' },
+  { title: '일정 반영 범위', desc: '개인 일정을 커리큘럼에 반영할지 선택하세요.' },
+  { title: '현재 직업', desc: '현재 상황에 맞는 직업을 선택하세요.' },
+  { title: '기술 스택', desc: '사용 중인 기술을 추가하세요.' },
+  { title: '희망 포지션', desc: '목표로 하는 포지션을 선택하세요.' },
+]
+
 // BE에서 가져올 목록 (onMounted에서 채워짐)
 const metaPositions = ref([])
 const metaTechStacks = ref([])
@@ -189,6 +228,29 @@ onMounted(async () => {
   }
 })
 
+const canProceedStep = computed(() => {
+  switch (currentStep.value) {
+    case 1: return true
+    case 2: return scheduleInclusion.value !== ""
+    case 3: return job.value !== ""
+    case 4: return techs.value.length > 0
+    case 5: return true
+    default: return false
+  }
+})
+
+const handleBack = () => {
+  router.push('/onboarding/connect')
+}
+
+const prevStep = () => {
+  if (currentStep.value > 1) currentStep.value--
+}
+
+const nextStep = () => {
+  if (canProceedStep.value && currentStep.value < totalSteps) currentStep.value++
+}
+
 const toggleScope = (val) => {
   if (selectedScopes.value.includes(val)) selectedScopes.value = selectedScopes.value.filter(x => x !== val)
   else selectedScopes.value.push(val)
@@ -201,7 +263,8 @@ const togglePosition = (val) => {
 
 const addTech = (t) => {
   const val = t.trim()
-  if (val && !techs.value.includes(val)) techs.value.push(val)
+  const isValid = suggestedTechs.value.includes(val)
+  if (val && isValid && !techs.value.includes(val)) techs.value.push(val)
   techInput.value = ""
 }
 
@@ -213,12 +276,8 @@ const availableSuggestedTechs = computed(() => {
   return suggestedTechs.value.filter(t => !techs.value.includes(t))
 })
 
-const canProceed = computed(() => {
-  return scheduleInclusion.value !== "" && job.value !== "" && techs.value.length > 0
-})
-
 const submitSurvey = async () => {
-  if (!canProceed.value || isSubmitting.value) return
+  if (!canProceedStep.value || isSubmitting.value) return
   isSubmitting.value = true
 
   const techStackIds = techs.value
@@ -256,15 +315,12 @@ const submitSurvey = async () => {
   font-family: 'Space Grotesk', 'Escoredream', system-ui, sans-serif; position: relative;
 }
 .setup-card {
-  width: 100%; max-width: 540px; max-height: calc(100vh - 100px);
+  width: 100%; max-width: 540px;
   background: var(--bg-surface); border: 1px solid var(--border);
   padding: 40px; border-radius: 8px;
-  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; overflow-y: auto;
+  animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 @keyframes fadeUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-
-.custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
-.custom-scroll::-webkit-scrollbar { display: none; }
 
 /* ── Stepper ── */
 .global-stepper-wrap { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: 100%; max-width: 640px; padding: 0 24px; z-index: 100; }
@@ -281,8 +337,8 @@ const submitSurvey = async () => {
 .page-stepper .step.done { color: var(--clr-success); background: transparent; }
 @media (max-width: 640px) { .page-stepper .step { font-size: 10px; padding: 8px 2px; } }
 
-/* ── Back button ── */
-.header-top { display: flex; justify-content: flex-start; align-items: center; margin-bottom: 20px; }
+/* ── Back button + step counter ── */
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
 .btn-back {
   background: transparent; border: 1px solid var(--border);
   font-weight: 800; font-size: 11px; color: var(--text-muted);
@@ -290,11 +346,24 @@ const submitSurvey = async () => {
   padding: 8px 14px; display: inline-flex; align-items: center; gap: 8px;
 }
 .btn-back:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.step-counter { font-size: 12px; font-weight: 800; color: var(--text-muted); letter-spacing: 0.05em; }
+
+/* ── Step progress bar ── */
+.step-progress {
+  height: 2px; background: var(--border); margin-bottom: 28px; overflow: hidden;
+}
+.step-progress-bar {
+  height: 100%; background: var(--clr-primary);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
 
 /* ── Header ── */
 .setup-header { border-bottom: 1px solid var(--border); padding-bottom: 16px; margin-bottom: 28px; }
 .setup-header h2 { font-size: 20px; font-weight: 900; color: var(--text-primary); margin-bottom: 6px; }
 .setup-header p { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+/* ── Step content ── */
+.step-content { min-height: 220px; }
 
 /* ── Form sections ── */
 .form-section { margin-bottom: 28px; }
@@ -307,10 +376,10 @@ const submitSurvey = async () => {
 .scope-box {
   text-align: left; padding: 16px; border: 1px solid var(--border);
   background: transparent; cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  display: flex; flex-direction: column; gap: 8px;
+  display: flex; flex-direction: column; gap: 8px; border-radius: 10px;
 }
 .scope-box:hover { border-color: var(--text-primary); background: var(--bg-hover); }
-.scope-box.active { border-color: var(--text-primary); background: var(--text-primary); }
+.scope-box.active { border-color: var(--clr-success); background: var(--clr-success); }
 .box-header { display: flex; align-items: center; gap: 10px; }
 .checkbox-square {
   width: 16px; height: 16px; border: 1px solid var(--border);
@@ -321,7 +390,7 @@ const submitSurvey = async () => {
 .box-title { font-size: 13px; font-weight: 900; color: var(--text-primary); }
 .scope-box.active .box-title { color: var(--bg-base); }
 .box-desc { font-size: 11px; font-weight: 600; color: var(--text-muted); padding-left: 26px; }
-.scope-box.active .box-desc { color: var(--bg-base); opacity: 0.7; }
+.scope-box.active .box-desc { color: rgba(0,0,0,0.7); }
 
 /* ── Choice buttons ── */
 .flex-row { display: flex; gap: 10px; }
@@ -329,20 +398,23 @@ const submitSurvey = async () => {
   padding: 14px; border: 1px solid var(--border); background: transparent;
   color: var(--text-primary); font-size: 14px; font-weight: 800;
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit; border-radius: 0;
+  font-family: inherit; border-radius: 10px;
 }
 .choice-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
-.choice-btn.active { border-color: var(--text-primary); background: var(--text-primary); color: var(--bg-base); }
+.choice-btn.active { border-color: var(--clr-success); background: var(--clr-success); color: var(--bg-base); }
+.flex-1 { flex: 1; }
 
 /* ── Radio ── */
 .job-list { display: flex; flex-direction: column; gap: 10px; }
 .radio-label { display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 700; color: var(--text-primary); }
 .hidden-radio { display: none; }
 .radio-custom {
-  width: 16px; height: 16px; border: 1px solid var(--text-primary);
+  width: 16px; height: 16px; border: 1px solid var(--text-muted);
   border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  transition: border-color 0.2s;
 }
-.radio-dot { width: 8px; height: 8px; background: var(--text-primary); border-radius: 50%; }
+.radio-label:has(input:checked) .radio-custom { border-color: var(--clr-success); }
+.radio-dot { width: 8px; height: 8px; background: var(--clr-success); border-radius: 50%; }
 
 /* ── Input row ── */
 .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -356,7 +428,7 @@ const submitSurvey = async () => {
 .btn-add {
   width: 44px; border: 1px solid var(--text-primary);
   background: var(--text-primary); color: var(--bg-base);
-  cursor: pointer; transition: all 0.2s; font-size: 14px; border-radius: 0;
+  cursor: pointer; transition: all 0.2s; font-size: 14px; border-radius: 8px;
 }
 .btn-add:hover { background: transparent; color: var(--text-primary); }
 
@@ -368,26 +440,40 @@ const submitSurvey = async () => {
   background: transparent; font-size: 12px; font-weight: 800;
   color: var(--text-muted); cursor: pointer; transition: all 0.2s;
   display: inline-flex; align-items: center; gap: 8px; font-family: inherit;
+  border-radius: 999px;
 }
 .tag:hover { border-color: var(--text-primary); color: var(--text-primary); }
 .tag.dashed { border-style: dashed; }
 .tag.active {
-  border-style: solid; border-color: var(--text-primary);
-  background: var(--text-primary); color: var(--bg-base);
+  border-style: solid; border-color: var(--clr-success);
+  background: transparent; color: var(--text-primary);
 }
 .tag.active button {
-  background: transparent; border: none; color: var(--bg-base);
+  background: transparent; border: none; color: var(--clr-success);
   cursor: pointer; padding: 0; font-size: 11px; opacity: 0.7; transition: opacity 0.15s;
 }
 .tag.active button:hover { opacity: 1; }
 
-/* ── Primary button ── */
+/* ── Navigation buttons ── */
+.btn-row {
+  display: flex; gap: 10px; margin-top: 8px;
+}
+.btn-secondary {
+  flex: 1; padding: 16px; border: 1px solid var(--border);
+  background: transparent; color: var(--text-primary);
+  font-weight: 900; font-size: 14px; letter-spacing: 0.1em;
+  cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 10px;
+}
+.btn-secondary:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .btn-primary {
-  width: 100%; padding: 16px; border: 1px solid var(--clr-primary);
+  flex: 2; padding: 16px; border: 1px solid var(--clr-primary);
   background: var(--clr-primary); color: var(--bg-base);
   font-weight: 900; font-size: 14px; letter-spacing: 0.1em;
   cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  font-family: inherit;
+  font-family: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  border-radius: 10px;
 }
 .btn-primary:disabled {
   background: transparent; border-color: var(--border);
