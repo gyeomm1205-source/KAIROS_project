@@ -358,6 +358,7 @@ def build_generation_context(request: QuizRequest) -> dict[str, Any]:
     question_types = _select_question_types(difficulty, question_count)
     target_skill = request.target_tech_stacks[0] if request.target_tech_stacks else "개발"
     all_skills   = ", ".join(request.target_tech_stacks)
+    current_node_hint = _build_current_node_hint(request)
 
     return {
         "target_skill":      target_skill,
@@ -366,7 +367,7 @@ def build_generation_context(request: QuizRequest) -> dict[str, Any]:
         "quiz_type":         quiz_type_label,
         "question_count":    question_count,
         "question_types":    question_types,
-        "hint_text":         f"커리큘럼 ID {request.curriculum_id} 기반 퀴즈입니다.",
+        "hint_text":         current_node_hint or f"커리큘럼 ID {request.curriculum_id} 기반 퀴즈입니다.",
         "target_positions":  "개발자",
         "time_limit":        20,
     }
@@ -424,7 +425,18 @@ def _build_qdrant_query(request: QuizRequest) -> str:
     """Qdrant query 문자열을 구성한다. targetTechStacks 기반 검색."""
     primary = request.target_tech_stacks[0] if request.target_tech_stacks else "개발"
     all_skills = " ".join(request.target_tech_stacks[:3])
-    return f"{all_skills} {primary} 개념과 사용 방법"
+    node_title = request.current_node_title or ""
+    node_desc = request.current_node_description or ""
+    return f"{all_skills} {primary} {node_title} {node_desc} 개념과 사용 방법".strip()
+
+
+def _build_current_node_hint(request: QuizRequest) -> str:
+    if not request.current_node_title:
+        return ""
+
+    date_part = f"{request.current_node_date} " if request.current_node_date else ""
+    desc_part = f" / {request.current_node_description}" if request.current_node_description else ""
+    return f"현재 학습 노드는 {date_part}{request.current_node_title}{desc_part} 입니다. 이 맥락에 맞춰 퀴즈를 생성하세요."
 
 
 # 단계 3 — 문항 생성

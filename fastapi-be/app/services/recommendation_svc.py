@@ -337,13 +337,14 @@ class _DailyRecommendationOutput(BaseModel):
 
 _DAILY_SYSTEM_PROMPT = """\
 당신은 KAIROS의 AI 학습 멘토입니다.
-사용자의 [최근 활동], [기술 숙련도 통계], [현재 수준]을 종합적으로 분석하여,
+사용자의 [최근 활동], [기술 숙련도 통계], [현재 수준], [현재 커리큘럼 노드]를 종합적으로 분석하여,
 1. 사용자의 '현재 학습 상태'를 명확히 진단하고
 2. 이를 바탕으로 '맞춤형 추천 이유'와 '다음 학습 경로'를 제안합니다.
 
 [응답 작성 원칙]
+- 가능하면 현재 커리큘럼 노드(title, scheduled date)를 중심으로 설명하세요.
 - status_summary/detail: 최근 활동의 맥락(어떤 기술을 주로 썼는지)을 포함하여 현재 상태를 진단하세요.
-- reason_summary/detail: 진단된 상태를 바탕으로 왜 이 추천 자료와 학습 경로가 지금 시점에 필요한지 구체적으로 설명하세요.
+- reason_summary/detail: 진단된 상태를 바탕으로 왜 이 추천 자료와 학습 경로가 지금 시점에 필요한지, 현재 커리큘럼 노드와 어떻게 이어지는지 구체적으로 설명하세요.
 - next_nodes: 추천 자료와 직접적으로 연결되면서 사용자의 수준({user_level})에 맞는 주제를 제시하세요.
 - 반드시 한국어로 작성하세요.\
 """
@@ -353,6 +354,7 @@ _DAILY_USER_TEMPLATE = """\
 - 현재 수준: {user_level}
 - 관심 기술 스택: {favorite_stacks}
 - 최근 진행한 커리큘럼 이력: {recent_curricula}
+- 현재 커리큘럼 노드: {current_node}
 
 [최근 활동 (최신순)]
 {recent_activities}
@@ -400,10 +402,19 @@ async def run_daily_recommendation(request: DailyRecommendationRequest) -> Daily
 def _build_daily_query(request: DailyRecommendationRequest) -> str:
     """skill_stats 상위 기술과 recent_activities 기술을 조합하여 검색어를 만든다."""
     keywords = []
+
+    if request.current_node_tech_stacks:
+        keywords.extend(request.current_node_tech_stacks[:2])
+
+    if request.current_node_title:
+        keywords.append(request.current_node_title)
+
     # 1. skill_stats 상위 2개
     if request.skill_stats:
         sorted_stats = sorted(request.skill_stats, key=lambda s: s.count, reverse=True)
-        keywords.extend([s.skill for s in sorted_stats[:2]])
+        for stat in sorted_stats[:2]:
+            if stat.skill not in keywords:
+                keywords.append(stat.skill)
     
     # 2. 최근 활동에서 등장한 기술 1~2개 추가
     act_skills = []
@@ -426,7 +437,7 @@ def _build_daily_query(request: DailyRecommendationRequest) -> str:
     if not keywords:
         return "개발 백엔드 프론트엔드"
 
-    return " ".join(keywords) + " 학습 자료"
+    return " ".join(dict.fromkeys(keywords)) + " 학습 자료"
 
 
 def _retrieve_from_qdrant_raw(query_text: str, level: UserLevel) -> list[dict[str, Any]]:
@@ -492,6 +503,7 @@ async def _generate_daily_with_llm(
         "user_level":       _LEVEL_LABEL[request.current_level],
         "favorite_stacks":  ", ".join(request.favorite_tech_stacks) or "미지정",
         "recent_curricula": _fmt_recent_curricula(request.recent_curricula_ids),
+        "current_node":     _fmt_current_node(request),
         "recent_activities": recent_activities_str,
         "skill_stats":       skill_stats_str,
         "reference_list":   _fmt_candidates(candidates[:5]),
@@ -505,13 +517,18 @@ def _generate_daily_with_template(
 ) -> _DailyRecommendationOutput:
     
     level = _LEVEL_LABEL[request.current_level]
-    top_skill = request.skill_stats[0].skill if request.skill_stats else "주력 기술"
+    top_skill = (
+        request.current_node_tech_stacks[0]
+        if request.current_node_tech_stacks
+        else (request.skill_stats[0].skill if request.skill_stats else "주력 기술")
+    )
+    node_hint = request.current_node_title or "현재 학습 노드"
     
     return _DailyRecommendationOutput(
-        reason_summary=f"현재 {top_skill} 숙련도와 최근 활동을 고려한 맞춤형 추천입니다.",
-        reason_detail=f"최근 {top_skill} 위주의 활동이 잦아, 이를 뒷받침할 {level} 수준의 심화 자료를 선정했습니다.",
-        status_summary=f"{top_skill} 중심으로 꾸준히 학습을 진행하고 있습니다.",
-        status_detail=f"제공된 활동 기록에 따르면 {top_skill} 관련 경험이 누적되고 있습니다.",
+        reason_summary=f"현재 '{node_hint}' 학습 흐름을 이어가기 위한 {top_skill} 중심 추천입니다.",
+        reason_detail=f"최근 활동과 현재 커리큘럼 노드를 함께 고려했을 때, {node_hint}와 직접 연결되는 {level} 수준의 {top_skill} 자료가 지금 시점에 가장 적합합니다.",
+        status_summary=f"현재 학습 위치는 {node_hint}이며, {top_skill} 맥락을 이어가는 단계입니다.",
+        status_detail=f"제공된 활동 기록과 커리큘럼 일정을 보면 현재는 {node_hint}를 중심으로 학습 흐름을 이어가야 할 시점입니다.",
         top_skills=[top_skill],
         next_nodes=[_NextNodeItem(title=f"{top_skill} 성능 최적화")],
     )
@@ -530,6 +547,7 @@ def _assemble_daily_response(
             reference_type=_map_source_type(c.get("source_type", "")),
             published_at=c.get("published_at"),
             url=c.get("url", ""),
+            tech_stacks=c.get("skill_tags", []),
         )
         for c in candidates[:5]
         if c.get("title") and c.get("url")
@@ -555,3 +573,13 @@ def _assemble_daily_response(
         references=references,
         next_nodes=next_nodes,
     )
+
+
+def _fmt_current_node(request: DailyRecommendationRequest) -> str:
+    if not request.current_node_title:
+        return "정보 없음"
+
+    date_part = f"{request.current_node_date} " if request.current_node_date else ""
+    desc_part = f" / {request.current_node_description}" if request.current_node_description else ""
+    tags = ", ".join(request.current_node_tech_stacks[:3]) if request.current_node_tech_stacks else "없음"
+    return f"{date_part}{request.current_node_title} (기술: {tags}){desc_part}"

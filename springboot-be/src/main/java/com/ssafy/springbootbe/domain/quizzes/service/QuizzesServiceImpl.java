@@ -32,7 +32,9 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRep
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
+import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumTechStack;
+import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumNodeRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumRepository;
 import com.ssafy.springbootbe.persistence.curriculum.repository.CurriculumTechStackRepository;
 import com.ssafy.springbootbe.persistence.quiz.entity.QuizQuestion;
@@ -56,6 +58,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -78,6 +81,7 @@ public class QuizzesServiceImpl implements QuizzesService {
     private static final String FAST_API_LEVEL_SENIOR = "SENIOR";
 
     private final CurriculumRepository curriculumRepository;
+    private final CurriculumNodeRepository curriculumNodeRepository;
     private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final QuizSessionRepository quizSessionRepository;
     private final QuizQuestionRepository quizQuestionRepository;
@@ -247,10 +251,14 @@ public class QuizzesServiceImpl implements QuizzesService {
             throw new QuizRedisException("퀴즈 원본 Redis 조회에 실패했습니다. curriculumId=" + curriculumId, e);
         }
 
+        CurriculumNode currentNode = findCurrentNode(curriculumId);
         QuizGenerateAsyncRequest generateRequest = QuizGenerateAsyncRequest.builder()
                 .curriculumId(curriculumId)
                 .targetTechStacks(buildTargetTechStacks(userId, curriculumId))
                 .userLevel(mapUserLevel(curriculum.getUser().getPosition()))
+                .currentNodeTitle(currentNode == null ? null : currentNode.getTitle())
+                .currentNodeDescription(currentNode == null ? null : currentNode.getDescription())
+                .currentNodeDate(currentNode == null ? null : currentNode.getScheduledDate())
                 .build();
 
         QuizGenerateAsyncResponse generatedQuiz = requestQuizGeneration(generateRequest);
@@ -288,6 +296,28 @@ public class QuizzesServiceImpl implements QuizzesService {
         }
 
         return techStacks.stream().limit(5).toList();
+    }
+
+    private CurriculumNode findCurrentNode(Long curriculumId) {
+        List<CurriculumNode> nodes = curriculumNodeRepository.findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
+        if (nodes.isEmpty()) {
+            return null;
+        }
+
+        LocalDate today = LocalDate.now();
+        for (CurriculumNode node : nodes) {
+            if (today.equals(node.getScheduledDate())) {
+                return node;
+            }
+        }
+
+        for (CurriculumNode node : nodes) {
+            if (node.getScheduledDate() != null && node.getScheduledDate().isAfter(today)) {
+                return node;
+            }
+        }
+
+        return nodes.get(nodes.size() - 1);
     }
 
     private void addRecommendationTopSkills(Long userId, Long curriculumId, LinkedHashSet<String> techStacks) {

@@ -23,6 +23,10 @@ public class DailyRecommendationGenerateRequest {
     private List<RecentActivity> recentActivities;
     private List<GoogleCalendarEvent> googleCalendarEvents;
     private List<Long> recentCurriculaIds;
+    private String currentNodeTitle;
+    private String currentNodeDescription;
+    private LocalDate currentNodeDate;
+    private List<String> currentNodeTechStacks;
 
     @Getter
     @Builder
@@ -55,4 +59,5 @@ public class DailyRecommendationGenerateRequest {
         private LocalDate startDate;
         private LocalDate endDate;
     }
+
 }

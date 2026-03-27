@@ -236,7 +236,7 @@
                 <div v-if="activeMission === 'velog'" class="panel-body p-lg pt-0">
                   <div class="info-box mb-md">
                     <div class="info-title"><i class="fas fa-pen-nib" /> velog 글 작성을 위한 레퍼런스 추천</div>
-                    <p>글을 대신 써주는 것이 아니라, 지금 학습 흐름에 맞는 참고 자료를 추천해서 글 구조를 잡는 데 도움을 줍니다.</p>
+                    <p>{{ referenceContextDescription }}</p>
                   </div>
 
                   <div class="ref-list space-y">
@@ -247,6 +247,9 @@
                           <span class="font-bold ref-title">{{ ref.title }}</span>
                         </div>
                         <span class="ref-type-badge">{{ ref.type }}</span>
+                      </div>
+                      <div v-if="referenceContextLabel" class="ref-context-chip">
+                        <i class="fas fa-crosshairs" /> {{ referenceContextLabel }} 기준 추천
                       </div>
                       <p class="text-muted text-sm ref-desc mb-sm">{{ ref.reason }}</p>
                       <div class="ref-card-bottom">
@@ -565,6 +568,21 @@ const recommendationTags = computed(() =>
     : (currentStatus.value.topSkills || [])
 )
 
+const currentCurriculumNodeLabel = computed(() => {
+  if (!curriculumNodes.value.length) return ''
+  const node = curriculumNodes.value[currentCurriculumIndex.value] || curriculumNodes.value[0]
+  if (!node) return ''
+  return `${currentCurriculumIndex.value + 1}일차 ${node.title}`
+})
+
+const referenceContextLabel = computed(() => currentCurriculumNodeLabel.value)
+const referenceContextDescription = computed(() => {
+  if (referenceContextLabel.value) {
+    return `글을 대신 써주는 것이 아니라, 현재 학습 위치인 ${referenceContextLabel.value}에 맞는 참고 자료를 추천해서 글 구조를 잡는 데 도움을 줍니다.`
+  }
+  return '글을 대신 써주는 것이 아니라, 지금 학습 흐름에 맞는 참고 자료를 추천해서 글 구조를 잡는 데 도움을 줍니다.'
+})
+
 const reasonStatusSummary = computed(() =>
   recommendationStatusLabel.value || currentStatus.value.summary || ''
 )
@@ -866,6 +884,7 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .ref-icon { flex-shrink: 0; margin-top: 2px; }
 .ref-title { font-size: 13px; line-height: 1.4; word-break: keep-all; }
 .ref-type-badge { flex-shrink: 0; padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px; font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
+.ref-context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin-left: 20px; margin-bottom: 10px; border: 1px dashed var(--border); border-radius: 999px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
 .ref-desc { padding-left: 20px; line-height: 1.6; }
 .ref-card-bottom { display: flex; align-items: center; justify-content: space-between; padding-left: 20px; }
 
