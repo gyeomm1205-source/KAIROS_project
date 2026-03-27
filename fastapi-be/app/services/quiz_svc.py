@@ -396,10 +396,11 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
     try:
         client = get_qdrant_client()
         query_vector = embed_text(query_text)
-        results = client.search(
+        results = client.query_points(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_vector=query_vector,
+            query=query_vector,
             limit=_MAX_CONTEXT_CHUNKS,
+            with_payload=True,
         )
         chunks = [
             {
@@ -407,7 +408,7 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
                 "content": ((hit.payload or {}).get("text", "") or "")[:_CHUNK_CONTENT_MAX_CHARS],
                 "score":   hit.score,
             }
-            for hit in results
+            for hit in results.points
         ]
         logger.info(
             "[retrieve_reference_context] Qdrant 반환 %d개 청크  query=%r",
