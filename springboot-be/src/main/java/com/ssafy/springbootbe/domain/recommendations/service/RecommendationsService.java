@@ -7,4 +7,5 @@ public interface RecommendationsService {
     RecommendationListResponse findRecommendations(Long userId);
     RecommendationDetailResponse findRecommendationDetail(Long userId, Long curriculumId);
     void refreshDailyRecommendations();
+    void refreshDailyRecommendation(Long userId, Long curriculumId);
 }

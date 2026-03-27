@@ -97,26 +97,7 @@ export const useRecommendStore = defineStore('recommend', () => {
     },
   ])
 
-  const references = ref([
-    {
-      title: "React 공식 문서 - Server Components",
-      reason: "RSC의 핵심 개념과 제약 사항을 가장 정확하게 확인할 수 있습니다.",
-      type: "공식 문서",
-      freshness: "2025.12 업데이트",
-    },
-    {
-      title: "Next.js App Router 실전 가이드",
-      reason: "현재 진행 중인 Next.js 흐름과 바로 연결되는 실전 예제가 포함되어 있습니다.",
-      type: "실전 가이드",
-      freshness: "2026.01 작성",
-    },
-    {
-      title: "RSC vs Client Components 비교 글",
-      reason: "velog 글을 쓰실 때 비교 기준을 잡기 좋은 정리형 레퍼런스입니다.",
-      type: "비교 아티클",
-      freshness: "2026.02 작성",
-    },
-  ])
+  const references = ref([])
 
   const quizQuestions = ref([
     {
@@ -169,6 +150,7 @@ export const useRecommendStore = defineStore('recommend', () => {
   const loadRecommendationDetail = async (curriculumId) => {
     isLoading.value = true
     try {
+      references.value = []
       const { data } = await getRecommendationDetail(curriculumId)
       recommendationDetail.value = data
 
@@ -230,8 +212,9 @@ export const useRecommendStore = defineStore('recommend', () => {
 
       return data
     } catch (e) {
-      console.error('recommendation detail 조회 실패 (Mock 유지):', e)
+      console.error('recommendation detail 조회 실패:', e)
       recommendationDetail.value = null
+      references.value = []
       return null
     } finally {
       isLoading.value = false

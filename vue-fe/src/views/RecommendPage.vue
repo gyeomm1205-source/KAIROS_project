@@ -14,9 +14,14 @@
             <h2>추천</h2>
             <div class="title-section-row">
               <p>최근 7일간 활동을 기반으로 맞춤 추천을 제공합니다. 확인할 활동을 선택하세요.</p>
-              <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
-                <i class="fas fa-plus" /> 신규 학습 시작
-              </button>
+              <div class="title-action-group">
+                <button class="btn-outline-small" @click="openCurriculumModal">
+                  <i class="fas fa-book-open" /> 커리큘럼 추천받기
+                </button>
+                <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
+                  <i class="fas fa-plus" /> 학습 맥락 직접 추가
+                </button>
+              </div>
             </div>
           </div>
 
@@ -65,9 +70,6 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
-                    <button class="btn-primary-small" @click="openCurriculumModal">
-                      <i class="fas fa-book-open" /> 커리큘럼 추천받기
-                    </button>
                   </div>
                   <span class="panel-sub">{{ recommendationSubLabel }}</span>
                 </div>
@@ -240,25 +242,32 @@
                   </div>
 
                   <div class="ref-list space-y">
-                    <div v-for="ref in store.references" :key="ref.title" class="base-panel p-md option-btn">
-                      <div class="ref-card-top mb-sm">
-                        <div class="flex-align gap-sm ref-title-row">
-                          <i class="fas fa-file-alt text-muted ref-icon" />
-                          <span class="font-bold ref-title">{{ ref.title }}</span>
+                    <template v-if="store.references.length">
+                      <div v-for="ref in store.references" :key="ref.title" class="base-panel p-md option-btn">
+                        <div class="ref-card-top mb-sm">
+                          <div class="flex-align gap-sm ref-title-row">
+                            <i class="fas fa-file-alt text-muted ref-icon" />
+                            <span class="font-bold ref-title">{{ ref.title }}</span>
+                          </div>
+                          <span class="ref-type-badge">{{ ref.type }}</span>
                         </div>
-                        <span class="ref-type-badge">{{ ref.type }}</span>
-                      </div>
-                      <div v-if="referenceContextLabel" class="ref-context-chip">
-                        <i class="fas fa-crosshairs" /> {{ referenceContextLabel }} 기준 추천
-                      </div>
-                      <p class="text-muted text-sm ref-desc mb-sm">{{ ref.reason }}</p>
-                      <div class="ref-card-bottom">
-                        <div class="flex-align gap-md text-muted text-xs">
-                          <span>{{ ref.freshness }}</span>
-                          <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
+                        <div v-if="referenceContextLabel" class="ref-context-chip">
+                          <i class="fas fa-crosshairs" /> {{ referenceContextLabel }} 기준 추천
                         </div>
-                        <button class="btn-text-muted" @click="openReference(ref.url)"><i class="fas fa-external-link-alt" /> 보기</button>
+                        <p class="text-muted text-sm ref-desc mb-sm">{{ ref.reason }}</p>
+                        <div class="ref-card-bottom">
+                          <div class="flex-align gap-md text-muted text-xs">
+                            <span>{{ ref.freshness }}</span>
+                            <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
+                          </div>
+                          <button class="btn-text-muted" @click="openReference(ref.url)"><i class="fas fa-external-link-alt" /> 보기</button>
+                        </div>
                       </div>
+                    </template>
+                    <div v-else class="base-panel p-lg text-center text-muted ref-empty-state">
+                      <i class="fas fa-search mb-sm" />
+                      <p>현재 조건에 맞는 레퍼런스를 아직 찾지 못했어요.</p>
+                      <small>Qdrant 검색 결과가 비어 있는지, 수집된 문서의 기술 태그가 맞는지 확인해보면 됩니다.</small>
                     </div>
                   </div>
                 </div>
@@ -822,6 +831,7 @@ const quizCorrectCount = computed(() => {
 .title-section h2 { font-size: 24px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px; letter-spacing: 0.05em; }
 .title-section p { font-size: 14px; font-weight: 600; color: var(--text-muted); }
 .title-section-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.title-action-group { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
 
 /* Buttons & Tags */
 .btn-back { background: transparent; border: none; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; margin-bottom: 32px; padding: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
@@ -978,6 +988,8 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .ref-title { font-size: 13px; line-height: 1.4; word-break: keep-all; }
 .ref-type-badge { flex-shrink: 0; padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px; font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
 .ref-context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin-left: 20px; margin-bottom: 10px; border: 1px dashed var(--border); border-radius: 999px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
+.ref-empty-state { min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.ref-empty-state i { font-size: 20px; color: var(--text-muted); }
 .ref-desc { padding-left: 20px; line-height: 1.6; }
 .ref-card-bottom { display: flex; align-items: center; justify-content: space-between; padding-left: 20px; }
 

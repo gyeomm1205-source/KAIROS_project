@@ -162,26 +162,42 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         int successCount = 0;
 
         for (Curriculum curriculum : activeCurricula) {
-            Long curriculumId = curriculum.getCurriculumId();
-            Long userId = curriculum.getUser().getUserId();
-
             try {
-                DailyRecommendationGenerateRequest request = buildDailyGenerateRequest(curriculum);
-                String responsePayload = requestDailyRecommendationPayload(request);
-//                System.out.printf("=== %d ===\n", successCount+1);
-//                System.out.printf("%s\n\n", responsePayload);
-                cacheRecommendation(userId, curriculumId, responsePayload);
+                generateAndCacheDailyRecommendation(curriculum);
                 successCount++;
-            } catch (IllegalStateException e) {
-                log.error("추천 배치 데이터 집계 실패. userId={}, curriculumId={}", userId, curriculumId, e);
-            } catch (RestClientException e) {
-                log.error("FastAPI 추천 생성 호출 실패. userId={}, curriculumId={}", userId, curriculumId, e);
             } catch (RuntimeException e) {
-                log.error("Redis 추천 저장 실패. userId={}, curriculumId={}", userId, curriculumId, e);
+                log.error("추천 배치 처리 실패. userId={}, curriculumId={}",
+                        curriculum.getUser().getUserId(),
+                        curriculum.getCurriculumId(),
+                        e);
             }
         }
 
         log.info("추천 배치 처리 완료. total={}, success={}", activeCurricula.size(), successCount);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void refreshDailyRecommendation(Long userId, Long curriculumId) {
+        Curriculum curriculum = findCurriculumOrThrow(curriculumId);
+        validateCurriculumOwnership(userId, curriculum);
+
+        try {
+            generateAndCacheDailyRecommendation(curriculum);
+            log.info("추천 단건 처리 완료. userId={}, curriculumId={}", userId, curriculumId);
+        } catch (RuntimeException e) {
+            log.error("추천 단건 처리 실패. userId={}, curriculumId={}", userId, curriculumId, e);
+            throw e;
+        }
+    }
+
+    private void generateAndCacheDailyRecommendation(Curriculum curriculum) {
+        Long userId = curriculum.getUser().getUserId();
+        Long curriculumId = curriculum.getCurriculumId();
+
+        DailyRecommendationGenerateRequest request = buildDailyGenerateRequest(curriculum);
+        String responsePayload = requestDailyRecommendationPayload(request);
+        cacheRecommendation(userId, curriculumId, responsePayload);
     }
 
     DailyRecommendationGenerateRequest buildDailyGenerateRequest(Curriculum curriculum) {
