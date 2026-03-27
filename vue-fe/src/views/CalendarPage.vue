@@ -249,7 +249,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, nextTick, onMounted, onBeforeUnmount, provide } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 import { useThemeStore } from '@/stores/useThemeStore'
@@ -301,6 +301,13 @@ const modalInitialForm = ref({})
 // AI 추론 요약 모달 상태
 const isAIModalOpen = ref(false)
 const aiModalData = ref(null)
+
+// 더보기 팝오버 닫기 신호 (모달이 열릴 때 increment)
+const popoverCloseSignal = ref(0)
+provide('popoverCloseSignal', popoverCloseSignal)
+watch([isScheduleModalOpen, isDayDetailOpen, isAIModalOpen], ([s, d, a]) => {
+  if (s || d || a) popoverCloseSignal.value++
+})
 
 const hiddenTracks = ref(new Set())
 function onHiddenTracksChange(set) { hiddenTracks.value = new Set(set) }
@@ -839,10 +846,10 @@ async function handleImportExternal() {
 
 async function handleSaveSchedule(payload) {
   const { parentIds, childIds, ...data } = payload
-  if (modalMode.value === 'create') { const newId = await store.createSchedule(data); store.updateConnectionsForSchedule(newId, parentIds || [], childIds || []) } 
+  if (modalMode.value === 'create') { const newId = await store.createSchedule(data); store.updateConnectionsForSchedule(newId, parentIds || [], childIds || []) }
   else { await store.updateSchedule(editTargetId.value, data); store.updateConnectionsForSchedule(editTargetId.value, parentIds || [], childIds || []) }
-  await refreshCurrentCalendar()
   isScheduleModalOpen.value = false
+  refreshCurrentCalendar()
 }
 function handleModalJump(dateStr) {
   isScheduleModalOpen.value = false
@@ -953,7 +960,7 @@ function onWeekWheel(e) {
 .conn-path:hover { stroke-width: 4 !important; opacity: 1 !important; }
 .conn-path.is-default-dimmed { opacity: 0.15; }
 .conn-path.is-dimmed { opacity: 0.05 !important; }
-.conn-path.is-other-month { opacity: 0.12; filter: grayscale(0.5); }
+.conn-path.is-other-month { opacity: 0.45; filter: grayscale(0.2); }
 h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 
 .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); position: relative; }

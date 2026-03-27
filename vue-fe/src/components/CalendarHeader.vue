@@ -140,7 +140,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .date-text {
   font-size: 20px; font-weight: 900; color: var(--text-primary);
   cursor: pointer; display: flex; align-items: center; gap: 4px;
-  border-radius: 4px; padding: 4px 8px; letter-spacing: 0.05em;
+  border-radius: 8px; padding: 4px 8px; letter-spacing: 0.05em;
   transition: background 0.15s; white-space: nowrap;
 }
 .date-text:hover { background: var(--text-primary); color: var(--bg-base); }
@@ -157,7 +157,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .custom-sel-wrap { position: relative; }
 .custom-sel-display {
   background: transparent; border: 1px solid var(--border); color: var(--text-primary);
-  padding: 10px 14px; border-radius: 4px;
+  padding: 10px 14px; border-radius: 8px;
   font-size: 13px; font-weight: 800; cursor: pointer;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   min-width: 95px; white-space: nowrap; transition: all 0.1s ease;
@@ -174,24 +174,24 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
   box-shadow: 0 4px 12px rgba(0,0,0,0.1); list-style: none; margin: 0;
 }
 .custom-sel-item {
-  padding: 8px 10px; font-size: 12px; border-radius: 4px; cursor: pointer;
+  padding: 8px 10px; font-size: 12px; border-radius: 8px; cursor: pointer;
   transition: all 0.1s; font-weight: 700; color: var(--text-primary); white-space: nowrap;
 }
 .custom-sel-item:hover { background: var(--text-primary); color: var(--bg-base); }
 .custom-sel-item.selected { background: var(--text-primary); color: var(--bg-base); }
 
-.btn-pop-confirm { width: 100%; background: var(--text-primary); color: var(--bg-base); border: none; padding: 12px; border-radius: 4px; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; }
+.btn-pop-confirm { width: 100%; background: var(--text-primary); color: var(--bg-base); border: none; padding: 12px; border-radius: 8px; font-size: 13px; font-weight: 900; letter-spacing: 0.1em; cursor: pointer; transition: all 0.15s; }
 .btn-pop-confirm:hover { background: var(--bg-hover); color: var(--text-primary); border: 1px solid var(--text-primary); }
 
 .nav-controls { display: flex; align-items: center; gap: 6px; }
-.nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: transparent; border-radius: 4px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.1s; }
+.nav-btn { width: 34px; height: 34px; border: 1px solid var(--border); background: transparent; border-radius: 8px; color: var(--text-primary); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 12px; transition: all 0.1s; }
 .nav-btn--text { width: auto; padding: 0 14px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; }
 .nav-btn--today { width: auto; padding: 0 14px; font-size: 11px; font-weight: 900; letter-spacing: 0.1em; color: var(--clr-primary); border-color: var(--clr-primary); }
 .nav-btn--today:hover { background: var(--clr-primary); color: var(--bg-base); border-color: var(--clr-primary); }
 .nav-btn:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 
-.view-switcher { display: flex; gap: 4px; background: transparent; border: 1px solid var(--border); padding: 4px; border-radius: 4px; }
-.view-btn { padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 4px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.1s; }
+.view-switcher { display: flex; gap: 4px; background: transparent; border: 1px solid var(--border); padding: 4px; border-radius: 8px; }
+.view-btn { padding: 6px 16px; font-size: 12px; font-weight: 800; letter-spacing: 0.05em; border: 1px solid transparent; border-radius: 8px; cursor: pointer; background: transparent; color: var(--text-muted); transition: all 0.1s; }
 .view-btn:hover { color: var(--text-primary); border-color: var(--border); background: var(--bg-hover); }
 .view-btn--active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 .view-btn--active:hover { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
@@ -199,7 +199,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .btn-manage, .btn-study-cal {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 16px; border: 1px solid var(--border); background: transparent;
-  color: var(--text-primary); border-radius: 4px;
+  color: var(--text-primary); border-radius: 8px;
   font-size: 12px; font-weight: 800; cursor: pointer;
   transition: all 0.1s; white-space: nowrap; letter-spacing: 0.05em;
 }
@@ -217,7 +217,7 @@ onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 .btn-legend-toggle {
   display: flex; align-items: center; gap: 8px;
   padding: 10px 16px; border: 1px solid var(--border); background: transparent;
-  color: var(--text-muted); border-radius: 4px;
+  color: var(--text-muted); border-radius: 8px;
   font-size: 12px; font-weight: 800; cursor: pointer;
   transition: all 0.2s; white-space: nowrap; letter-spacing: 0.05em;
 }

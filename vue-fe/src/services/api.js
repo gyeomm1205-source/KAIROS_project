@@ -58,7 +58,8 @@ function handle401(error) {
 
   if (originalRequest.url?.includes('/auth/reissue')) {
     clearAuthToken();
-    window.location.href = '/login';
+    // [DEV] 로그인 리다이렉트 임시 비활성화
+    // window.location.href = '/login';
     return Promise.reject(error);
   }
 
@@ -74,7 +75,8 @@ function handle401(error) {
         isRefreshing = false;
         pendingRequests = [];
         clearAuthToken();
-        window.location.href = '/login';
+        // [DEV] 로그인 리다이렉트 임시 비활성화
+        // window.location.href = '/login';
       });
   }
 
