@@ -38,6 +38,7 @@ from app.models.schemas import (
     QuizResponse,
     UserLevel,
 )
+from app.services.ingestion.embedder import embed_text
 from app.services.qdrant_client import get_qdrant_client
 
 logger = logging.getLogger(__name__)
@@ -394,15 +395,16 @@ def retrieve_reference_context(request: QuizRequest) -> list[dict[str, Any]]:
 
     try:
         client = get_qdrant_client()
-        results = client.query(
+        query_vector = embed_text(query_text)
+        results = client.search(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_text=query_text,
+            query_vector=query_vector,
             limit=_MAX_CONTEXT_CHUNKS,
         )
         chunks = [
             {
-                "title":   hit.metadata.get("title", ""),
-                "content": (hit.document or "")[:_CHUNK_CONTENT_MAX_CHARS],
+                "title":   (hit.payload or {}).get("title", ""),
+                "content": ((hit.payload or {}).get("text", "") or "")[:_CHUNK_CONTENT_MAX_CHARS],
                 "score":   hit.score,
             }
             for hit in results

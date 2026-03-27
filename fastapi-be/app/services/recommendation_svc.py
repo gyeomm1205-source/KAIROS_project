@@ -27,6 +27,7 @@ from pydantic import BaseModel, Field
 
 from app.core.model_router import TaskType, get_model, get_model_name, get_prompt_version
 from app.core.settings import QDRANT_COLLECTION_NAME
+from app.services.ingestion.embedder import embed_text
 from app.models.schemas import (
     ActivityHistoryItem,
     CurrentStatus,
@@ -156,23 +157,24 @@ def _retrieve_from_qdrant(request: RecommendationRequest) -> list[dict[str, Any]
 
     try:
         client = get_qdrant_client()
-        results = client.query(
+        query_vector = embed_text(query_text)
+        results = client.search(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_text=query_text,
+            query_vector=query_vector,
             limit=_MAX_CANDIDATES,
         )
         candidates = [
             {
-                "title":          hit.metadata.get("title", ""),
-                "url":            hit.metadata.get("url", "") or hit.metadata.get("source_url", ""),
-                "source_type":    hit.metadata.get("source_type", "tech_blog"),
-                "published_at":   hit.metadata.get("published_at", None),
-                "skill_tags":     hit.metadata.get("skill_tags", []) or hit.metadata.get("skill", []),
+                "title":          (hit.payload or {}).get("title", ""),
+                "url":            (hit.payload or {}).get("url", "") or (hit.payload or {}).get("source_url", ""),
+                "source_type":    (hit.payload or {}).get("source_type", "tech_blog"),
+                "published_at":   (hit.payload or {}).get("published_at", None),
+                "skill_tags":     (hit.payload or {}).get("skill_tags", []) or (hit.payload or {}).get("skill", []),
                 "recommendation_reason": "",  # LLM이 채워줌
                 "score":          hit.score,
             }
             for hit in results
-            if hit.metadata.get("title")
+            if (hit.payload or {}).get("title")
         ]
         logger.info("[_retrieve_from_qdrant] %d개 후보 검색", len(candidates))
         return candidates
@@ -462,23 +464,24 @@ def _retrieve_from_qdrant_raw(query_text: str, level: UserLevel) -> list[dict[st
 
     try:
         client = get_qdrant_client()
-        results = client.query(
+        query_vector = embed_text(target_query)
+        results = client.search(
             collection_name=QDRANT_COLLECTION_NAME,
-            query_text=target_query,
+            query_vector=query_vector,
             limit=_MAX_CANDIDATES,
         )
         candidates = [
             {
-                "title":          hit.metadata.get("title", ""),
-                "url":            hit.metadata.get("url", "") or hit.metadata.get("source_url", ""),
-                "source_type":    hit.metadata.get("source_type", "tech_blog"),
-                "published_at":   hit.metadata.get("published_at", None),
-                "skill_tags":     hit.metadata.get("skill_tags", []) or hit.metadata.get("skill", []),
+                "title":          (hit.payload or {}).get("title", ""),
+                "url":            (hit.payload or {}).get("url", "") or (hit.payload or {}).get("source_url", ""),
+                "source_type":    (hit.payload or {}).get("source_type", "tech_blog"),
+                "published_at":   (hit.payload or {}).get("published_at", None),
+                "skill_tags":     (hit.payload or {}).get("skill_tags", []) or (hit.payload or {}).get("skill", []),
                 "recommendation_reason": "",
                 "score":          hit.score,
             }
             for hit in results
-            if hit.metadata.get("title")
+            if (hit.payload or {}).get("title")
         ]
         return candidates
     except Exception as exc:

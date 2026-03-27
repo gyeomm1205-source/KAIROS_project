@@ -37,3 +37,11 @@ def embed_chunks(chunks: list[str]) -> list[list[float]]:
         vectors.extend([item.embedding for item in resp.data])
 
     return vectors
+
+
+def embed_text(text: str) -> list[float]:
+    """단일 텍스트를 임베딩합니다."""
+    client = _get_client()
+    safe_text = str(text).encode("utf-8", "ignore").decode("utf-8").replace("\x00", "")
+    resp = client.embeddings.create(model=EMBEDDING_MODEL, input=[safe_text])
+    return resp.data[0].embedding
