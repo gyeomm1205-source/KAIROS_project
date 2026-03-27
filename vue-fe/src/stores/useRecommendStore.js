@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { getRecommendations, getRecommendationDetail, postQuizSessionStart, postQuizAnswer, postQuizComplete } from '@/api/aiApi'
+import { getRecommendations, getRecommendationDetail, getCalendar, postQuizSessionStart, postQuizAnswer, postQuizComplete } from '@/api/aiApi'
 
 export const useRecommendStore = defineStore('recommend', () => {
   const isLoading = ref(false)
@@ -65,6 +65,7 @@ export const useRecommendStore = defineStore('recommend', () => {
   ])
 
   const recommendationDetail = ref(null)
+  const selectedCurriculumNodes = ref([])
 
   const recentFlow = ref([
     { label: "React 상태관리 학습", status: "done" },
@@ -148,6 +149,8 @@ export const useRecommendStore = defineStore('recommend', () => {
           id: item.curriculumId,
           title: item.displayName || item.techStacks?.map(t => t.techName).join(', ') || '커리큘럼',
           displayName: item.displayName || '',
+          startDate: item.startDate || null,
+          endDate: item.endDate || null,
           type: 'study',
           date: formatDateRange(item.startDate, item.endDate),
           status: item.status === 'ACTIVE' ? 'in-progress' : 'done',
@@ -234,6 +237,60 @@ export const useRecommendStore = defineStore('recommend', () => {
     }
   }
 
+  const getMonthRange = (startDate, endDate) => {
+    const start = startDate ? new Date(startDate) : new Date()
+    const end = endDate ? new Date(endDate) : start
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      const today = new Date()
+      return [{ year: today.getFullYear(), month: today.getMonth() + 1 }]
+    }
+
+    const ranges = []
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1)
+    const last = new Date(end.getFullYear(), end.getMonth(), 1)
+
+    while (cursor <= last) {
+      ranges.push({ year: cursor.getFullYear(), month: cursor.getMonth() + 1 })
+      cursor.setMonth(cursor.getMonth() + 1)
+    }
+
+    return ranges
+  }
+
+  const loadCurriculumNodes = async (curriculumId, startDate, endDate) => {
+    selectedCurriculumNodes.value = []
+
+    try {
+      const ranges = getMonthRange(startDate, endDate)
+      const results = await Promise.all(ranges.map(params => getCalendar(params)))
+
+      const foundNodes = []
+      const seenNodeIds = new Set()
+
+      results.forEach(({ data }) => {
+        const curriculum = (data.curricula || []).find(item => item.curriculumId === curriculumId)
+        if (!curriculum) return
+
+        ;(curriculum.nodes || []).forEach(node => {
+          if (seenNodeIds.has(node.curriculumNodeId)) return
+          seenNodeIds.add(node.curriculumNodeId)
+          foundNodes.push(node)
+        })
+      })
+
+      selectedCurriculumNodes.value = foundNodes.sort((a, b) => {
+        return (a.scheduledDate || '').localeCompare(b.scheduledDate || '')
+      })
+
+      return selectedCurriculumNodes.value
+    } catch (e) {
+      console.error('curriculum nodes 조회 실패:', e)
+      selectedCurriculumNodes.value = []
+      return []
+    }
+  }
+
   // Quiz session state
   const quizResults = ref([])
   const quizTotalScore = ref(null)
@@ -311,6 +368,7 @@ export const useRecommendStore = defineStore('recommend', () => {
     isLoading, isSubmitting,
     recentActivities,
     recommendationDetail,
+    selectedCurriculumNodes,
     recentFlow,
     missions,
     references,
@@ -318,6 +376,7 @@ export const useRecommendStore = defineStore('recommend', () => {
     quizResults, quizTotalScore, quizCurriculumId,
     loadRecommendations,
     loadRecommendationDetail,
+    loadCurriculumNodes,
     startQuizSession, submitQuizAnswer, completeQuizSession,
   }
 })
