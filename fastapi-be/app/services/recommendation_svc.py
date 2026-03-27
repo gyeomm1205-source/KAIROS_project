@@ -164,10 +164,10 @@ def _retrieve_from_qdrant(request: RecommendationRequest) -> list[dict[str, Any]
         candidates = [
             {
                 "title":          hit.metadata.get("title", ""),
-                "url":            hit.metadata.get("url", ""),
+                "url":            hit.metadata.get("url", "") or hit.metadata.get("source_url", ""),
                 "source_type":    hit.metadata.get("source_type", "tech_blog"),
                 "published_at":   hit.metadata.get("published_at", None),
-                "skill_tags":     hit.metadata.get("skill_tags", []),
+                "skill_tags":     hit.metadata.get("skill_tags", []) or hit.metadata.get("skill", []),
                 "recommendation_reason": "",  # LLM이 채워줌
                 "score":          hit.score,
             }
@@ -443,10 +443,10 @@ def _retrieve_from_qdrant_raw(query_text: str, level: UserLevel) -> list[dict[st
         candidates = [
             {
                 "title":          hit.metadata.get("title", ""),
-                "url":            hit.metadata.get("url", ""),
+                "url":            hit.metadata.get("url", "") or hit.metadata.get("source_url", ""),
                 "source_type":    hit.metadata.get("source_type", "tech_blog"),
                 "published_at":   hit.metadata.get("published_at", None),
-                "skill_tags":     hit.metadata.get("skill_tags", []),
+                "skill_tags":     hit.metadata.get("skill_tags", []) or hit.metadata.get("skill", []),
                 "recommendation_reason": "",
                 "score":          hit.score,
             }
