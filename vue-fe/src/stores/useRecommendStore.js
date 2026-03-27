@@ -180,7 +180,8 @@ export const useRecommendStore = defineStore('recommend', () => {
           title: r.title,
           reason: r.recommendationReason,
           type: r.referenceType,
-          freshness: r.publishedAt || ''
+          freshness: r.publishedAt || '',
+          techStacks: r.techStacks || []
         }))
       }
 

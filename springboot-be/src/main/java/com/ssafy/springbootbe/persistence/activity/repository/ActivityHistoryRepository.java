@@ -44,6 +44,10 @@ public interface ActivityHistoryRepository extends JpaRepository<ActivityHistory
     List<LocalDateTime> findActivityDatesByUserId(@Param("userId") Long userId);
 
     Optional<ActivityHistory> findTopByUserUserIdAndActivityTypeOrderByActivityDateDesc(Long userId, ActivityType activityType);
+    Optional<ActivityHistory> findTopByUserUserIdAndActivityTypeAndTitleOrderByActivityDateDesc(
+            Long userId,
+            ActivityType activityType,
+            String title);
 
     // 성장 일지 — 월별 activity_type별 활동 수 집계
     @Query("SELECT YEAR(a.activityDate), MONTH(a.activityDate), a.activityType, COUNT(a) " +
