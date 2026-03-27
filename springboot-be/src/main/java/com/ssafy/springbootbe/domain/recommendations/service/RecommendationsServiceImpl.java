@@ -41,6 +41,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -178,6 +179,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
     @Override
     @Transactional(readOnly = true)
+    @Async
     public void refreshDailyRecommendation(Long userId, Long curriculumId) {
         Curriculum curriculum = findCurriculumOrThrow(curriculumId);
         validateCurriculumOwnership(userId, curriculum);
