@@ -18,6 +18,7 @@ import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewRes
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewOptionDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewReasonDto;
+import com.ssafy.springbootbe.domain.recommendations.service.RecommendationsService;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
@@ -70,6 +71,7 @@ class CurriculaServiceImplTest {
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     @Mock private OAuthAccountRepository oAuthAccountRepository;
+    @Mock private RecommendationsService recommendationsService;
     @Mock private GoogleCalendarClientService googleCalendarClientService;
     @Mock private OAuthTokenCryptoService oAuthTokenCryptoService;
     @Mock private AIRestClient aiRestClient;
@@ -97,6 +99,7 @@ class CurriculaServiceImplTest {
                 activityHistoryRepository,
                 activityHistoryTechStackRepository,
                 oAuthAccountRepository,
+                recommendationsService,
                 googleCalendarClientService,
                 oAuthTokenCryptoService,
                 aiRestClient,

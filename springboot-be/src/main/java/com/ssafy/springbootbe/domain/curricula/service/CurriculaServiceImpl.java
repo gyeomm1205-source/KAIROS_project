@@ -29,6 +29,7 @@ import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedE
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
+import com.ssafy.springbootbe.domain.recommendations.service.RecommendationsService;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
@@ -57,6 +58,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
@@ -83,6 +86,7 @@ public class CurriculaServiceImpl implements CurriculaService {
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
     private final TechStackRepository techStackRepository;
+    private final RecommendationsService recommendationsService;
     private final GoogleCalendarClientService googleCalendarClientService;
     private final OAuthTokenCryptoService oAuthTokenCryptoService;
     private final AIRestClient aiRestClient;
@@ -184,6 +188,7 @@ public class CurriculaServiceImpl implements CurriculaService {
         }
 
         Calendar calendarClient = buildGoogleCalendarClientOrNull(userId);
+        registerDailyRecommendationRefreshAfterCommit(userId, curriculum.getCurriculumId());
 
         List<ConfirmNodeDto> confirmNodes = new ArrayList<>();
         for (PreviewNodeDto nodeDto : selectedPreview.getNodes()) {
@@ -242,6 +247,28 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .techStacks(selectedPreview.getTechStacks())
                 .nodes(confirmNodes)
                 .build();
+    }
+
+    private void registerDailyRecommendationRefreshAfterCommit(Long userId, Long curriculumId) {
+        Runnable refreshTask = () -> {
+            try {
+                recommendationsService.refreshDailyRecommendation(userId, curriculumId);
+            } catch (RuntimeException e) {
+                log.error("커리큘럼 저장 후 추천 캐시 갱신 실패. userId={}, curriculumId={}", userId, curriculumId, e);
+            }
+        };
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    refreshTask.run();
+                }
+            });
+            return;
+        }
+
+        refreshTask.run();
     }
 
     @Override
