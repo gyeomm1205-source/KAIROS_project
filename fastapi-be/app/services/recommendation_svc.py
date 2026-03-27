@@ -321,6 +321,16 @@ def _item_reason(candidate: dict[str, Any], default: str) -> str:
 
 
 def _map_source_type(source_type: str) -> str:
+    mapping = {
+        "tech_blog": "TECH_BLOG",
+        "blog": "TECH_BLOG",
+        "docs": "OFFICIAL_DOCS",
+        "documentation": "OFFICIAL_DOCS",
+        "official_docs": "OFFICIAL_DOCS",
+        "wiki": "WIKI",
+        "video": "VIDEO",
+        "youtube": "VIDEO",
+    }
     return mapping.get(source_type.lower(), "TECH_BLOG")
 
 
