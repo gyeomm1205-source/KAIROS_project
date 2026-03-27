@@ -243,24 +243,35 @@
 
                   <div class="ref-list space-y">
                     <template v-if="store.references.length">
-                      <div v-for="ref in store.references" :key="ref.title" class="base-panel p-md option-btn">
+                      <div
+                        v-for="ref in store.references"
+                        :key="ref.title"
+                        class="base-panel p-md option-btn ref-card"
+                        @click="openReference(ref.url)"
+                      >
                         <div class="ref-card-top mb-sm">
                           <div class="flex-align gap-sm ref-title-row">
                             <i class="fas fa-file-alt text-muted ref-icon" />
                             <span class="font-bold ref-title">{{ ref.title }}</span>
                           </div>
-                          <span class="ref-type-badge">{{ ref.type }}</span>
+                          <span class="ref-type-badge" :class="getReferenceTypeClass(ref.type)">{{ getReferenceTypeLabel(ref.type) }}</span>
                         </div>
                         <div v-if="referenceContextLabel" class="ref-context-chip">
                           <i class="fas fa-crosshairs" /> {{ referenceContextLabel }} 기준 추천
                         </div>
                         <p class="text-muted text-sm ref-desc mb-sm">{{ ref.reason }}</p>
+                        <div v-if="ref.techStacks?.length" class="ref-tech-list">
+                          <span v-for="tag in ref.techStacks.slice(0, 4)" :key="tag" class="ref-tech-pill">
+                            <i v-if="hasTechIcon(tag)" :class="getTechIcon(tag)" class="tech-icon" />
+                            {{ tag }}
+                          </span>
+                        </div>
                         <div class="ref-card-bottom">
                           <div class="flex-align gap-md text-muted text-xs">
                             <span>{{ ref.freshness }}</span>
                             <span><i class="fas fa-shield-alt" /> 안전한 링크</span>
                           </div>
-                          <button class="btn-text-muted" @click="openReference(ref.url)"><i class="fas fa-external-link-alt" /> 보기</button>
+                          <span class="ref-open-hint"><i class="fas fa-external-link-alt" /> 문서 열기</span>
                         </div>
                       </div>
                     </template>
@@ -579,6 +590,26 @@ const recommendationTags = computed(() =>
     ? selectedActivityCard.value.tags
     : (currentStatus.value.topSkills || [])
 )
+
+const getReferenceTypeLabel = (type) => {
+  const mapping = {
+    TECH_BLOG: '기술 블로그',
+    OFFICIAL_DOCS: '공식 문서',
+    WIKI: '위키',
+    VIDEO: '영상',
+  }
+  return mapping[type] || '기술 블로그'
+}
+
+const getReferenceTypeClass = (type) => {
+  const mapping = {
+    TECH_BLOG: 'type-blog',
+    OFFICIAL_DOCS: 'type-docs',
+    WIKI: 'type-wiki',
+    VIDEO: 'type-video',
+  }
+  return mapping[type] || 'type-blog'
+}
 
 const currentCurriculumNodeLabel = computed(() => {
   if (!curriculumNodes.value.length) return ''
@@ -982,16 +1013,26 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .outline-badge { border-color: var(--border); color: var(--text-muted); background: transparent; padding: 3px 8px; font-size: 9px; font-weight: 600; border-radius: 4px; }
 
 /* Ref card layout */
+.ref-card { cursor: pointer; transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+.ref-card:hover { transform: translateY(-2px); box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08); border-color: rgba(124, 77, 255, 0.22); }
 .ref-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .ref-title-row { flex: 1; min-width: 0; align-items: flex-start; }
 .ref-icon { flex-shrink: 0; margin-top: 2px; }
 .ref-title { font-size: 13px; line-height: 1.4; word-break: keep-all; }
-.ref-type-badge { flex-shrink: 0; padding: 2px 7px; border: 1px solid var(--border); border-radius: 4px; font-size: 9px; font-weight: 700; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
+.ref-type-badge { flex-shrink: 0; padding: 4px 9px; border: 1px solid var(--border); border-radius: 999px; font-size: 10px; font-weight: 800; color: var(--text-muted); white-space: nowrap; margin-top: 2px; }
+.ref-type-badge.type-blog { border-color: rgba(245, 158, 11, 0.28); background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.ref-type-badge.type-docs { border-color: rgba(37, 99, 235, 0.22); background: rgba(37, 99, 235, 0.10); color: #1d4ed8; }
+.ref-type-badge.type-wiki { border-color: rgba(16, 185, 129, 0.22); background: rgba(16, 185, 129, 0.10); color: #047857; }
+.ref-type-badge.type-video { border-color: rgba(168, 85, 247, 0.22); background: rgba(168, 85, 247, 0.10); color: #7c3aed; }
 .ref-context-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; margin-left: 20px; margin-bottom: 10px; border: 1px dashed var(--border); border-radius: 999px; font-size: 10px; font-weight: 700; color: var(--text-muted); }
 .ref-empty-state { min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
 .ref-empty-state i { font-size: 20px; color: var(--text-muted); }
 .ref-desc { padding-left: 20px; line-height: 1.6; }
+.ref-tech-list { display: flex; flex-wrap: wrap; gap: 8px; padding-left: 20px; margin-bottom: 10px; }
+.ref-tech-pill { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-hover); font-size: 11px; font-weight: 700; color: var(--text-primary); }
+.ref-tech-pill .tech-icon { font-size: 11px; }
 .ref-card-bottom { display: flex; align-items: center; justify-content: space-between; padding-left: 20px; }
+.ref-open-hint { font-size: 11px; font-weight: 800; color: var(--clr-primary); }
 
 /* Active Panel (Sticky) */
 .active-panel { position: sticky; top: 84px; }
