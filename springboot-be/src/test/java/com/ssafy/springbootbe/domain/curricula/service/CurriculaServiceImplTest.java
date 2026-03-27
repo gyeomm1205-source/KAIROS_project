@@ -145,6 +145,8 @@ class CurriculaServiceImplTest {
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
                 .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
 
         CurriculumGenerateResponse aiResponse = CurriculumGenerateResponse.builder()
                 .recommendationReason(PreviewReasonDto.builder().summaryLine("백엔드 커리큘럼").build())
@@ -190,6 +192,8 @@ class CurriculaServiceImplTest {
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(userWithSchedule));
         given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
                 .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
         given(oAuthAccountRepository.findByUserUserIdAndProvider(eq(USER_ID), any()))
                 .willReturn(Optional.empty());
 
@@ -219,6 +223,10 @@ class CurriculaServiceImplTest {
     void preview_사용자_없으면_IllegalArgumentException() {
         // given
         given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
+        given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
+                .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
 
         CurriculumPreviewRequest request = CurriculumPreviewRequest.builder()
                 .analysisData(AnalysisDataRequest.builder().summary("분석 결과").build())

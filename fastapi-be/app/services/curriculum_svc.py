@@ -227,21 +227,36 @@ async def run_curriculum(request: CurriculumRequest) -> CurriculumResponse:
         request.user_id,
         request.curriculum_type.value,
     )
-    option_a_output, option_b_output = await _generate_alternative_pair(request)
-    option_a = _assemble_alternative_option(option_a_output, "WEAKNESS", "약점 보완형")
-    option_b = _assemble_alternative_option(option_b_output, "STRENGTH", "강점 강화형")
+    if request.curriculum_type == CurriculumType.auto:
+        option_a_output, option_b_output = await _generate_alternative_pair(request)
+        option_a = _assemble_alternative_option(option_a_output, "WEAKNESS", "약점 보완형")
+        option_b = _assemble_alternative_option(option_b_output, "STRENGTH", "강점 강화형")
 
-    response = CurriculumResponse(
-        recommendation_reason=option_a.recommendation_reason,
-        tech_stacks=option_a.tech_stacks,
-        nodes=option_a.nodes,
-        option_a=option_a,
-        option_b=option_b,
-    )
+        response = CurriculumResponse(
+            recommendation_reason=option_a.recommendation_reason,
+            tech_stacks=option_a.tech_stacks,
+            nodes=option_a.nodes,
+            option_a=option_a,
+            option_b=option_b,
+        )
+        logger.info(
+            "[run_curriculum] 완료 — optionA=%d개, optionB=%d개 노드 생성 (type=%s)",
+            len(option_a.nodes),
+            len(option_b.nodes),
+            request.curriculum_type.value,
+        )
+        return response
+
+    try:
+        output = await _generate_with_llm(request)
+    except Exception as exc:
+        logger.warning("[run_curriculum] LLM 호출 실패 (%s) — 템플릿 폴백 사용", exc)
+        output = _generate_with_template(request)
+
+    response = _assemble_response(output)
     logger.info(
-        "[run_curriculum] 완료 — optionA=%d개, optionB=%d개 노드 생성 (type=%s)",
-        len(option_a.nodes),
-        len(option_b.nodes),
+        "[run_curriculum] 완료 — %d개 노드 생성 (type=%s)",
+        len(response.nodes),
         request.curriculum_type.value,
     )
     return response
