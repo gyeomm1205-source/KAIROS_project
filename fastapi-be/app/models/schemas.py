@@ -283,6 +283,17 @@ class CurriculumResponse(_CamelModel):
     recommendation_reason: CurriculumRecommendationReason
     tech_stacks: list[str] = Field(default_factory=list)
     nodes: list[CurriculumNode]
+    option_a: AlternativeCurriculumOption | None = None
+    option_b: AlternativeCurriculumOption | None = None
+
+
+class AlternativeCurriculumOption(_CamelModel):
+    """A/B 추천 커리큘럼 옵션 1건."""
+    option_type: str
+    option_label: str
+    recommendation_reason: CurriculumRecommendationReason
+    tech_stacks: list[str] = Field(default_factory=list)
+    nodes: list[CurriculumNode]
 
 
 # ---------------------------------------------------------------------------

@@ -18,4 +18,6 @@ public class CurriculumPreviewResponse {
     private PreviewReasonDto recommendationReason;
     private List<String> techStacks;
     private List<PreviewNodeDto> nodes;
+    private PreviewOptionDto optionA;
+    private PreviewOptionDto optionB;
 }

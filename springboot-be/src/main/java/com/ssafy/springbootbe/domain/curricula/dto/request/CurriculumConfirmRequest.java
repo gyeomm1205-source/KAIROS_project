@@ -10,4 +10,5 @@ public class CurriculumConfirmRequest {
 
     @NotBlank(message = "curriculumPreviewKey는 필수입니다.")
     private String curriculumPreviewKey;
+    private String selectedOptionType;
 }

@@ -13,11 +13,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class CurriculumGenerateResponse {
+public class PreviewOptionDto {
 
+    private String optionType;
+    private String optionLabel;
     private PreviewReasonDto recommendationReason;
     private List<String> techStacks;
     private List<PreviewNodeDto> nodes;
-    private PreviewOptionDto optionA;
-    private PreviewOptionDto optionB;
 }

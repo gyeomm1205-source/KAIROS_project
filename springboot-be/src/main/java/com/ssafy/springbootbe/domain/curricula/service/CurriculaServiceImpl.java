@@ -13,6 +13,7 @@ import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumGenerateReq
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumNodeUpdateRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.CurriculumPreviewRequest;
 import com.ssafy.springbootbe.domain.curricula.dto.request.GoogleCalendarEventDto;
+import com.ssafy.springbootbe.domain.curricula.dto.request.RecentActivityDto;
 import com.ssafy.springbootbe.domain.curricula.dto.request.SkillStatDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CalendarSyncDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.ConfirmNodeDto;
@@ -22,12 +23,15 @@ import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeRespon
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewOptionDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewReasonDto;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
+import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNodeCalendarSync;
@@ -75,6 +79,7 @@ public class CurriculaServiceImpl implements CurriculaService {
     private final CurriculumRecommendationReasonRepository curriculumRecommendationReasonRepository;
     private final CurriculumTechStackRepository curriculumTechStackRepository;
     private final UserRepository userRepository;
+    private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
     private final TechStackRepository techStackRepository;
@@ -103,13 +108,16 @@ public class CurriculaServiceImpl implements CurriculaService {
 
         List<SkillStatDto> userTechStacks = buildUserTechStacks(userId);
 
+        boolean isOnboardingPreview = request.getAnalysisData() != null;
+
         CurriculumGenerateRequest aiRequest = CurriculumGenerateRequest.builder()
                 .userId(userId)
-                .curriculumType("ONBOARDING")
+                .curriculumType(isOnboardingPreview ? "ONBOARDING" : "AUTO")
                 .considerPersonalSchedule(user.getConsiderPersonalSchedule())
                 .googleCalendarEvents(googleEvents)
                 .analysisData(request.getAnalysisData())
                 .userTechStacks(userTechStacks)
+                .recentActivities(isOnboardingPreview ? List.of() : buildRecentActivities(userId))
                 .build();
 
         CurriculumGenerateResponse aiResponse = callFastApi(aiRequest);
@@ -128,6 +136,8 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .recommendationReason(aiResponse.getRecommendationReason())
                 .techStacks(aiResponse.getTechStacks())
                 .nodes(aiResponse.getNodes())
+                .optionA(aiResponse.getOptionA())
+                .optionB(aiResponse.getOptionB())
                 .build();
     }
 
@@ -151,7 +161,8 @@ public class CurriculaServiceImpl implements CurriculaService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다. userId=" + userId));
 
-        int duration = calculateDuration(aiResponse.getNodes());
+        CurriculumGenerateResponse selectedPreview = resolveSelectedPreview(aiResponse, request.getSelectedOptionType());
+        int duration = calculateDuration(selectedPreview.getNodes());
 
         Curriculum curriculum = Curriculum.builder()
                 .user(user)
@@ -159,9 +170,9 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .duration(duration)
                 .build();
         curriculumRepository.save(curriculum);
-        saveCurriculumTechStacks(curriculum, aiResponse.getTechStacks());
+        saveCurriculumTechStacks(curriculum, selectedPreview.getTechStacks());
 
-        PreviewReasonDto reason = aiResponse.getRecommendationReason();
+        PreviewReasonDto reason = selectedPreview.getRecommendationReason();
         if (reason != null) {
             curriculumRecommendationReasonRepository.save(CurriculumRecommendationReason.builder()
                     .curriculum(curriculum)
@@ -175,7 +186,7 @@ public class CurriculaServiceImpl implements CurriculaService {
         Calendar calendarClient = buildGoogleCalendarClientOrNull(userId);
 
         List<ConfirmNodeDto> confirmNodes = new ArrayList<>();
-        for (PreviewNodeDto nodeDto : aiResponse.getNodes()) {
+        for (PreviewNodeDto nodeDto : selectedPreview.getNodes()) {
             CurriculumNode node = CurriculumNode.builder()
                     .curriculum(curriculum)
                     .title(nodeDto.getTitle())
@@ -220,7 +231,7 @@ public class CurriculaServiceImpl implements CurriculaService {
         }
 
         redisService.delete(previewKey);
-        invalidateCalendarCacheForNodes(userId, aiResponse.getNodes());
+        invalidateCalendarCacheForNodes(userId, selectedPreview.getNodes());
 
         log.info("커리큘럼 확정 저장 완료. userId={}, curriculumId={}", userId, curriculum.getCurriculumId());
 
@@ -228,7 +239,7 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .curriculumId(curriculum.getCurriculumId())
                 .status(curriculum.getStatus())
                 .createdAt(curriculum.getCreatedAt())
-                .techStacks(aiResponse.getTechStacks())
+                .techStacks(selectedPreview.getTechStacks())
                 .nodes(confirmNodes)
                 .build();
     }
@@ -364,8 +375,31 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .map(row -> SkillStatDto.builder()
                         .skill(((TechStack) row[0]).getTechName())
                         .count(((Long) row[1]).intValue())
+                .build())
+                .toList();
+    }
+
+    private List<RecentActivityDto> buildRecentActivities(Long userId) {
+        return activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(userId).stream()
+                .map(activity -> RecentActivityDto.builder()
+                        .activityType(mapActivityType(activity.getActivityType()))
+                        .category(activity.getCategory() == null ? null : activity.getCategory().name())
+                        .title(activity.getTitle())
+                        .description(activity.getDescription())
+                        .activityDate(activity.getActivityDate())
+                        .techStacks(activityHistoryTechStackRepository
+                                .findByActivityHistoryActivityHistoryId(activity.getActivityHistoryId()).stream()
+                                .map(techStack -> techStack.getTechStack().getTechName())
+                                .toList())
                         .build())
                 .toList();
+    }
+
+    private String mapActivityType(ActivityType activityType) {
+        if (activityType == ActivityType.GITHUB_COMMIT) {
+            return "COMMIT";
+        }
+        return activityType.name();
     }
 
     CurriculumGenerateResponse callFastApi(CurriculumGenerateRequest request) {
@@ -399,6 +433,34 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .max(Comparator.naturalOrder())
                 .orElse(LocalDate.now());
         return (int) (maxDate.toEpochDay() - minDate.toEpochDay() + 1);
+    }
+
+    private CurriculumGenerateResponse resolveSelectedPreview(
+            CurriculumGenerateResponse response,
+            String selectedOptionType
+    ) {
+        if (response == null) {
+            return null;
+        }
+
+        PreviewOptionDto selectedOption = null;
+        if ("STRENGTH".equalsIgnoreCase(selectedOptionType)) {
+            selectedOption = response.getOptionB();
+        } else if ("WEAKNESS".equalsIgnoreCase(selectedOptionType)) {
+            selectedOption = response.getOptionA();
+        }
+
+        if (selectedOption == null) {
+            return response;
+        }
+
+        return CurriculumGenerateResponse.builder()
+                .recommendationReason(selectedOption.getRecommendationReason())
+                .techStacks(selectedOption.getTechStacks())
+                .nodes(selectedOption.getNodes())
+                .optionA(response.getOptionA())
+                .optionB(response.getOptionB())
+                .build();
     }
 
     private void savePreviewToRedis(String previewKey, CurriculumGenerateResponse data) {

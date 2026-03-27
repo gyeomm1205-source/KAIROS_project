@@ -65,7 +65,7 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
-                    <button class="btn-primary-small" @click="showCurriculumModal = true">
+                    <button class="btn-primary-small" @click="openCurriculumModal">
                       <i class="fas fa-book-open" /> 커리큘럼 추천받기
                     </button>
                   </div>
@@ -335,51 +335,63 @@
           <h3><i class="fas fa-book-open" /> 추천 커리큘럼</h3>
           <button class="btn-close" @click="showCurriculumModal = false"><i class="fas fa-times"/></button>
         </div>
-        <div class="curriculum-dual-body">
+        <div v-if="isCurriculumModalLoading" class="curriculum-modal-state">
+          <i class="fas fa-spinner fa-spin" />
+          <p>현재 상태를 바탕으로 약점 보완형과 강점 강화형 커리큘럼을 만들고 있어요.</p>
+        </div>
+        <div v-else-if="curriculumModalError" class="curriculum-modal-state error-state">
+          <i class="fas fa-exclamation-circle" />
+          <p>{{ curriculumModalError }}</p>
+        </div>
+        <div v-else class="curriculum-dual-body">
           <!-- 옵션 A -->
-          <div class="curriculum-option">
+          <div v-if="curriculumOptionA" class="curriculum-option">
             <div class="curriculum-option-header">
               <span class="option-badge badge-a">옵션 A</span>
-              <h4 class="option-title">단기 집중 코스</h4>
-              <p class="option-subtitle">약점 보완형 (부족한 기술 중심)</p>
-              <span class="option-meta"><i class="fas fa-clock"/> 3일 · 약 5시간</span>
+              <h4 class="option-title">{{ curriculumOptionATitle }}</h4>
+              <p class="option-subtitle">{{ curriculumOptionASubtitle }}</p>
+              <span class="option-meta"><i class="fas fa-clock"/> {{ curriculumOptionAMeta }}</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in curriculumA" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in curriculumOptionA.nodes || []" :key="`a-${i}`" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
                   <span class="font-bold text-sm">{{ i + 1 }}일차</span>
-                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ formatNodeDuration(item.expectedMinutes) }}</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
-                <p class="text-muted text-sm">{{ item.desc }}</p>
+                <p class="text-muted text-sm">{{ item.description }}</p>
               </div>
             </div>
             <div class="curriculum-option-footer">
-              <button class="btn-primary w-full" @click="showCurriculumModal = false">이 커리큘럼 선택</button>
+              <button class="btn-primary w-full" :disabled="isCurriculumConfirming" @click="selectRecommendedCurriculum('WEAKNESS')">
+                {{ isCurriculumConfirming ? '저장 중...' : '이 커리큘럼 선택' }}
+              </button>
             </div>
           </div>
 
           <div class="curriculum-divider"></div>
 
-          <div class="curriculum-option">
+          <div v-if="curriculumOptionB" class="curriculum-option">
             <div class="curriculum-option-header">
               <span class="option-badge badge-b">옵션 B</span>
-              <h4 class="option-title">심화 마스터 코스</h4>
-              <p class="option-subtitle">강점 심화형 (잘하는 기술 심화)</p>
-              <span class="option-meta"><i class="fas fa-clock"/> 5일 · 약 9시간</span>
+              <h4 class="option-title">{{ curriculumOptionBTitle }}</h4>
+              <p class="option-subtitle">{{ curriculumOptionBSubtitle }}</p>
+              <span class="option-meta"><i class="fas fa-clock"/> {{ curriculumOptionBMeta }}</span>
             </div>
             <div class="curriculum-items">
-              <div v-for="(item, i) in curriculumB" :key="i" class="reason-item shadow-normal">
+              <div v-for="(item, i) in curriculumOptionB.nodes || []" :key="`b-${i}`" class="reason-item shadow-normal">
                 <div class="flex-between mb-xs">
                   <span class="font-bold text-sm">{{ i + 1 }}일차</span>
-                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ item.duration }}</span>
+                  <span class="text-muted text-xs"><i class="fas fa-clock"/> {{ formatNodeDuration(item.expectedMinutes) }}</span>
                 </div>
                 <h4 class="mb-xs">{{ item.title }}</h4>
-                <p class="text-muted text-sm">{{ item.desc }}</p>
+                <p class="text-muted text-sm">{{ item.description }}</p>
               </div>
             </div>
             <div class="curriculum-option-footer">
-              <button class="btn-primary w-full" @click="showCurriculumModal = false">이 커리큘럼 선택</button>
+              <button class="btn-primary w-full" :disabled="isCurriculumConfirming" @click="selectRecommendedCurriculum('STRENGTH')">
+                {{ isCurriculumConfirming ? '저장 중...' : '이 커리큘럼 선택' }}
+              </button>
             </div>
           </div>
         </div>
@@ -395,6 +407,7 @@ import { useRouter } from 'vue-router'
 import { useRecommendStore } from '@/stores/useRecommendStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
+import { postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 
 const router = useRouter()
 const store = useRecommendStore()
@@ -414,20 +427,10 @@ const selectedActivity = ref(null)
 const showReasonModal = ref(false)
 const showCurriculumModal = ref(false)
 const flowTrackRef = ref(null)
-
-const curriculumA = [
-  { title: 'RSC 핵심 개념 이해', desc: 'Server Component와 Client Component의 차이와 경계선을 익힙니다.', duration: '1시간 30분' },
-  { title: '데이터 패칭 패턴 실습', desc: 'fetch, cache, revalidate 패턴을 직접 구현해봅니다.', duration: '2시간' },
-  { title: 'RSC 실전 적용', desc: '기존 Next.js 프로젝트에 RSC를 점진적으로 도입합니다.', duration: '1시간 30분' },
-]
-
-const curriculumB = [
-  { title: 'RSC 이론 기반 다지기', desc: 'React 렌더링 모델과 RSC의 설계 철학을 이해합니다.', duration: '1시간 30분' },
-  { title: 'Streaming & Suspense', desc: 'Progressive rendering과 Suspense 경계를 활용합니다.', duration: '2시간' },
-  { title: '고급 데이터 패칭 전략', desc: 'Server Action, cache 태깅, on-demand revalidation을 익힙니다.', duration: '2시간' },
-  { title: '성능 최적화 심화', desc: 'Bundle 분석, PPR, 렌더링 결정 기준을 학습합니다.', duration: '1시간 30분' },
-  { title: '프로덕션 마이그레이션', desc: '실제 App Router 마이그레이션 전략과 트레이드오프를 정리합니다.', duration: '2시간' },
-]
+const curriculumPreviewData = ref(null)
+const isCurriculumModalLoading = ref(false)
+const isCurriculumConfirming = ref(false)
+const curriculumModalError = ref('')
 
 const activeMission = ref(null)
 const quizStep = ref("intro") // 'intro' | 'question' | 'result'
@@ -594,6 +597,48 @@ const reasonSummary = computed(() => recommendationReason.value.summary || '')
 const reasonDetail = computed(() => recommendationReason.value.detail || '')
 const currentStatusDetail = computed(() => currentStatus.value.detail || '')
 
+const curriculumOptionA = computed(() => {
+  const data = curriculumPreviewData.value
+  if (!data) return null
+  return data.optionA || (data.nodes?.length ? {
+    optionType: 'WEAKNESS',
+    optionLabel: '약점 보완형',
+    recommendationReason: data.recommendationReason,
+    techStacks: data.techStacks || [],
+    nodes: data.nodes || [],
+  } : null)
+})
+
+const curriculumOptionB = computed(() => curriculumPreviewData.value?.optionB || null)
+
+const buildCurriculumMeta = (option) => {
+  const nodes = option?.nodes || []
+  if (!nodes.length) return '일정 정보 없음'
+  const totalMinutes = nodes.reduce((sum, node) => sum + (node.expectedMinutes || 0), 0)
+  const hours = Math.floor(totalMinutes / 60)
+  const minutes = totalMinutes % 60
+  const durationLabel = hours > 0
+    ? `약 ${hours}시간${minutes ? ` ${minutes}분` : ''}`
+    : `약 ${minutes}분`
+  return `${nodes.length}일 · ${durationLabel}`
+}
+
+const curriculumOptionATitle = computed(() =>
+  curriculumOptionA.value?.recommendationReason?.summaryLine || '약점 보완형 커리큘럼'
+)
+const curriculumOptionASubtitle = computed(() =>
+  curriculumOptionA.value?.optionLabel || '약점 보완형'
+)
+const curriculumOptionAMeta = computed(() => buildCurriculumMeta(curriculumOptionA.value))
+
+const curriculumOptionBTitle = computed(() =>
+  curriculumOptionB.value?.recommendationReason?.summaryLine || '강점 강화형 커리큘럼'
+)
+const curriculumOptionBSubtitle = computed(() =>
+  curriculumOptionB.value?.optionLabel || '강점 강화형'
+)
+const curriculumOptionBMeta = computed(() => buildCurriculumMeta(curriculumOptionB.value))
+
 const quizIntroDescription = computed(() =>
   primaryQuiz.value?.description
   || '현재 추천 흐름을 바탕으로 핵심 개념을 점검할 수 있는 퀴즈입니다.'
@@ -602,6 +647,15 @@ const quizIntroDescription = computed(() =>
 const quizExpectedMinutesLabel = computed(() =>
   primaryQuiz.value?.expectedMinutes ? `약 ${primaryQuiz.value.expectedMinutes}분` : '약 15분'
 )
+
+const formatNodeDuration = (minutes) => {
+  const value = Number(minutes || 0)
+  const hours = Math.floor(value / 60)
+  const remain = value % 60
+  if (hours > 0 && remain > 0) return `${hours}시간 ${remain}분`
+  if (hours > 0) return `${hours}시간`
+  return `${remain}분`
+}
 
 const selectActivity = async (activityId) => {
   selectedActivity.value = activityId
@@ -646,7 +700,46 @@ const handleBack = () => {
   selectedActivity.value = null
   store.curriculumReason = null
   store.selectedCurriculumNodes = []
+  curriculumPreviewData.value = null
+  curriculumModalError.value = ''
   closeMission()
+}
+
+const openCurriculumModal = async () => {
+  showCurriculumModal.value = true
+  isCurriculumModalLoading.value = true
+  curriculumModalError.value = ''
+
+  try {
+    const { data } = await postCurriculumPreview({})
+    curriculumPreviewData.value = data
+  } catch (e) {
+    console.error('추천 커리큘럼 미리보기 생성 실패:', e)
+    curriculumPreviewData.value = null
+    curriculumModalError.value = '커리큘럼 추천안을 불러오지 못했어요. 잠시 후 다시 시도해주세요.'
+  } finally {
+    isCurriculumModalLoading.value = false
+  }
+}
+
+const selectRecommendedCurriculum = async (optionType) => {
+  const previewKey = curriculumPreviewData.value?.curriculumPreviewKey
+  if (!previewKey) return
+
+  isCurriculumConfirming.value = true
+  try {
+    await postCurriculaConfirm({
+      curriculumPreviewKey: previewKey,
+      selectedOptionType: optionType,
+    })
+    showCurriculumModal.value = false
+    router.push('/calendar')
+  } catch (e) {
+    console.error('추천 커리큘럼 저장 실패:', e)
+    curriculumModalError.value = '선택한 커리큘럼 저장에 실패했어요. 다시 시도해주세요.'
+  } finally {
+    isCurriculumConfirming.value = false
+  }
 }
 
 const openMission = (missionKey) => {
@@ -933,6 +1026,9 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .curriculum-dual-modal { max-width: 960px; overflow: hidden; }
 .curriculum-dual-modal .reason-content { display: none; }
 .curriculum-dual-body { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0; height: 480px; }
+.curriculum-modal-state { min-height: 320px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: var(--text-muted); text-align: center; font-weight: 600; }
+.curriculum-modal-state i { font-size: 24px; color: var(--text-primary); }
+.curriculum-modal-state.error-state i { color: var(--clr-danger, #ff6b6b); }
 .curriculum-option { display: flex; flex-direction: column; padding: 4px; min-height: 0; }
 .curriculum-option-header { flex-shrink: 0; margin-bottom: 16px; }
 .option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 8px; }

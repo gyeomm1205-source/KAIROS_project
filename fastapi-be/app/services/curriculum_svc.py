@@ -18,6 +18,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, timedelta
 from typing import Any
@@ -29,6 +30,7 @@ from app.core.model_router import TaskType, get_model, get_model_name
 from app.models.schemas import (
     ActivityHistoryItem,
     AnalysisData,
+    AlternativeCurriculumOption,
     CurriculumNode,
     CurriculumRecommendationReason,
     CurriculumRequest,
@@ -108,6 +110,15 @@ _ONBOARDING_SYSTEM_PROMPT = """\
 4. 주제는 하나의 구체적인 기술 또는 기술 조합으로 한정하세요.
 
 """ + _COMMON_RULES
+
+_ALTERNATIVE_FOCUS_TEMPLATE = """\
+
+[추가 생성 지시]
+이번 생성은 "{focus_label}" 옵션입니다.
+- 생성 목표: {focus_description}
+- 가능하면 {focus_tech} 중심으로 커리큘럼 주제를 구체화하세요.
+- 두 옵션이 지나치게 비슷해지지 않도록 학습 의도와 노드 흐름을 분명히 구분하세요.
+"""
 
 _ONBOARDING_USER_TEMPLATE = """\
 [프로필 분석 결과]
@@ -216,15 +227,23 @@ async def run_curriculum(request: CurriculumRequest) -> CurriculumResponse:
         request.user_id,
         request.curriculum_type.value,
     )
+    option_a_output, option_b_output = await _generate_alternative_pair(request)
+    option_a = _assemble_alternative_option(option_a_output, "WEAKNESS", "약점 보완형")
+    option_b = _assemble_alternative_option(option_b_output, "STRENGTH", "강점 강화형")
 
-    try:
-        output = await _generate_with_llm(request)
-    except Exception as exc:
-        logger.warning("[run_curriculum] LLM 호출 실패 (%s) — 템플릿 폴백 사용", exc)
-        output = _generate_with_template(request)
-
-    response = _assemble_response(output)
-    logger.info("[run_curriculum] 완료 — %d개 노드 생성 (type=%s)", len(response.nodes), request.curriculum_type.value)
+    response = CurriculumResponse(
+        recommendation_reason=option_a.recommendation_reason,
+        tech_stacks=option_a.tech_stacks,
+        nodes=option_a.nodes,
+        option_a=option_a,
+        option_b=option_b,
+    )
+    logger.info(
+        "[run_curriculum] 완료 — optionA=%d개, optionB=%d개 노드 생성 (type=%s)",
+        len(option_a.nodes),
+        len(option_b.nodes),
+        request.curriculum_type.value,
+    )
     return response
 
 
@@ -237,24 +256,7 @@ async def _generate_with_llm(request: CurriculumRequest) -> _CurriculumOutput:
     llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.7)
     structured_llm = llm.with_structured_output(_CurriculumOutput)
 
-    match request.curriculum_type:
-        case CurriculumType.onboarding:
-            system_prompt = _ONBOARDING_SYSTEM_PROMPT
-            user_template = _ONBOARDING_USER_TEMPLATE
-            ctx = _build_onboarding_context(request)
-        case CurriculumType.auto:
-            system_prompt = _AUTO_SYSTEM_PROMPT
-            user_template = _AUTO_USER_TEMPLATE
-            ctx = _build_auto_context(request)
-        case CurriculumType.manual:
-            system_prompt = _MANUAL_SYSTEM_PROMPT
-            user_template = _MANUAL_USER_TEMPLATE
-            ctx = _build_manual_context(request)
-        case _:
-            logger.warning("[_generate_with_llm] 알 수 없는 curriculum_type=%s — ONBOARDING으로 폴백", request.curriculum_type)
-            system_prompt = _ONBOARDING_SYSTEM_PROMPT
-            user_template = _ONBOARDING_USER_TEMPLATE
-            ctx = _build_onboarding_context(request)
+    system_prompt, user_template, ctx = _resolve_curriculum_prompt(request)
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
@@ -267,6 +269,67 @@ async def _generate_with_llm(request: CurriculumRequest) -> _CurriculumOutput:
         "[_generate_with_llm] model=%s type=%s nodes=%d",
         get_model_name(TaskType.RECOMMENDATION_REASON),
         request.curriculum_type.value,
+        len(result.nodes),
+    )
+    return result
+
+
+async def _generate_alternative_pair(request: CurriculumRequest) -> tuple[_CurriculumOutput, _CurriculumOutput]:
+    weak_output, strong_output = await asyncio.gather(
+        _generate_alternative_option(request, "weakness"),
+        _generate_alternative_option(request, "strength"),
+    )
+    return weak_output, strong_output
+
+
+def _resolve_curriculum_prompt(request: CurriculumRequest) -> tuple[str, str, dict[str, Any]]:
+    match request.curriculum_type:
+        case CurriculumType.onboarding:
+            return _ONBOARDING_SYSTEM_PROMPT, _ONBOARDING_USER_TEMPLATE, _build_onboarding_context(request)
+        case CurriculumType.auto:
+            return _AUTO_SYSTEM_PROMPT, _AUTO_USER_TEMPLATE, _build_auto_context(request)
+        case CurriculumType.manual:
+            return _MANUAL_SYSTEM_PROMPT, _MANUAL_USER_TEMPLATE, _build_manual_context(request)
+        case _:
+            logger.warning("[_resolve_curriculum_prompt] 알 수 없는 curriculum_type=%s — ONBOARDING으로 폴백", request.curriculum_type)
+            return _ONBOARDING_SYSTEM_PROMPT, _ONBOARDING_USER_TEMPLATE, _build_onboarding_context(request)
+
+
+async def _generate_alternative_option(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    """A/B 전용 옵션 하나를 생성한다. 기존 단일 생성 로직과 분리 유지."""
+    try:
+        return await _generate_with_llm_for_focus(request, focus_mode)
+    except Exception as exc:
+        logger.warning(
+            "[_generate_alternative_option] LLM 호출 실패 (%s) — %s 템플릿 폴백",
+            exc,
+            focus_mode,
+        )
+        return _generate_with_template_for_focus(request, focus_mode)
+
+
+async def _generate_with_llm_for_focus(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.7)
+    structured_llm = llm.with_structured_output(_CurriculumOutput)
+
+    system_prompt, user_template, ctx = _resolve_curriculum_prompt(request)
+    focus_instruction = _build_focus_instruction(request, focus_mode)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", user_template + _ALTERNATIVE_FOCUS_TEMPLATE),
+    ])
+    chain = prompt | structured_llm
+    result: _CurriculumOutput = await chain.ainvoke({
+        **ctx,
+        **focus_instruction,
+    })
+
+    logger.debug(
+        "[_generate_with_llm_for_focus] model=%s type=%s focus=%s nodes=%d",
+        get_model_name(TaskType.RECOMMENDATION_REASON),
+        request.curriculum_type.value,
+        focus_mode,
         len(result.nodes),
     )
     return result
@@ -410,6 +473,36 @@ def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
     )
 
 
+def _generate_with_template_for_focus(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    topic = _choose_focus_topic(request, focus_mode)
+    base_output = _generate_with_template(request)
+
+    focus_label = "약점 보완형" if focus_mode == "weakness" else "강점 강화형"
+    focus_reason = (
+        f"{topic}처럼 지금 보완이 필요한 영역을 우선 다루도록 구성했습니다."
+        if focus_mode == "weakness"
+        else f"{topic}처럼 이미 강점이 보이는 영역을 더 깊게 확장하도록 구성했습니다."
+    )
+
+    adjusted_nodes = []
+    for index, node in enumerate(base_output.nodes):
+        adjusted_nodes.append(_CurriculumNodeOutput(
+            title=f"{topic} — {['개념 이해', '실습', '심화 및 복습'][index % 3]}",
+            description=node.description,
+            scheduled_date=node.scheduled_date,
+            expected_minutes=node.expected_minutes,
+        ))
+
+    return _CurriculumOutput(
+        summary_line=f"{focus_label} {topic} 집중 과정",
+        user_context=base_output.user_context,
+        ai_interpretation=focus_reason,
+        curriculum_rationale=base_output.curriculum_rationale,
+        tech_stacks=_normalize_tech_stack_list([topic, *base_output.tech_stacks]),
+        nodes=adjusted_nodes,
+    )
+
+
 def _assemble_response(output: _CurriculumOutput) -> CurriculumResponse:
     """LLM 출력을 CurriculumResponse로 조립한다."""
     reason = CurriculumRecommendationReason(
@@ -432,7 +525,22 @@ def _assemble_response(output: _CurriculumOutput) -> CurriculumResponse:
         tech_stacks=output.tech_stacks[:5],
         nodes=nodes,
     )
-    
+
+
+def _assemble_alternative_option(
+    output: _CurriculumOutput,
+    option_type: str,
+    option_label: str,
+) -> AlternativeCurriculumOption:
+    base = _assemble_response(output)
+    return AlternativeCurriculumOption(
+        option_type=option_type,
+        option_label=option_label,
+        recommendation_reason=base.recommendation_reason,
+        tech_stacks=base.tech_stacks,
+        nodes=base.nodes,
+    )
+
 
 def _derive_template_tech_stacks(request: CurriculumRequest) -> list[str]:
     tech_stacks: list[str] = []
@@ -447,6 +555,56 @@ def _derive_template_tech_stacks(request: CurriculumRequest) -> list[str]:
 
     normalized: list[str] = []
     for tech in tech_stacks:
+        value = (tech or "").strip()
+        if value and value not in normalized:
+            normalized.append(value)
+    return normalized[:5]
+
+
+def _build_focus_instruction(request: CurriculumRequest, focus_mode: str) -> dict[str, str]:
+    focus_tech = _choose_focus_topic(request, focus_mode)
+    if focus_mode == "weakness":
+        return {
+            "focus_label": "약점 보완형",
+            "focus_description": "현재 상대적으로 약하거나 덜 자신 있는 기술을 보완하는 방향",
+            "focus_tech": focus_tech,
+        }
+    return {
+        "focus_label": "강점 강화형",
+        "focus_description": "이미 강점이 보이는 기술을 더 깊게 확장하는 방향",
+        "focus_tech": focus_tech,
+    }
+
+
+def _choose_focus_topic(request: CurriculumRequest, focus_mode: str) -> str:
+    if request.curriculum_type == CurriculumType.onboarding and request.analysis_data and request.analysis_data.tech_details:
+        techs = sorted(
+            request.analysis_data.tech_details,
+            key=lambda t: (t.proficiency_percentage, t.usage_count)
+        )
+        if focus_mode == "strength":
+            selected = max(
+                request.analysis_data.tech_details,
+                key=lambda t: (t.proficiency_percentage, t.usage_count)
+            )
+            return selected.tech_name
+        return techs[0].tech_name
+
+    if request.user_tech_stacks:
+        sorted_stats = sorted(request.user_tech_stacks, key=lambda s: s.count, reverse=True)
+        if focus_mode == "strength":
+            return sorted_stats[0].skill
+        return sorted_stats[-1].skill
+
+    if request.manual_generation and request.manual_generation.topic:
+        return request.manual_generation.topic
+
+    return "개발 역량 강화"
+
+
+def _normalize_tech_stack_list(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for tech in values:
         value = (tech or "").strip()
         if value and value not in normalized:
             normalized.append(value)

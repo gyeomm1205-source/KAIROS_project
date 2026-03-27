@@ -17,4 +17,5 @@ public class CurriculumGenerateRequest {
     private List<GoogleCalendarEventDto> googleCalendarEvents;
     private AnalysisDataRequest analysisData;
     private List<SkillStatDto> userTechStacks;
+    private List<RecentActivityDto> recentActivities;
 }
