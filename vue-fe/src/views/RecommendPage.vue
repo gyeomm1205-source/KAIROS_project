@@ -276,10 +276,10 @@
         </div>
         <div class="reason-content custom-scroll">
           <div class="reason-item shadow-normal" v-if="reasonStatusSummary || recommendationTags.length">
-            <div class="reason-item-header"><i class="fas fa-compass" /><h4>추천 포인트</h4></div>
+            <div class="reason-item-header"><i class="fas fa-compass" /><h4>커리큘럼 포인트</h4></div>
             <div class="reason-meta-grid">
               <div v-if="reasonStatusSummary" class="reason-meta-box">
-                <span class="reason-meta-label">현재 기준</span>
+                <span class="reason-meta-label">현재 위치</span>
                 <p>{{ reasonStatusSummary }}</p>
               </div>
               <div v-if="recommendationTags.length" class="reason-meta-box">
@@ -292,15 +292,31 @@
               </div>
             </div>
           </div>
-          <div class="reason-item shadow-normal" v-if="reasonSummary">
+          <div class="reason-item shadow-normal" v-if="curriculumReasonSummary">
+            <div class="reason-item-header"><i class="fas fa-lightbulb" /><h4>커리큘럼 요약</h4></div>
+            <p>{{ curriculumReasonSummary }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-if="curriculumReasonUserContext">
+            <div class="reason-item-header"><i class="fas fa-user-circle" /><h4>사용자 맥락</h4></div>
+            <p>{{ curriculumReasonUserContext }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-if="curriculumReasonAiInterpretation">
+            <div class="reason-item-header"><i class="fas fa-brain" /><h4>AI 해석</h4></div>
+            <p>{{ curriculumReasonAiInterpretation }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-if="curriculumReasonRationale">
+            <div class="reason-item-header"><i class="fas fa-bullseye" /><h4>커리큘럼 구성 근거</h4></div>
+            <p>{{ curriculumReasonRationale }}</p>
+          </div>
+          <div class="reason-item shadow-normal" v-else-if="reasonSummary">
             <div class="reason-item-header"><i class="fas fa-lightbulb" /><h4>추천 요약</h4></div>
             <p>{{ reasonSummary }}</p>
           </div>
-          <div class="reason-item shadow-normal" v-if="reasonDetail">
+          <div class="reason-item shadow-normal" v-if="!curriculumReasonRationale && reasonDetail">
             <div class="reason-item-header"><i class="fas fa-bullseye" /><h4>추천 상세</h4></div>
             <p>{{ reasonDetail }}</p>
           </div>
-          <div class="reason-item shadow-normal" v-if="currentStatusDetail">
+          <div class="reason-item shadow-normal" v-if="!curriculumReasonAiInterpretation && currentStatusDetail">
             <div class="reason-item-header"><i class="fas fa-chart-line" /><h4>현재 학습 상태</h4></div>
             <p>{{ currentStatusDetail }}</p>
           </div>
@@ -421,6 +437,7 @@ const selectedActivityCard = computed(() =>
 )
 
 const detailData = computed(() => store.recommendationDetail || {})
+const curriculumReasonData = computed(() => store.curriculumReason || {})
 const recommendationReason = computed(() => detailData.value.recommendationReason || {})
 const currentStatus = computed(() => detailData.value.currentStatus || {})
 const primaryQuiz = computed(() => detailData.value.quizzes?.[0] || null)
@@ -549,8 +566,12 @@ const recommendationTags = computed(() =>
 )
 
 const reasonStatusSummary = computed(() =>
-  currentStatus.value.summary || recommendationStatusLabel.value || ''
+  recommendationStatusLabel.value || currentStatus.value.summary || ''
 )
+const curriculumReasonSummary = computed(() => curriculumReasonData.value.summaryLine || '')
+const curriculumReasonUserContext = computed(() => curriculumReasonData.value.userContext || '')
+const curriculumReasonAiInterpretation = computed(() => curriculumReasonData.value.aiInterpretation || '')
+const curriculumReasonRationale = computed(() => curriculumReasonData.value.curriculumRationale || '')
 const reasonSummary = computed(() => recommendationReason.value.summary || '')
 const reasonDetail = computed(() => recommendationReason.value.detail || '')
 const currentStatusDetail = computed(() => currentStatus.value.detail || '')
@@ -570,6 +591,7 @@ const selectActivity = async (activityId) => {
 
   await Promise.all([
     store.loadRecommendationDetail(activityId),
+    store.loadCurriculumReason(activityId),
     store.loadCurriculumNodes(activityId, activity?.startDate, activity?.endDate),
   ])
 }
@@ -604,6 +626,7 @@ watch(
 
 const handleBack = () => {
   selectedActivity.value = null
+  store.curriculumReason = null
   store.selectedCurriculumNodes = []
   closeMission()
 }
