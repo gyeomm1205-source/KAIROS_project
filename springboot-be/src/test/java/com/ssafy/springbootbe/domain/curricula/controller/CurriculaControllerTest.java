@@ -103,8 +103,19 @@ class CurriculaControllerTest {
     }
 
     @Test
-    void 커리큘럼_미리보기_실패_analysisData_없음() throws Exception {
+    void 커리큘럼_미리보기_성공_analysisData_없음_AUTO() throws Exception {
         // given: analysisData = null
+        CurriculumPreviewResponse response = CurriculumPreviewResponse.builder()
+                .curriculumPreviewKey("preview-uuid-1234")
+                .duration(30)
+                .recommendationReason(PreviewReasonDto.builder()
+                        .summaryLine("AUTO 커리큘럼")
+                        .build())
+                .nodes(List.of())
+                .build();
+
+        given(curriculaService.preview(eq(USER_ID), any())).willReturn(response);
+
         String body = "{}";
 
         // when & then
@@ -112,8 +123,9 @@ class CurriculaControllerTest {
                         .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("INVALID_INPUT"));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.curriculumPreviewKey").value("preview-uuid-1234"))
+                .andExpect(jsonPath("$.recommendationReason.summaryLine").value("AUTO 커리큘럼"));
     }
 
     // ===== POST /curricula/confirm =====
@@ -134,7 +146,7 @@ class CurriculaControllerTest {
         mockMvc.perform(post("/curricula/confirm")
                         .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"curriculumPreviewKey\": \"preview-uuid-1234\"}"))
+                        .content("{\"curriculumPreviewKey\": \"preview-uuid-1234\", \"selectedOptionType\": \"WEAKNESS\"}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.curriculumId").value(10))
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
@@ -162,7 +174,7 @@ class CurriculaControllerTest {
         mockMvc.perform(post("/curricula/confirm")
                         .principal(authenticatedUser())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"curriculumPreviewKey\": \"preview-uuid-1234\"}"))
+                        .content("{\"curriculumPreviewKey\": \"preview-uuid-1234\", \"selectedOptionType\": \"WEAKNESS\"}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.error").value("NOT_FOUND"));
     }

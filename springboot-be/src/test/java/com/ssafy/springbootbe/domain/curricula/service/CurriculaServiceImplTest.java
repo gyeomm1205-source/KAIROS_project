@@ -16,12 +16,14 @@ import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumNodeRespon
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumReasonResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.CurriculumPreviewResponse;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewNodeDto;
+import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewOptionDto;
 import com.ssafy.springbootbe.domain.curricula.dto.response.PreviewReasonDto;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeAccessDeniedException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNodeNotFoundException;
 import com.ssafy.springbootbe.domain.curricula.exception.CurriculumNotFoundException;
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
+import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRepository;
 import com.ssafy.springbootbe.persistence.curriculum.entity.Curriculum;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNode;
 import com.ssafy.springbootbe.persistence.curriculum.entity.CurriculumNodeCalendarSync;
@@ -65,6 +67,7 @@ class CurriculaServiceImplTest {
     @Mock private CurriculumNodeCalendarSyncRepository curriculumNodeCalendarSyncRepository;
     @Mock private CurriculumRecommendationReasonRepository curriculumRecommendationReasonRepository;
     @Mock private UserRepository userRepository;
+    @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     @Mock private OAuthAccountRepository oAuthAccountRepository;
     @Mock private GoogleCalendarClientService googleCalendarClientService;
@@ -91,6 +94,7 @@ class CurriculaServiceImplTest {
                 curriculumNodeCalendarSyncRepository,
                 curriculumRecommendationReasonRepository,
                 userRepository,
+                activityHistoryRepository,
                 activityHistoryTechStackRepository,
                 oAuthAccountRepository,
                 googleCalendarClientService,
@@ -141,6 +145,8 @@ class CurriculaServiceImplTest {
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
         given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
                 .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
 
         CurriculumGenerateResponse aiResponse = CurriculumGenerateResponse.builder()
                 .recommendationReason(PreviewReasonDto.builder().summaryLine("백엔드 커리큘럼").build())
@@ -186,6 +192,8 @@ class CurriculaServiceImplTest {
         given(userRepository.findById(USER_ID)).willReturn(Optional.of(userWithSchedule));
         given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
                 .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
         given(oAuthAccountRepository.findByUserUserIdAndProvider(eq(USER_ID), any()))
                 .willReturn(Optional.empty());
 
@@ -215,6 +223,10 @@ class CurriculaServiceImplTest {
     void preview_사용자_없으면_IllegalArgumentException() {
         // given
         given(userRepository.findById(USER_ID)).willReturn(Optional.empty());
+        given(activityHistoryTechStackRepository.findTechStackCountsByUserId(eq(USER_ID), any()))
+                .willReturn(List.of());
+        given(activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(USER_ID))
+                .willReturn(List.of());
 
         CurriculumPreviewRequest request = CurriculumPreviewRequest.builder()
                 .analysisData(AnalysisDataRequest.builder().summary("분석 결과").build())
@@ -282,6 +294,69 @@ class CurriculaServiceImplTest {
         verify(curriculumRepository).save(any(Curriculum.class));
         verify(curriculumNodeRepository).save(any(CurriculumNode.class));
         verify(redisService).delete(previewKey);
+    }
+
+    @Test
+    void confirm_selectedOptionType_STRENGTH_면_optionB_저장() throws JacksonException {
+        // given
+        String previewKey = "curriculumPreview:1:abc12345";
+        String json = "{\"nodes\":[]}";
+
+        CurriculumGenerateResponse aiResponse = CurriculumGenerateResponse.builder()
+                .recommendationReason(PreviewReasonDto.builder().summaryLine("기본안").build())
+                .nodes(List.of(
+                        PreviewNodeDto.builder()
+                                .title("기본 노드")
+                                .scheduledDate(LocalDate.of(2025, 3, 10))
+                                .expectedMinutes(60)
+                                .build()
+                ))
+                .optionA(PreviewOptionDto.builder()
+                        .optionType("WEAKNESS")
+                        .optionLabel("약점 보완형")
+                        .recommendationReason(PreviewReasonDto.builder().summaryLine("A").build())
+                        .techStacks(List.of("React"))
+                        .nodes(List.of(
+                                PreviewNodeDto.builder()
+                                        .title("A 노드")
+                                        .scheduledDate(LocalDate.of(2025, 3, 10))
+                                        .expectedMinutes(60)
+                                        .build()
+                        ))
+                        .build())
+                .optionB(PreviewOptionDto.builder()
+                        .optionType("STRENGTH")
+                        .optionLabel("강점 강화형")
+                        .recommendationReason(PreviewReasonDto.builder().summaryLine("B").build())
+                        .techStacks(List.of("Docker"))
+                        .nodes(List.of(
+                                PreviewNodeDto.builder()
+                                        .title("B 노드")
+                                        .scheduledDate(LocalDate.of(2025, 3, 11))
+                                        .expectedMinutes(90)
+                                        .build()
+                        ))
+                        .build())
+                .build();
+
+        given(redisService.get(previewKey)).willReturn(json);
+        given(objectMapper.readValue(json, CurriculumGenerateResponse.class)).willReturn(aiResponse);
+        given(userRepository.findById(USER_ID)).willReturn(Optional.of(user));
+        given(oAuthAccountRepository.findByUserUserIdAndProvider(eq(USER_ID), any()))
+                .willReturn(Optional.empty());
+
+        CurriculumConfirmRequest request = new CurriculumConfirmRequest();
+        ReflectionTestUtils.setField(request, "curriculumPreviewKey", previewKey);
+        ReflectionTestUtils.setField(request, "selectedOptionType", "STRENGTH");
+
+        // when
+        CurriculumConfirmResponse response = curriculaService.confirm(USER_ID, request);
+
+        // then
+        assertThat(response).isNotNull();
+        assertThat(response.getTechStacks()).containsExactly("Docker");
+        assertThat(response.getNodes()).hasSize(1);
+        assertThat(response.getNodes().get(0).getTitle()).isEqualTo("B 노드");
     }
 
     @Test
