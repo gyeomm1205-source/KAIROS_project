@@ -275,6 +275,23 @@
           <button class="btn-close" @click="showReasonModal = false"><i class="fas fa-times"/></button>
         </div>
         <div class="reason-content custom-scroll">
+          <div class="reason-item shadow-normal" v-if="reasonStatusSummary || recommendationTags.length">
+            <div class="reason-item-header"><i class="fas fa-compass" /><h4>추천 포인트</h4></div>
+            <div class="reason-meta-grid">
+              <div v-if="reasonStatusSummary" class="reason-meta-box">
+                <span class="reason-meta-label">현재 기준</span>
+                <p>{{ reasonStatusSummary }}</p>
+              </div>
+              <div v-if="recommendationTags.length" class="reason-meta-box">
+                <span class="reason-meta-label">핵심 기술</span>
+                <div class="reason-tag-list">
+                  <span class="pill-tag tag-white" v-for="tag in recommendationTags" :key="tag">
+                    <i v-if="hasTechIcon(tag)" :class="getTechIcon(tag)" class="tech-icon" />{{ tag }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
           <div class="reason-item shadow-normal" v-if="reasonSummary">
             <div class="reason-item-header"><i class="fas fa-lightbulb" /><h4>추천 요약</h4></div>
             <p>{{ reasonSummary }}</p>
@@ -286,10 +303,6 @@
           <div class="reason-item shadow-normal" v-if="currentStatusDetail">
             <div class="reason-item-header"><i class="fas fa-chart-line" /><h4>현재 학습 상태</h4></div>
             <p>{{ currentStatusDetail }}</p>
-          </div>
-          <div class="reason-item shadow-normal" v-if="recommendationTags.length">
-            <div class="reason-item-header"><i class="fas fa-tags" /><h4>핵심 기술</h4></div>
-            <p>{{ recommendationTags.join(', ') }}</p>
           </div>
         </div>
         <div class="modal-actions mt-md"><button class="btn-primary" @click="showReasonModal = false">확인</button></div>
@@ -535,6 +548,9 @@ const recommendationTags = computed(() =>
     : (currentStatus.value.topSkills || [])
 )
 
+const reasonStatusSummary = computed(() =>
+  currentStatus.value.summary || recommendationStatusLabel.value || ''
+)
 const reasonSummary = computed(() => recommendationReason.value.summary || '')
 const reasonDetail = computed(() => recommendationReason.value.detail || '')
 const currentStatusDetail = computed(() => currentStatus.value.detail || '')
@@ -866,6 +882,10 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 /* Modal specific */
 .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 24px; }
 .base-modal { width: 100%; max-width: 600px; max-height: 85vh; display: flex; flex-direction: column; background: var(--bg-surface); border: 1px solid var(--border); padding: 40px; animation: fadeUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; border-radius: 8px; overflow-y: auto; }
+.reason-meta-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.reason-meta-box { border: 1px solid var(--border); border-radius: 8px; padding: 14px; background: var(--bg-hover); }
+.reason-meta-label { display: block; margin-bottom: 8px; font-size: 10px; font-weight: 700; color: var(--text-muted); letter-spacing: 0.08em; text-transform: uppercase; }
+.reason-tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
 
 /* Dual curriculum modal */
 .curriculum-dual-modal { max-width: 960px; overflow: hidden; }
