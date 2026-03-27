@@ -187,6 +187,8 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     DailyRecommendationGenerateRequest buildDailyGenerateRequest(Curriculum curriculum) {
         User user = curriculum.getUser();
         Long userId = user.getUserId();
+        CurriculumNode currentNode = findCurrentNode(curriculum.getCurriculumId());
+        List<String> currentNodeTechStacks = resolveCurrentNodeTechStacks(curriculum.getCurriculumId());
 
         return DailyRecommendationGenerateRequest.builder()
                 .userId(userId)
@@ -197,6 +199,10 @@ public class RecommendationsServiceImpl implements RecommendationsService {
                 .recentActivities(buildRecentActivities(userId))
                 .googleCalendarEvents(buildGoogleCalendarEvents(userId, user.getConsiderPersonalSchedule()))
                 .recentCurriculaIds(buildRecentCurriculaIds(userId, curriculum.getCurriculumId()))
+                .currentNodeTitle(currentNode == null ? null : currentNode.getTitle())
+                .currentNodeDescription(currentNode == null ? null : currentNode.getDescription())
+                .currentNodeDate(currentNode == null ? null : currentNode.getScheduledDate())
+                .currentNodeTechStacks(currentNodeTechStacks)
                 .build();
     }
 
@@ -538,10 +544,14 @@ public class RecommendationsServiceImpl implements RecommendationsService {
             throw new RecommendationRedisLookupException(userId, curriculum.getCurriculumId(), e);
         }
 
+        CurriculumNode currentNode = findCurrentNode(curriculum.getCurriculumId());
         QuizGenerateAsyncRequest request = QuizGenerateAsyncRequest.builder()
                 .curriculumId(curriculum.getCurriculumId())
                 .targetTechStacks(buildTargetTechStacks(userId, recommendationPayload))
                 .userLevel(mapCurrentLevel(curriculum.getUser().getPosition()))
+                .currentNodeTitle(currentNode == null ? null : currentNode.getTitle())
+                .currentNodeDescription(currentNode == null ? null : currentNode.getDescription())
+                .currentNodeDate(currentNode == null ? null : currentNode.getScheduledDate())
                 .build();
 
         QuizGenerateAsyncResponse generatedQuiz = requestQuizGeneration(request);
@@ -588,6 +598,43 @@ public class RecommendationsServiceImpl implements RecommendationsService {
         }
 
         return techStacks.stream().limit(5).toList();
+    }
+
+    private CurriculumNode findCurrentNode(Long curriculumId) {
+        List<CurriculumNode> nodes = curriculumNodeRepository.findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
+        if (nodes.isEmpty()) {
+            return null;
+        }
+
+        LocalDate today = LocalDate.now();
+        for (CurriculumNode node : nodes) {
+            if (today.equals(node.getScheduledDate())) {
+                return node;
+            }
+        }
+
+        for (CurriculumNode node : nodes) {
+            if (node.getScheduledDate() != null && node.getScheduledDate().isAfter(today)) {
+                return node;
+            }
+        }
+
+        return nodes.get(nodes.size() - 1);
+    }
+
+    private List<String> resolveCurrentNodeTechStacks(Long curriculumId) {
+        List<TechStackInfo> techStacks = aggregateCurriculumTechStacks(
+                List.of(findCurriculumOrThrow(curriculumId))
+        ).get(curriculumId);
+
+        if (techStacks == null || techStacks.isEmpty()) {
+            return List.of();
+        }
+
+        return techStacks.stream()
+                .map(TechStackInfo::getTechName)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     private void cacheRecommendationQuiz(Long userId, Long curriculumId, QuizGenerateAsyncResponse quizPayload) {

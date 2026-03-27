@@ -294,6 +294,9 @@ class QuizRequest(_CamelModel):
     curriculum_id: int
     target_tech_stacks: list[str] = Field(..., min_length=1)
     user_level: UserLevel
+    current_node_title: str | None = None
+    current_node_description: str | None = None
+    current_node_date: str | None = None
 
 
 class QuizQuestion(_CamelModel):
@@ -374,6 +377,10 @@ class DailyRecommendationRequest(_CamelModel):
     recent_activities: list[ActivityHistoryItem] = Field(default_factory=list)
     google_calendar_events: list[GoogleCalendarEvent] = Field(default_factory=list)
     recent_curricula_ids: list[int] = Field(default_factory=list)  # 중복 방지용
+    current_node_title: str | None = None
+    current_node_description: str | None = None
+    current_node_date: str | None = None
+    current_node_tech_stacks: list[str] = Field(default_factory=list)
 
 
 class CurrentStatus(_CamelModel):
