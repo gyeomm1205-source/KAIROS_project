@@ -323,7 +323,7 @@ const monthOptions = computed(() => {
 .table-row.is-excluded .row-title { color: var(--text-muted); }
 
 .row-badge { background: transparent; border: 1px solid var(--border); color: var(--text-primary); padding: 4px 8px; font-size: 10px; font-weight: 800; border-radius: 40px; margin-left: 8px;}
-.row-desc { font-size: 13px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font-weight: 600; line-height: 1.6; }
+.row-desc { font-size: 13px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; font-weight: 600; line-height: 1.6; white-space: pre-line; }
 
 .type-badge { display: inline-flex; align-items: center; gap: 8px; background: transparent; border: 1px solid var(--border); padding: 6px 12px; font-size: 11px; font-weight: 800; color: var(--text-primary); border-radius: 40px; }
 .row-tags { display: flex; flex-wrap: wrap; gap: 8px; }

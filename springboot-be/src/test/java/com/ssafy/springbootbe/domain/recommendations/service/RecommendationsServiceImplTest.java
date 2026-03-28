@@ -249,6 +249,56 @@ class RecommendationsServiceImplTest {
     }
 
     @Test
+    void findRecommendationDetail_referenceHistoryDescription_isFormattedByType() throws Exception {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(recommendationPayloadJsonWithTwoReferences());
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(activityHistoryRepository.existsByUserUserIdAndActivityTypeAndCurriculumIdAndActivityDateBetween(
+                eq(1L),
+                eq(ActivityType.REFERENCE),
+                eq(10L),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).willReturn(false);
+
+        ArgumentCaptor<ActivityHistory> historyCaptor = ArgumentCaptor.forClass(ActivityHistory.class);
+
+        // when
+        recommendationsService.findRecommendationDetail(1L, 10L);
+
+        // then
+        verify(activityHistoryRepository).save(historyCaptor.capture());
+        ActivityHistory saved = historyCaptor.getValue();
+        assertThat(saved.getCurriculumId()).isEqualTo(10L);
+        assertThat(saved.getTitle()).contains("레퍼런스 추천");
+        assertThat(saved.getDescription())
+                .contains("공식 문서 : Using TypeScript")
+                .contains("기술 블로그 : 디자인 시스템 다시 생각해보기");
+    }
+
+    @Test
+    void findRecommendationDetail_referenceHistory_isSkippedWhenAlreadySavedToday() {
+        // given
+        given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
+        given(redisService.get("recommendation:1:10")).willReturn(recommendationPayloadJsonWithTwoReferences());
+        given(redisService.get("recommendation:quiz:1:10")).willReturn(quizPayloadJson());
+        given(activityHistoryRepository.existsByUserUserIdAndActivityTypeAndCurriculumIdAndActivityDateBetween(
+                eq(1L),
+                eq(ActivityType.REFERENCE),
+                eq(10L),
+                any(LocalDateTime.class),
+                any(LocalDateTime.class)
+        )).willReturn(true);
+
+        // when
+        recommendationsService.findRecommendationDetail(1L, 10L);
+
+        // then
+        verify(activityHistoryRepository, never()).save(any());
+    }
+
+    @Test
     void findRecommendationDetail_quizRedis가_없으면_FastAPI_호출_후_Redis에_저장한다() throws Exception {
         // given
         given(curriculumRepository.findById(10L)).willReturn(Optional.of(curriculum));
@@ -493,6 +543,42 @@ class RecommendationsServiceImplTest {
                 """;
     }
 
+    private String recommendationPayloadJsonWithTwoReferences() {
+        return """
+                {
+                  "userId": 1,
+                  "curriculumId": 10,
+                  "recommendationReason": {
+                    "summary": "Java 기반 추천",
+                    "detail": "TypeScript와 React 학습 흐름을 이어가기 좋은 자료입니다."
+                  },
+                  "currentStatus": {
+                    "summary": "학습 위치가 안정적입니다.",
+                    "detail": "다음 단계로 참고 자료를 읽어도 괜찮습니다.",
+                    "topSkills": ["TypeScript", "React"]
+                  },
+                  "references": [
+                    {
+                      "title": "Using TypeScript",
+                      "recommendationReason": "공식 문서로 문법을 빠르게 확인할 수 있습니다.",
+                      "referenceType": "OFFICIAL_DOCS",
+                      "publishedAt": "2024-06-01",
+                      "url": "https://www.typescriptlang.org/docs/"
+                    },
+                    {
+                      "title": "디자인 시스템 다시 생각해보기",
+                      "recommendationReason": "실무에서 컴포넌트 구조를 다시 정리할 때 도움이 됩니다.",
+                      "referenceType": "TECH_BLOG",
+                      "publishedAt": "2024-05-12",
+                      "url": "https://example.com/design-system"
+                    }
+                  ],
+                  "nextNodes": [
+                    { "title": "State Management Patterns" }
+                  ]
+                }
+                """;
+    }
     private String quizPayloadJson() {
         return """
                 {

@@ -30,6 +30,8 @@ public class ActivityHistory {
     @Enumerated(EnumType.STRING)
     @Column(name = "category")
     private CurriculumCategory category;
+    @Column(name = "curriculum_id")
+    private Long curriculumId;
     @Column(name = "title", nullable = false, length = 500)
     private String title;
     @Column(name = "description", length = 500)

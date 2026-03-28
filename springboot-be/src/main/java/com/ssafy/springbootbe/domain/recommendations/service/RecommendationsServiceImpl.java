@@ -1,4 +1,4 @@
-package com.ssafy.springbootbe.domain.recommendations.service;
+﻿package com.ssafy.springbootbe.domain.recommendations.service;
 
 import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.common.redis.RedisService;
@@ -52,6 +52,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -59,6 +60,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -68,6 +70,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
     static final long RECOMMENDATION_TTL_HOURS = 24L;
     private static final DateTimeFormatter MONTH_DAY_FORMATTER = DateTimeFormatter.ofPattern("M/d");
+    private static final ZoneId SEOUL_ZONE = ZoneId.of("Asia/Seoul");
     private static final String RECOMMENDATION_KEY_PREFIX = "recommendation:";
     private static final String RECOMMENDATION_QUIZ_KEY_PREFIX = "recommendation:quiz:";
     private static final String FAST_API_LEVEL_JUNIOR = "JUNIOR";
@@ -85,6 +88,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     private final RedisService redisService;
     private final AIRestClient aiRestClient;
     private final ObjectMapper objectMapper;
+    private final ConcurrentHashMap<String, Object> referenceHistoryLocks = new ConcurrentHashMap<>();
 
     @Value("${ai.server-url}")
     private String aiServerUrl;
@@ -777,59 +781,94 @@ public class RecommendationsServiceImpl implements RecommendationsService {
             return;
         }
 
-        List<CurriculumNode> nodes = curriculumNodeRepository
-                .findByCurriculumCurriculumIdOrderByScheduledDate(curriculum.getCurriculumId());
-        String displayName = buildDisplayName(nodes, curriculum.getCurriculumId());
-        String title = "레퍼런스 추천 — " + displayName;
+        Long userId = curriculum.getUser().getUserId();
+        Long curriculumId = curriculum.getCurriculumId();
+        LocalDateTime now = LocalDateTime.now(SEOUL_ZONE);
+        LocalDate today = now.toLocalDate();
+        String lockKey = userId + ":" + curriculumId + ":" + today;
+        Object lock = referenceHistoryLocks.computeIfAbsent(lockKey, key -> new Object());
 
-        boolean alreadySavedToday = activityHistoryRepository
-                .findTopByUserUserIdAndActivityTypeAndTitleOrderByActivityDateDesc(
-                        curriculum.getUser().getUserId(),
-                        ActivityType.REFERENCE,
-                        title
-                )
-                .map(activity -> activity.getActivityDate() != null
-                        && activity.getActivityDate().toLocalDate().isEqual(LocalDate.now()))
-                .orElse(false);
+        synchronized (lock) {
+            if (activityHistoryRepository.existsByUserUserIdAndActivityTypeAndCurriculumIdAndActivityDateBetween(
+                    userId,
+                    ActivityType.REFERENCE,
+                    curriculumId,
+                    today.atStartOfDay(),
+                    today.plusDays(1).atStartOfDay().minusNanos(1)
+            )) {
+                return;
+            }
 
-        if (alreadySavedToday) {
-            return;
+            List<CurriculumNode> nodes = curriculumNodeRepository
+                    .findByCurriculumCurriculumIdOrderByScheduledDate(curriculumId);
+            String displayName = buildDisplayName(nodes, curriculumId);
+            String title = "레퍼런스 추천 — " + displayName;
+            String description = buildReferenceHistoryDescription(recommendationPayload.getReferences());
+
+            ActivityHistory activityHistory = activityHistoryRepository.save(ActivityHistory.builder()
+                    .user(curriculum.getUser())
+                    .activityType(ActivityType.REFERENCE)
+                    .curriculumId(curriculumId)
+                    .title(title)
+                    .description(description)
+                    .activityDate(now)
+                    .build());
+
+            List<ActivityHistoryTechStack> links = new ArrayList<>();
+            recommendationPayload.getReferences().stream()
+                    .map(RecommendationCachePayload.ReferenceItem::getTechStacks)
+                    .filter(Objects::nonNull)
+                    .flatMap(List::stream)
+                    .filter(Objects::nonNull)
+                    .map(String::trim)
+                    .filter(value -> !value.isBlank())
+                    .distinct()
+                    .forEach(techName -> techStackRepository.findByTechNameIgnoreCase(techName)
+                            .ifPresent(techStack -> links.add(ActivityHistoryTechStack.builder()
+                                    .activityHistory(activityHistory)
+                                    .techStack(techStack)
+                                    .build())));
+
+            if (!links.isEmpty()) {
+                activityHistoryTechStackRepository.saveAll(links);
+            }
+        }
+    }
+
+    private String buildReferenceHistoryDescription(List<RecommendationCachePayload.ReferenceItem> references) {
+        List<String> lines = new ArrayList<>();
+
+        for (RecommendationCachePayload.ReferenceItem reference : references.stream().filter(Objects::nonNull).limit(2).toList()) {
+            String typeLabel = resolveReferenceTypeLabel(reference.getReferenceType());
+            String title = reference.getTitle() == null ? "" : reference.getTitle().trim();
+            if (title.isBlank()) {
+                continue;
+            }
+            lines.add(typeLabel + " : " + title);
         }
 
-        String description = recommendationPayload.getReferences().stream()
-                .map(RecommendationCachePayload.ReferenceItem::getTitle)
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .limit(3)
-                .reduce((first, second) -> first + ", " + second)
-                .orElse("추천 자료를 확인했습니다.");
-
-        ActivityHistory activityHistory = activityHistoryRepository.save(ActivityHistory.builder()
-                .user(curriculum.getUser())
-                .activityType(ActivityType.REFERENCE)
-                .title(title)
-                .description(description)
-                .activityDate(LocalDateTime.now())
-                .build());
-
-        List<ActivityHistoryTechStack> links = new ArrayList<>();
-        recommendationPayload.getReferences().stream()
-                .map(RecommendationCachePayload.ReferenceItem::getTechStacks)
-                .filter(Objects::nonNull)
-                .flatMap(List::stream)
-                .filter(Objects::nonNull)
-                .map(String::trim)
-                .filter(value -> !value.isBlank())
-                .distinct()
-                .forEach(techName -> techStackRepository.findByTechNameIgnoreCase(techName)
-                        .ifPresent(techStack -> links.add(ActivityHistoryTechStack.builder()
-                                .activityHistory(activityHistory)
-                                .techStack(techStack)
-                                .build())));
-
-        if (!links.isEmpty()) {
-            activityHistoryTechStackRepository.saveAll(links);
+        if (lines.isEmpty()) {
+            return "추천 레퍼런스를 확인했습니다.";
         }
+
+        if (references.size() > lines.size()) {
+            lines.add("외 " + (references.size() - lines.size()) + "개");
+        }
+
+        return String.join("\n", lines);
+    }
+
+    private String resolveReferenceTypeLabel(String referenceType) {
+        if (referenceType == null) {
+            return "레퍼런스";
+        }
+
+        return switch (referenceType.toUpperCase()) {
+            case "OFFICIAL_DOCS" -> "공식 문서";
+            case "TECH_BLOG" -> "기술 블로그";
+            case "WIKI" -> "위키";
+            case "VIDEO" -> "영상";
+            default -> "레퍼런스";
+        };
     }
 }
