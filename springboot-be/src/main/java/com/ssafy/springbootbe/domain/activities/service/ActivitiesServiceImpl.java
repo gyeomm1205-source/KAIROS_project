@@ -13,9 +13,11 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryRep
 import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTechStackRepository;
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
+import com.ssafy.springbootbe.persistence.user.entity.User;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStackBaseline;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackBaselineRepository;
+import com.ssafy.springbootbe.persistence.user.repository.UserRepository;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +47,7 @@ public class ActivitiesServiceImpl implements ActivitiesService {
 
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
+    private final UserRepository userRepository;
     private final UserTechStackRepository userTechStackRepository;
     private final UserTechStackBaselineRepository userTechStackBaselineRepository;
     private final LearningStateService learningStateService;
@@ -52,6 +55,8 @@ public class ActivitiesServiceImpl implements ActivitiesService {
     @Override
     @Transactional(readOnly = true)
     public GrowthReportResponse getGrowthReport(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("User not found: " + userId));
         Pageable topTechPageable = PageRequest.of(0, TOP_TECH_STACKS_LIMIT);
         Pageable rankingPageable = PageRequest.of(0, TECH_ACTIVITY_RANKING_LIMIT);
         List<Object[]> topTechRaws = activityHistoryTechStackRepository
@@ -126,6 +131,7 @@ public class ActivitiesServiceImpl implements ActivitiesService {
 
         return GrowthReportResponse.builder()
                 .topTechStacks(topTechStacks)
+                .userCreatedAt(user.getCreatedAt())
                 .totalActivityCount(totalActivityCount)
                 .recentGrowthTech(recentGrowthTech)
                 .recentGrowthDelta(recentGrowthDelta)

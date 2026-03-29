@@ -123,20 +123,24 @@
           <div class="flex-col gap-lg h-full">
             <div class="base-panel p-md shadow-normal h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-lg">
-                <i class="fas fa-chart-bar text-muted" /> 월별 학습량 변화
+                <i class="fas fa-chart-bar text-muted" /> 월별 활동량 변화
               </h3>
 
               <div v-if="monthlyActivity.length" class="flex-col gap-md mb-md flex-1 justify-center">
                 <div v-for="m in monthlyActivity" :key="m.month">
                   <div class="flex-between mb-xs">
-                    <span class="text-sm font-bold">{{ m.month }}</span>
+                    <div class="flex-align gap-sm">
+                      <span class="text-sm font-bold">{{ m.month }}</span>
+                      <span v-if="m.isJoinMonth" class="join-month-badge">가입 월</span>
+                    </div>
                     <span class="text-xs text-muted font-bold">{{ m.total }}회</span>
                   </div>
                   <div class="bar-chart-track flex">
-                    <div class="bar-segment color-1" :style="{ width: `${(m.study / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-2" :style="{ width: `${(m.dev / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-3" :style="{ width: `${(m.blog / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-4" :style="{ width: `${(m.review / maxBar) * 100}%` }" />
+                    <div class="bar-segment color-1" :style="{ width: `${(m.commit / maxBar) * 100}%` }" />
+                    <div class="bar-segment color-2" :style="{ width: `${(m.pr / maxBar) * 100}%` }" />
+                    <div class="bar-segment color-3" :style="{ width: `${(m.velog / maxBar) * 100}%` }" />
+                    <div class="bar-segment color-4" :style="{ width: `${(m.quiz / maxBar) * 100}%` }" />
+                    <div class="bar-segment color-5" :style="{ width: `${(m.reference / maxBar) * 100}%` }" />
                   </div>
                 </div>
               </div>
@@ -178,6 +182,7 @@ import { getGrowthReport, postGrowthSummary } from '@/api/aiApi'
 const growthSummary = ref('성장 요약을 불러오는 중...')
 const growthReport = ref({
   topTechStacks: [],
+  userCreatedAt: null,
   totalActivityCount: 0,
   recentGrowthTech: null,
   recentGrowthDelta: null,
@@ -190,10 +195,11 @@ const growthReport = ref({
 })
 
 const chartLegend = [
-  { label: '학습', colorClass: 'color-1' },
-  { label: '개발', colorClass: 'color-2' },
-  { label: '블로그', colorClass: 'color-3' },
-  { label: '복습', colorClass: 'color-4' },
+  { label: '커밋', colorClass: 'color-1' },
+  { label: 'PR', colorClass: 'color-2' },
+  { label: 'Velog', colorClass: 'color-3' },
+  { label: '퀴즈', colorClass: 'color-4' },
+  { label: '추천', colorClass: 'color-5' },
 ]
 
 const formatMonthLabel = (year, month) => `${year}.${String(month).padStart(2, '0')}`
@@ -223,7 +229,7 @@ const summaryStats = computed(() => {
       icon: 'fas fa-fire',
       label: '최근 급성장 기술',
       value: recentGrowthLabel,
-      sub: recentGrowthDelta == null ? '성장 비교 데이터 준비 중' : `baseline 대비 +${recentGrowthDelta.toFixed(1)}점`,
+      sub: recentGrowthDelta == null ? '성장 비교 데이터 준비 중' : `가입 직후 대비 +${recentGrowthDelta.toFixed(1)}점`,
     },
     {
       icon: 'fas fa-ranking-star',
@@ -273,21 +279,32 @@ const topSkills = computed(() => {
 })
 
 const monthlyActivity = computed(() => {
-  return (growthReport.value.monthlyActivityCounts || []).map((item) => {
+  const items = growthReport.value.monthlyActivityCounts || []
+  const createdAt = growthReport.value.userCreatedAt
+  const joinDate = createdAt ? new Date(createdAt) : null
+  const joinMonthKey = joinDate && !Number.isNaN(joinDate.getTime())
+    ? `${joinDate.getFullYear()}-${String(joinDate.getMonth() + 1).padStart(2, '0')}`
+    : null
+
+  return items.map((item) => {
     const counts = item.counts || {}
-    const study = Number(counts.REFERENCE || 0)
-    const dev = Number(counts.GITHUB_COMMIT || 0) + Number(counts.GITHUB_PR || 0)
-    const blog = Number(counts.VELOG_POST || 0)
-    const review = Number(counts.QUIZ || 0)
-    const total = study + dev + blog + review
+    const commit = Number(counts.GITHUB_COMMIT || 0)
+    const pr = Number(counts.GITHUB_PR || 0)
+    const velog = Number(counts.VELOG_POST || 0)
+    const quiz = Number(counts.QUIZ || 0)
+    const reference = Number(counts.REFERENCE || 0)
+    const total = commit + pr + velog + quiz + reference
+    const monthKey = `${item.year}-${String(item.month).padStart(2, '0')}`
 
     return {
       month: formatMonthLabel(item.year, item.month),
-      study,
-      dev,
-      blog,
-      review,
+      commit,
+      pr,
+      velog,
+      quiz,
+      reference,
       total,
+      isJoinMonth: monthKey === joinMonthKey,
     }
   })
 })
@@ -448,14 +465,25 @@ onMounted(async () => {
 .bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
 .bar-segment { height: 100%; transition: width 0.3s; }
 .color-1 { background: var(--clr-primary); }
-.color-2 { background: var(--clr-icon-velog); }
-.color-3 { background: var(--clr-icon-ai); }
-.color-4 { background: var(--clr-warning); }
+.color-2 { background: #22c55e; }
+.color-3 { background: var(--clr-icon-velog); }
+.color-4 { background: #8b5cf6; }
+.color-5 { background: var(--clr-warning); }
 
 .legend-box { width: 12px; height: 12px; border-radius: 2px; }
 .legend-line { width: 16px; height: 2px; }
 .border-dashed { border-top: 2px dashed var(--text-muted); height: 0; background: transparent; }
 .bg-dark { background: var(--text-primary); }
+.join-month-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
 
 .radar-container { width: 100%; max-width: 280px; aspect-ratio: 1 / 1; margin: 0 auto; position: relative; }
 .radar-svg { width: 100%; height: 100%; display: block; overflow: visible; }
