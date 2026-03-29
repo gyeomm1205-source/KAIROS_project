@@ -44,20 +44,20 @@
             </div>
           </div>
 
-          <!-- Skill Levels -->
+          <!-- Skill Distribution -->
           <div class="base-panel p-md">
             <div class="panel-header mb-md">
               <i class="fas fa-chart-bar"></i>
-              <h3>SKILL LEVELS</h3>
+              <h3>SKILL DISTRIBUTION</h3>
             </div>
             <div class="skill-list">
-              <div v-for="s in analysisResult.skillLevels" :key="s.name" class="skill-item">
+              <div v-for="s in skillDistribution" :key="s.name" class="skill-item">
                 <div class="skill-info">
                   <span class="skill-name">{{ s.name }}</span>
-                  <span class="skill-percent">{{ s.level }}%</span>
+                  <span class="skill-percent">{{ s.share }}%</span>
                 </div>
                 <div class="progress-bar-bg">
-                  <div class="progress-bar-fill" :style="{ width: s.level + '%' }"></div>
+                  <div class="progress-bar-fill" :style="{ width: s.share + '%' }"></div>
                 </div>
               </div>
             </div>
@@ -167,7 +167,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useCalendarStore } from '@/stores/useCalendarStore'
@@ -183,6 +183,38 @@ const { analysisResult, isLoadingAI } = storeToRefs(store)
 const showFeedback = ref(false)
 const feedbackText = ref('')
 const isSubmitting = ref(false)
+
+const repeatedTechCountMap = computed(() => {
+  const techs = analysisResult.value?.repeatedTechs || []
+  return techs.reduce((acc, tech) => {
+    acc[tech.name] = tech.count || 0
+    return acc
+  }, {})
+})
+
+const totalRepeatedTechCount = computed(() => {
+  return (analysisResult.value?.repeatedTechs || []).reduce((sum, tech) => sum + (tech.count || 0), 0)
+})
+
+const skillDistribution = computed(() => {
+  const skillLevels = analysisResult.value?.skillLevels || []
+  const totalCount = totalRepeatedTechCount.value
+
+  if (totalCount <= 0) {
+    return skillLevels.map((skill) => ({
+      name: skill.name,
+      share: 0
+    }))
+  }
+
+  return skillLevels.map((skill) => {
+    const count = repeatedTechCountMap.value[skill.name] || 0
+    return {
+      name: skill.name,
+      share: Math.round((count / totalCount) * 100)
+    }
+  })
+})
 
 onMounted(async () => {
   // localStorage 기준으로 항상 최신 분석 결과를 다시 반영
