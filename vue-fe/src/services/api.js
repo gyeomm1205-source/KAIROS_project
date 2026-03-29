@@ -63,7 +63,7 @@ function handle401(error) {
 
   if (originalRequest.url?.includes('/auth/reissue')) {
     clearAuthToken();
-    // window.location.href = '/login'; // [임시 비활성화]
+    window.location.href = '/login';
     return Promise.reject(error);
   }
 
@@ -79,7 +79,7 @@ function handle401(error) {
         isRefreshing = false;
         clearAuthToken();
         onRefreshFailed(err);
-        // window.location.href = '/login'; // [임시 비활성화]
+        window.location.href = '/login';
       });
   }
 
