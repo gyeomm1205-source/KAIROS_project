@@ -70,9 +70,6 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
-                    <button class="btn-primary-small" @click="openCurriculumModal">
-                      <i class="fas fa-book-open" /> 커리큘럼 추천받기
-                    </button>
                   </div>
                   <span class="panel-sub">{{ recommendationSubLabel }}</span>
                 </div>
@@ -208,9 +205,10 @@
 
                     <div class="base-panel mb-md p-md">
                       <h4 class="quiz-q">{{ store.quizQuestions[currentQuizIndex].question }}</h4>
-                      <div class="options-list">
-                        <button 
-                          v-for="(opt, idx) in store.quizQuestions[currentQuizIndex].options" 
+                      <!-- 객관식 -->
+                      <div v-if="!isCurrentQuizSubjective" class="options-list">
+                        <button
+                          v-for="(opt, idx) in store.quizQuestions[currentQuizIndex].options"
                           :key="idx"
                           class="option-btn"
                           :class="{ 'selected': selectedOption === idx }"
@@ -222,8 +220,17 @@
                           <span>{{ opt }}</span>
                         </button>
                       </div>
+                      <!-- 주관식 -->
+                      <div v-else class="subjective-area">
+                        <textarea
+                          v-model="subjectiveAnswer"
+                          class="subjective-input"
+                          placeholder="답변을 입력하세요"
+                          rows="5"
+                        />
+                      </div>
                     </div>
-                    <button class="btn-primary-block" :disabled="selectedOption === null || store.isSubmitting" @click="handleQuizSubmit">
+                    <button class="btn-primary-block" :disabled="!isQuizAnswerReady || store.isSubmitting" @click="handleQuizSubmit">
                       {{ store.isSubmitting ? '제출 중...' : (currentQuizIndex < store.quizQuestions.length - 1 ? '다음 문제' : '결과 확인') }}
                     </button>
                   </template>
@@ -465,6 +472,18 @@ const activeMission = ref(null)
 const quizStep = ref("intro") // 'intro' | 'question' | 'result'
 const currentQuizIndex = ref(0)
 const selectedOption = ref(null)
+const subjectiveAnswer = ref('')
+
+const isCurrentQuizSubjective = computed(() => {
+  const q = store.quizQuestions[currentQuizIndex.value]
+  const t = q?.quizType || q?.quiz_type
+  return t === 'SHORT_ANSWER' || t === 'CODING'
+})
+
+const isQuizAnswerReady = computed(() => {
+  if (isCurrentQuizSubjective.value) return subjectiveAnswer.value.trim().length > 0
+  return selectedOption.value !== null
+})
 const quizAnswers = ref([])
 
 const selectedActivityCard = computed(() =>
@@ -821,18 +840,23 @@ const handleQuizStart = async () => {
 }
 
 const handleQuizSubmit = async () => {
-  if (selectedOption.value === null) return
+  if (!isQuizAnswerReady.value) return
 
-  // 인덱스 → 텍스트 변환하여 BE에 제출
   const question = store.quizQuestions[currentQuizIndex.value]
-  question._selectedOption = selectedOption.value
-  quizAnswers.value.push(selectedOption.value)
+  if (isCurrentQuizSubjective.value) {
+    question._subjectiveAnswer = subjectiveAnswer.value.trim()
+    quizAnswers.value.push(subjectiveAnswer.value.trim())
+  } else {
+    question._selectedOption = selectedOption.value
+    quizAnswers.value.push(selectedOption.value)
+  }
 
   await store.submitQuizAnswer(currentQuizIndex.value)
 
   if (currentQuizIndex.value < store.quizQuestions.length - 1) {
     currentQuizIndex.value++
     selectedOption.value = null
+    subjectiveAnswer.value = ''
   } else {
     await store.completeQuizSession()
     quizStep.value = 'result'
@@ -1069,6 +1093,16 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 
 .quiz-q { font-size: 16px; font-weight: 700; line-height: 1.6; margin-bottom: 24px; margin-top: 0; color: var(--text-primary); letter-spacing: 0.05em;}
 .options-list { display: flex; flex-direction: column; gap: 12px; }
+.subjective-area { width: 100%; }
+.subjective-input {
+  width: 100%; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg-surface);
+  color: var(--text-primary); font-size: 14px; font-weight: 600;
+  font-family: 'Space Grotesk', 'Escoredream', sans-serif;
+  line-height: 1.6; resize: vertical; transition: border-color 0.15s;
+}
+.subjective-input:focus { outline: none; border-color: var(--text-primary); }
+.subjective-input::placeholder { color: var(--text-muted); font-weight: 600; }
 .option-btn { background: var(--bg-surface); border: 1px solid var(--border); padding: 16px; cursor: pointer; text-align: left; display: flex; align-items: flex-start; gap: 14px; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); border-radius: 8px; }
 .option-btn:hover { border-color: var(--text-primary); background: var(--bg-hover); }
 .option-btn.selected { border-color: var(--text-primary); background: var(--bg-hover); font-weight: 700; }

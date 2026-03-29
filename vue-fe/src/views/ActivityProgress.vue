@@ -44,7 +44,8 @@
             <div class="brutal-tag inline-tag mb-md text-xs">문제 {{ currentQ + 1 }}</div>
             <h3 class="quiz-q">{{ question.question }}</h3>
 
-            <div class="options-list mb-lg">
+            <!-- 객관식 -->
+            <div v-if="!isSubjective" class="options-list mb-lg">
               <button
                 v-for="(opt, i) in question.options"
                 :key="i"
@@ -59,9 +60,19 @@
               </button>
             </div>
 
+            <!-- 주관식 -->
+            <div v-else class="subjective-area mb-lg">
+              <textarea
+                v-model="subjectiveAnswer"
+                class="subjective-input"
+                placeholder="답변을 입력하세요"
+                rows="5"
+              />
+            </div>
+
             <button
               class="btn-primary-block"
-              :disabled="selected === null"
+              :disabled="!isAnswerReady"
               @click="handleSubmit"
             >
               {{ currentQ < totalQ - 1 ? "다음 문제" : "제출하기" }}
@@ -131,6 +142,7 @@ const quizQuestions = [
 
 const currentQ = ref(0)
 const selected = ref(null)
+const subjectiveAnswer = ref('')
 const answers = ref([])
 const showWarning = ref(false)
 const showUpload = ref(false)
@@ -140,16 +152,31 @@ const totalQ = quizQuestions.length
 const progress = computed(() => Math.round(((currentQ.value + (completed.value ? 1 : 0)) / totalQ) * 100))
 const question = computed(() => quizQuestions[currentQ.value])
 
+const isSubjective = computed(() => {
+  const t = question.value?.quizType || question.value?.quiz_type
+  return t === 'SHORT_ANSWER' || t === 'CODING'
+})
+
+const isAnswerReady = computed(() => {
+  if (isSubjective.value) return subjectiveAnswer.value.trim().length > 0
+  return selected.value !== null
+})
+
 const correctCount = computed(() => {
   return answers.value.filter((a, i) => a === quizQuestions[i].correct).length
 })
 
 const handleSubmit = () => {
-  if (selected.value === null) return
-  answers.value.push(selected.value)
+  if (!isAnswerReady.value) return
+  if (isSubjective.value) {
+    answers.value.push(subjectiveAnswer.value.trim())
+  } else {
+    answers.value.push(selected.value)
+  }
   if (currentQ.value < totalQ - 1) {
     currentQ.value++
     selected.value = null
+    subjectiveAnswer.value = ''
   } else {
     completed.value = true
   }
@@ -268,4 +295,15 @@ const goToCalendar = () => {
 @keyframes fadeUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px 32px; border-bottom: 1px solid var(--border); }
 .modal-header h3 { font-size: 16px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; color: var(--text-primary); letter-spacing: 0.05em; }
+
+.subjective-area { width: 100%; }
+.subjective-input {
+  width: 100%; padding: 14px 16px; border-radius: 10px;
+  border: 1px solid var(--border); background: var(--bg-surface);
+  color: var(--text-primary); font-size: 14px; font-weight: 600;
+  font-family: 'Space Grotesk', 'Escoredream', sans-serif;
+  line-height: 1.6; resize: vertical; transition: border-color 0.15s;
+}
+.subjective-input:focus { outline: none; border-color: var(--text-primary); }
+.subjective-input::placeholder { color: var(--text-muted); font-weight: 600; }
 </style>
