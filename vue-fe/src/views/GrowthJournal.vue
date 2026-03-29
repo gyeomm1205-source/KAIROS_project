@@ -131,12 +131,12 @@
           </div>
 
           <div class="flex-col gap-lg h-full">
-            <div class="base-panel p-md shadow-normal h-full flex-col">
+            <div class="base-panel p-md shadow-normal growth-monthly-panel h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-lg">
                 <i class="fas fa-chart-bar text-muted" /> 월별 활동량 변화
               </h3>
 
-              <div v-if="monthlyActivity.length" class="flex-col gap-md mb-md flex-1 justify-center">
+              <div v-if="monthlyActivity.length" class="monthly-activity-list flex-col gap-md mb-md flex-1">
                 <div v-for="m in monthlyActivity" :key="m.month">
                   <div class="flex-between mb-xs">
                     <div class="flex-align gap-sm">
@@ -258,7 +258,7 @@ const summaryStats = computed(() => {
       icon: 'fas fa-ranking-star',
       label: '대표 기술 백분위',
       value: percentile?.topPercentile ? `상위 ${percentile.topPercentile}%` : '-',
-      sub: percentile ? `${percentile.techName} 보유 사용자 ${percentile.comparedUserCount}명 기준` : '비교할 사용자 풀이 부족해요',
+      sub: percentile ? `${percentile.techName} 보유 사용자 기준` : '비교할 사용자 풀이 부족해요',
     },
   ]
 })
@@ -533,6 +533,25 @@ onMounted(async () => {
 
 .summary-box { background: var(--bg-elevated); padding: 32px; border: 1px dashed var(--border); box-shadow: none; position: relative; }
 .summary-box::before { content: ''; position: absolute; inset: 0; border: 1px solid var(--border); pointer-events: none; }
+
+.growth-monthly-panel {
+  max-height: 570px;
+  min-height: 570px;
+}
+
+.monthly-activity-list {
+  overflow-y: auto;
+  padding-right: 6px;
+  min-height: 0;
+}
+
+.monthly-activity-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.monthly-activity-list::-webkit-scrollbar-thumb {
+  background: #c7c7c7;
+}
 
 .empty-panel {
   min-height: 120px;
