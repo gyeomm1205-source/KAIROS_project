@@ -155,6 +155,8 @@ public class CurriculaServiceImpl implements CurriculaService {
     @Transactional
     public CurriculumConfirmResponse confirm(Long userId, CurriculumConfirmRequest request) {
         String previewKey = request.getCurriculumPreviewKey();
+        log.info("커리큘럼 확정 요청 시작. userId={}, previewKey={}, selectedOptionType={}",
+                userId, previewKey, request.getSelectedOptionType());
 
         String json = redisService.get(previewKey);
         if (json == null) {
@@ -194,6 +196,8 @@ public class CurriculaServiceImpl implements CurriculaService {
         }
 
         Calendar calendarClient = buildGoogleCalendarClientOrNull(userId);
+        log.info("커리큘럼 Google Calendar 연동 준비 상태. userId={}, calendarClientAvailable={}",
+                userId, calendarClient != null);
         registerDailyRecommendationRefreshAfterCommit(userId, curriculum.getCurriculumId());
 
         List<ConfirmNodeDto> confirmNodes = new ArrayList<>();
@@ -213,6 +217,8 @@ public class CurriculaServiceImpl implements CurriculaService {
 
             if (calendarClient != null) {
                 try {
+                    log.info("커리큘럼 노드 Google Calendar 이벤트 생성 시도. userId={}, nodeId={}, title={}, scheduledDate={}",
+                            userId, node.getCurriculumNodeId(), node.getTitle(), node.getScheduledDate());
                     Event event = googleCalendarClientService.createAllDayEvent(
                             calendarClient,
                             node.getTitle(),
@@ -220,10 +226,15 @@ public class CurriculaServiceImpl implements CurriculaService {
                             node.getScheduledDate()
                     );
                     sync.synced("primary", event.getId(), event.getEtag());
+                    log.info("커리큘럼 노드 Google Calendar 이벤트 생성 성공. userId={}, nodeId={}, googleEventId={}",
+                            userId, node.getCurriculumNodeId(), event.getId());
                 } catch (IOException e) {
                     log.warn("커리큘럼 노드 Google Calendar 이벤트 생성 실패. nodeId={}", node.getCurriculumNodeId(), e);
                     sync.syncFailed();
                 }
+            } else {
+                log.warn("커리큘럼 노드 Google Calendar 이벤트 생성 생략. userId={}, nodeId={}, reason=no_calendar_client",
+                        userId, node.getCurriculumNodeId());
             }
 
             curriculumNodeCalendarSyncRepository.save(sync);
@@ -344,11 +355,20 @@ public class CurriculaServiceImpl implements CurriculaService {
             OAuthAccount oAuthAccount = oAuthAccountRepository
                     .findByUserUserIdAndProvider(userId, OAuthProvider.GOOGLE)
                     .orElse(null);
-            if (oAuthAccount == null || oAuthAccount.getRefreshToken() == null) {
+            if (oAuthAccount == null) {
+                log.warn("Google OAuth 계정이 없어 커리큘럼 캘린더 자동 연동을 건너뜁니다. userId={}", userId);
+                return null;
+            }
+            if (oAuthAccount.getRefreshToken() == null) {
+                log.warn("Google refresh token 이 없어 커리큘럼 캘린더 자동 연동을 건너뜁니다. userId={}, oauthAccountId={}",
+                        userId, oAuthAccount.getOauthAccountId());
                 return null;
             }
             String refreshToken = oAuthTokenCryptoService.decrypt(oAuthAccount.getRefreshToken());
-            return googleCalendarClientService.buildCalendarClient(refreshToken);
+            Calendar client = googleCalendarClientService.buildCalendarClient(refreshToken);
+            log.info("Google Calendar 클라이언트 생성 성공. userId={}, oauthAccountId={}",
+                    userId, oAuthAccount.getOauthAccountId());
+            return client;
         } catch (Exception e) {
             log.warn("Google Calendar 클라이언트 생성 실패, 캘린더 연동 없이 진행. userId={}", userId, e);
             return null;
