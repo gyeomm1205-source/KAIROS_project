@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class CurriculumPreviewRequest {
 
     private AnalysisDataRequest analysisData;
+    private java.util.List<String> excludedTechStacks;
 }

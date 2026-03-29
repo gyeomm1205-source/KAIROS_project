@@ -425,12 +425,14 @@
 import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRecommendStore } from '@/stores/useRecommendStore'
+import { useHistoryStore } from '@/stores/useHistoryStore'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { getTechIcon, hasTechIcon } from '@/utils/techIcons'
 import { postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 
 const router = useRouter()
 const store = useRecommendStore()
+const historyStore = useHistoryStore()
 
 onMounted(() => {
   store.loadRecommendations()
@@ -751,7 +753,11 @@ const openCurriculumModal = async () => {
   curriculumModalError.value = ''
 
   try {
-    const { data } = await postCurriculumPreview({})
+    await historyStore.loadActivities()
+    const excludedTechStacks = historyStore.excludedTechStacks
+    const { data } = await postCurriculumPreview({
+      excludedTechStacks,
+    })
     curriculumPreviewData.value = data
   } catch (e) {
     console.error('추천 커리큘럼 미리보기 생성 실패:', e)

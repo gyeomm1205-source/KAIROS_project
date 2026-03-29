@@ -110,7 +110,8 @@ public class CurriculaServiceImpl implements CurriculaService {
             googleEvents = fetchGoogleCalendarEvents(userId);
         }
 
-        List<SkillStatDto> userTechStacks = buildUserTechStacks(userId);
+        List<String> excludedTechStacks = normalizeTechStackNames(request.getExcludedTechStacks());
+        List<SkillStatDto> userTechStacks = buildUserTechStacks(userId, excludedTechStacks);
 
         boolean isOnboardingPreview = request.getAnalysisData() != null;
 
@@ -121,7 +122,8 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .googleCalendarEvents(googleEvents)
                 .analysisData(request.getAnalysisData())
                 .userTechStacks(userTechStacks)
-                .recentActivities(isOnboardingPreview ? List.of() : buildRecentActivities(userId))
+                .recentActivities(isOnboardingPreview ? List.of() : buildRecentActivities(userId, excludedTechStacks))
+                .excludedTechStacks(excludedTechStacks)
                 .build();
 
         CurriculumGenerateResponse aiResponse = callFastApi(aiRequest);
@@ -395,10 +397,15 @@ public class CurriculaServiceImpl implements CurriculaService {
         }
     }
 
-    private List<SkillStatDto> buildUserTechStacks(Long userId) {
+    private List<SkillStatDto> buildUserTechStacks(Long userId, List<String> excludedTechStacks) {
+        java.util.Set<String> excludedSet = normalizeTechStackSet(excludedTechStacks);
         List<Object[]> rows = activityHistoryTechStackRepository
                 .findTechStackCountsByUserId(userId, PageRequest.of(0, 10));
         return rows.stream()
+                .filter(row -> {
+                    String techName = ((TechStack) row[0]).getTechName();
+                    return techName == null || !excludedSet.contains(techName.trim().toLowerCase());
+                })
                 .map(row -> SkillStatDto.builder()
                         .skill(((TechStack) row[0]).getTechName())
                         .count(((Long) row[1]).intValue())
@@ -406,7 +413,8 @@ public class CurriculaServiceImpl implements CurriculaService {
                 .toList();
     }
 
-    private List<RecentActivityDto> buildRecentActivities(Long userId) {
+    private List<RecentActivityDto> buildRecentActivities(Long userId, List<String> excludedTechStacks) {
+        java.util.Set<String> excludedSet = normalizeTechStackSet(excludedTechStacks);
         return activityHistoryRepository.findTop10ByUserUserIdAndIsIncludedTrueOrderByActivityDateDesc(userId).stream()
                 .map(activity -> RecentActivityDto.builder()
                         .activityType(mapActivityType(activity.getActivityType()))
@@ -417,9 +425,28 @@ public class CurriculaServiceImpl implements CurriculaService {
                         .techStacks(activityHistoryTechStackRepository
                                 .findByActivityHistoryActivityHistoryId(activity.getActivityHistoryId()).stream()
                                 .map(techStack -> techStack.getTechStack().getTechName())
+                                .filter(techName -> techName == null || !excludedSet.contains(techName.trim().toLowerCase()))
                                 .toList())
                         .build())
                 .toList();
+    }
+
+    private List<String> normalizeTechStackNames(List<String> techStacks) {
+        if (techStacks == null || techStacks.isEmpty()) {
+            return List.of();
+        }
+        return techStacks.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(String::trim)
+                .filter(value -> !value.isBlank())
+                .distinct()
+                .toList();
+    }
+
+    private java.util.Set<String> normalizeTechStackSet(List<String> techStacks) {
+        return normalizeTechStackNames(techStacks).stream()
+                .map(String::toLowerCase)
+                .collect(java.util.stream.Collectors.toCollection(java.util.LinkedHashSet::new));
     }
 
     private String mapActivityType(ActivityType activityType) {

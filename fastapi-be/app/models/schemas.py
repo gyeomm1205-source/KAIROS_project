@@ -254,6 +254,7 @@ class CurriculumRequest(_CamelModel):
 
     # ONBOARDING + AUTO 공통 — SpringBoot DB의 user_tech_stack 통계
     user_tech_stacks: list[SkillStat] = Field(default_factory=list)
+    excluded_tech_stacks: list[str] = Field(default_factory=list)
 
     # AUTO 전용 — 최근 activity_history 레코드
     recent_activities: list[ActivityHistoryItem] = Field(default_factory=list)

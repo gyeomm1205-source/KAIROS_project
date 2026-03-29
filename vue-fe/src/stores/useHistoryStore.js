@@ -124,6 +124,22 @@ export const useHistoryStore = defineStore('history', () => {
     return items.value.filter((item) => item.date >= weekAgoStr).length
   })
   const excludedCount = computed(() => items.value.filter((item) => item.excluded).length)
+  const excludedTechStacks = computed(() => {
+    const seen = new Set()
+    const stacks = []
+    items.value
+      .filter((item) => item.excluded)
+      .flatMap((item) => item.tags || [])
+      .forEach((tag) => {
+        const value = (tag || '').trim()
+        const key = value.toLowerCase()
+        if (value && !seen.has(key)) {
+          seen.add(key)
+          stacks.push(value)
+        }
+      })
+    return stacks
+  })
 
   const resetQueries = () => {
     keyword.value = ""
@@ -137,6 +153,6 @@ export const useHistoryStore = defineStore('history', () => {
 
   return {
     items, filter, sort, keyword, selectedYear, selectedMonth,
-    loadActivities, toggleExclude, deleteItem, filteredItems, totalCount, thisWeekCount, excludedCount, resetQueries
+    loadActivities, toggleExclude, deleteItem, filteredItems, totalCount, thisWeekCount, excludedCount, excludedTechStacks, resetQueries
   }
 })
