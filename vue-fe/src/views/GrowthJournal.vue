@@ -135,12 +135,16 @@
                     </div>
                     <span class="text-xs text-muted font-bold">{{ m.total }}회</span>
                   </div>
-                  <div class="bar-chart-track flex">
-                    <div class="bar-segment color-1" :style="{ width: `${(m.commit / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-2" :style="{ width: `${(m.pr / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-3" :style="{ width: `${(m.velog / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-4" :style="{ width: `${(m.quiz / maxBar) * 100}%` }" />
-                    <div class="bar-segment color-5" :style="{ width: `${(m.reference / maxBar) * 100}%` }" />
+                  <div class="bar-chart-track">
+                    <div class="bar-chart-fill" :style="{ width: `${m.fillRatio}%` }">
+                      <div
+                        v-for="segment in m.segments"
+                        :key="`${m.month}-${segment.key}`"
+                        class="bar-segment"
+                        :class="segment.colorClass"
+                        :style="{ width: `${segment.ratio}%` }"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -205,6 +209,14 @@ const chartLegend = [
 const formatMonthLabel = (year, month) => `${year}.${String(month).padStart(2, '0')}`
 const formatScore = (score) => `${Number(score || 0).toFixed(1)}점`
 const clampPercent = (value) => Math.max(0, Math.min(100, value))
+const readCount = (counts, ...keys) => {
+  for (const key of keys) {
+    if (counts?.[key] != null) {
+      return Number(counts[key] || 0)
+    }
+  }
+  return 0
+}
 
 const summaryStats = computed(() => {
   const topTech = growthReport.value.topTechStacks?.[0]
@@ -288,13 +300,22 @@ const monthlyActivity = computed(() => {
 
   return items.map((item) => {
     const counts = item.counts || {}
-    const commit = Number(counts.GITHUB_COMMIT || 0)
-    const pr = Number(counts.GITHUB_PR || 0)
-    const velog = Number(counts.VELOG_POST || 0)
-    const quiz = Number(counts.QUIZ || 0)
-    const reference = Number(counts.REFERENCE || 0)
+    const commit = readCount(counts, 'GITHUB_COMMIT', 'githubCommit')
+    const pr = readCount(counts, 'GITHUB_PR', 'githubPr')
+    const velog = readCount(counts, 'VELOG_POST', 'velogPost')
+    const quiz = readCount(counts, 'QUIZ', 'quiz')
+    const reference = readCount(counts, 'REFERENCE', 'reference')
     const total = commit + pr + velog + quiz + reference
     const monthKey = `${item.year}-${String(item.month).padStart(2, '0')}`
+    const segments = total > 0
+      ? [
+          { key: 'commit', ratio: (commit / total) * 100, colorClass: 'color-1' },
+          { key: 'pr', ratio: (pr / total) * 100, colorClass: 'color-2' },
+          { key: 'velog', ratio: (velog / total) * 100, colorClass: 'color-3' },
+          { key: 'quiz', ratio: (quiz / total) * 100, colorClass: 'color-4' },
+          { key: 'reference', ratio: (reference / total) * 100, colorClass: 'color-5' },
+        ].filter((segment) => segment.ratio > 0)
+      : []
 
     return {
       month: formatMonthLabel(item.year, item.month),
@@ -304,9 +325,14 @@ const monthlyActivity = computed(() => {
       quiz,
       reference,
       total,
+      fillRatio: 0,
+      segments,
       isJoinMonth: monthKey === joinMonthKey,
     }
-  })
+  }).map((item) => ({
+    ...item,
+    fillRatio: clampPercent((item.total / maxBar.value) * 100),
+  }))
 })
 
 const maxBar = computed(() => {
@@ -462,7 +488,8 @@ onMounted(async () => {
 .track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s; opacity: 0.8; }
 .metric-value { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
 
-.bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
+.bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; background: #d9d9d9; }
+.bar-chart-fill { height: 100%; display: flex; overflow: hidden; }
 .bar-segment { height: 100%; transition: width 0.3s; }
 .color-1 { background: var(--clr-primary); }
 .color-2 { background: #22c55e; }
