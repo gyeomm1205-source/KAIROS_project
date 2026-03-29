@@ -143,7 +143,7 @@ public class UsersServiceImpl implements UsersService {
 
         if (request.getTechStackIds() != null) {
             List<UserTechStack> existing = userTechStackRepository.findByUserUserId(userId);
-            Map<Long, Integer> scoreMap = new HashMap<>();
+            Map<Long, Double> scoreMap = new HashMap<>();
             for (UserTechStack uts : existing) {
                 scoreMap.put(uts.getTechStack().getTechStackId(), uts.getScore());
             }

@@ -50,7 +50,7 @@ public class GrowthReportResponse {
         private String techName;
         private String iconUrl;
         private String color;
-        private Integer score;
+        private Double score;
     }
 
     @Getter

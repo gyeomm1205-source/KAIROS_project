@@ -3,6 +3,7 @@ package com.ssafy.springbootbe.domain.recommendations.service;
 import com.ssafy.springbootbe.common.dto.TechStackInfo;
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.domain.activities.service.LearningStateService;
 import com.ssafy.springbootbe.domain.recommendations.dto.request.DailyRecommendationGenerateRequest;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationCachePayload;
 import com.ssafy.springbootbe.domain.recommendations.dto.response.RecommendationDetailResponse;
@@ -85,6 +86,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final UserScheduleRepository userScheduleRepository;
+    private final LearningStateService learningStateService;
     private final RedisService redisService;
     private final AIRestClient aiRestClient;
     private final ObjectMapper objectMapper;
@@ -832,6 +834,8 @@ public class RecommendationsServiceImpl implements RecommendationsService {
             if (!links.isEmpty()) {
                 activityHistoryTechStackRepository.saveAll(links);
             }
+
+            learningStateService.recalculateForUser(userId);
         }
     }
 

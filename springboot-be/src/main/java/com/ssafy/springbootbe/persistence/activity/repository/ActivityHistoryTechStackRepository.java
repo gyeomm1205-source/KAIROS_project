@@ -36,4 +36,10 @@ public interface ActivityHistoryTechStackRepository extends JpaRepository<Activi
     List<Object[]> findTechStackCountsSince(@Param("userId") Long userId,
                                             @Param("since") LocalDateTime since,
                                             Pageable pageable);
+
+    @Query("SELECT ahts FROM ActivityHistoryTechStack ahts " +
+           "JOIN FETCH ahts.activityHistory ah " +
+           "JOIN FETCH ahts.techStack ts " +
+           "WHERE ah.user.userId = :userId AND ah.isIncluded = true")
+    List<ActivityHistoryTechStack> findIncludedByUserId(@Param("userId") Long userId);
 }

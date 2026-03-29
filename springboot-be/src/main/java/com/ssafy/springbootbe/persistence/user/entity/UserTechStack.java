@@ -30,9 +30,9 @@ public class UserTechStack {
 
     @Column(name = "score", nullable = false)
     @Builder.Default
-    private Integer score = 0;
+    private Double score = 0.0;
 
-    public void updateScore(Integer score) {
+    public void updateScore(Double score) {
         this.score = score;
     }
 }

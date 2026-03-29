@@ -2,6 +2,7 @@ package com.ssafy.springbootbe.domain.quizzes.service;
 
 import com.ssafy.springbootbe.common.redis.RedisService;
 import com.ssafy.springbootbe.common.utils.AIRestClient;
+import com.ssafy.springbootbe.domain.activities.service.LearningStateService;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizAnswerSubmitRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizGenerateAsyncRequest;
 import com.ssafy.springbootbe.domain.quizzes.dto.request.QuizSessionStartRequest;
@@ -89,6 +90,7 @@ public class QuizzesServiceImpl implements QuizzesService {
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final TechStackRepository techStackRepository;
+    private final LearningStateService learningStateService;
     private final RedisService redisService;
     private final AIRestClient aiRestClient;
     private final ObjectMapper objectMapper;
@@ -166,6 +168,7 @@ public class QuizzesServiceImpl implements QuizzesService {
         QuizSession quizSession = saveQuizSessionResult(curriculum, totalScore);
         saveQuizQuestions(quizSession, quizResults);
         saveQuizActivityHistory(curriculum, quizResults);
+        learningStateService.recalculateForUser(userId);
         cleanupQuizRedisKeys(userId, curriculumId);
 
         return QuizSessionCompleteResponse.builder()

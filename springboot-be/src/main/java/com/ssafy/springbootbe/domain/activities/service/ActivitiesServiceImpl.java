@@ -41,6 +41,7 @@ public class ActivitiesServiceImpl implements ActivitiesService {
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final UserTechStackRepository userTechStackRepository;
+    private final LearningStateService learningStateService;
 
     @Override
     @Transactional(readOnly = true)
@@ -215,6 +216,7 @@ public class ActivitiesServiceImpl implements ActivitiesService {
         }
 
         activity.toggleInclusion(request.getIsIncluded());
+        learningStateService.recalculateForUser(userId);
 
         log.info("활동 이력 포함 여부 수정. userId={}, activityHistoryId={}, isIncluded={}", userId, activityHistoryId, request.getIsIncluded());
 

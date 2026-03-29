@@ -42,6 +42,7 @@ class ActivitiesServiceImplTest {
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     @Mock private UserTechStackRepository userTechStackRepository;
+    @Mock private LearningStateService learningStateService;
 
     @InjectMocks
     private ActivitiesServiceImpl activitiesService;
@@ -276,7 +277,7 @@ class ActivitiesServiceImplTest {
         UserTechStack uts = UserTechStack.builder()
                 .userTechStackId(1L)
                 .techStack(springStack)
-                .score(80)
+                .score(80.0)
                 .build();
 
         List<Object[]> monthlyRaws = new java.util.ArrayList<>();
@@ -294,7 +295,7 @@ class ActivitiesServiceImplTest {
         assertThat(response.getRecentGrowthTech().getTechName()).isEqualTo("Spring Boot");
         assertThat(response.getMaxStreakDays()).isEqualTo(3);
         assertThat(response.getTechScoreSnapshot()).hasSize(1);
-        assertThat(response.getTechScoreSnapshot().get(0).getScore()).isEqualTo(80);
+        assertThat(response.getTechScoreSnapshot().get(0).getScore()).isEqualTo(80.0);
         assertThat(response.getMonthlyActivityCounts()).hasSize(1);
         assertThat(response.getTechActivityRanking()).hasSize(2);
     }
