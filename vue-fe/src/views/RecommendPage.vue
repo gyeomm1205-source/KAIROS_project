@@ -19,7 +19,7 @@
                   <i class="fas fa-book-open" /> 커리큘럼 추천받기
                 </button>
                 <button class="btn-outline-small" @click="$router.push('/recommend/new-learning')">
-                  <i class="fas fa-plus" /> 학습 맥락 직접 추가
+                  <i class="fas fa-plus" /> 새 커리큘럼 도전
                 </button>
               </div>
             </div>
@@ -1101,8 +1101,8 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 40px; letter-spacing: 0.12em; }
 .badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
 .badge-a-sub { background: transparent; color: var(--clr-primary); border: 1px solid var(--clr-primary); }
-.badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
-.badge-b-sub { background: var(--clr-icon-ai); color: var(--bg-base); border: 1px solid var(--clr-icon-ai); }
+.badge-b { background: var(--clr-icon-ai); color: var(--bg-base); border: 1px solid var(--clr-icon-ai); }
+.badge-b-sub { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
 .option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
 .option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }

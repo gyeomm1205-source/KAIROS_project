@@ -51,11 +51,6 @@
                 :key="s.id"
                 class="timeline-item"
               >
-                <!-- 선 + 점 -->
-                <div class="tl-connector">
-                  <div class="tl-dot" :style="{ borderColor: trackColor(s.track) }" />
-                </div>
-
                 <!-- 카드 -->
                 <div class="tl-card" :style="{ '--track-color': trackColor(s.track) }">
                   <div class="tl-header">

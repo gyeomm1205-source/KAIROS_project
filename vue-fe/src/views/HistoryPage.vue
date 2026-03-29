@@ -124,7 +124,6 @@
             <div class="row-main">
               <div class="flex-align gap-sm mb-xs">
                 <span class="row-title">{{ item.title }}</span>
-                <span class="row-badge">{{ recordKindConfig[item.recordKind].label }}</span>
               </div>
               <p class="row-desc">{{ item.summary }}</p>
             </div>
@@ -215,11 +214,10 @@
           <button class="btn-outline-small" @click="closeTechExcludeModal">취소</button>
           <button
             class="btn-primary-modal"
-            :disabled="selectedTechStacks.length === 0 || isApplyingTechExclusion"
+            :disabled="isApplyingTechExclusion"
             @click="applyTechExclusion"
           >
-            <i class="fas fa-ban" />
-            {{ isApplyingTechExclusion ? '적용 중...' : `제외 적용 (${selectedTechStacks.length})` }}
+            {{ isApplyingTechExclusion ? '적용 중...' : 'context 적용' }}
           </button>
         </div>
       </div>
@@ -261,7 +259,7 @@ const availableTechStacks = computed(() => {
 })
 
 const openTechExcludeModal = () => {
-  selectedTechStacks.value = [...store.excludedTechStacks]
+  selectedTechStacks.value = []
   showTechExcludeModal.value = true
 }
 
@@ -286,7 +284,10 @@ const clearSelectedTechStacks = () => {
 }
 
 const applyTechExclusion = async () => {
-  if (!selectedTechStacks.value.length) return
+  if (!selectedTechStacks.value.length) {
+    showTechExcludeModal.value = false
+    return
+  }
 
   isApplyingTechExclusion.value = true
   try {
