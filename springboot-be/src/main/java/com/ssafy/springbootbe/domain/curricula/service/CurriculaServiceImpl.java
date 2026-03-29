@@ -50,7 +50,9 @@ import com.ssafy.springbootbe.persistence.oauth.type.OAuthProvider;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import com.ssafy.springbootbe.persistence.techstack.repository.TechStackRepository;
 import com.ssafy.springbootbe.persistence.user.entity.User;
+import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
 import com.ssafy.springbootbe.persistence.user.repository.UserRepository;
+import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -86,6 +88,7 @@ public class CurriculaServiceImpl implements CurriculaService {
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final OAuthAccountRepository oAuthAccountRepository;
     private final TechStackRepository techStackRepository;
+    private final UserTechStackRepository userTechStackRepository;
     private final RecommendationsService recommendationsService;
     private final GoogleCalendarClientService googleCalendarClientService;
     private final OAuthTokenCryptoService oAuthTokenCryptoService;
@@ -110,10 +113,11 @@ public class CurriculaServiceImpl implements CurriculaService {
             googleEvents = fetchGoogleCalendarEvents(userId);
         }
 
-        List<String> excludedTechStacks = normalizeTechStackNames(request.getExcludedTechStacks());
-        List<SkillStatDto> userTechStacks = buildUserTechStacks(userId, excludedTechStacks);
-
         boolean isOnboardingPreview = request.getAnalysisData() != null;
+        List<String> excludedTechStacks = normalizeTechStackNames(request.getExcludedTechStacks());
+        List<SkillStatDto> userTechStacks = isOnboardingPreview
+                ? buildUserTechStacksFromActivityCounts(userId, excludedTechStacks)
+                : buildUserTechStacksFromScores(userId, excludedTechStacks);
 
         CurriculumGenerateRequest aiRequest = CurriculumGenerateRequest.builder()
                 .userId(userId)
@@ -397,7 +401,33 @@ public class CurriculaServiceImpl implements CurriculaService {
         }
     }
 
-    private List<SkillStatDto> buildUserTechStacks(Long userId, List<String> excludedTechStacks) {
+    private List<SkillStatDto> buildUserTechStacksFromScores(Long userId, List<String> excludedTechStacks) {
+        java.util.Set<String> excludedSet = normalizeTechStackSet(excludedTechStacks);
+        List<SkillStatDto> scoreStats = userTechStackRepository.findByUserUserId(userId).stream()
+                .filter(userTechStack -> userTechStack.getScore() != null && userTechStack.getScore() > 0)
+                .sorted((left, right) -> Double.compare(
+                        right.getScore() == null ? 0.0 : right.getScore(),
+                        left.getScore() == null ? 0.0 : left.getScore()
+                ))
+                .filter(userTechStack -> {
+                    String techName = userTechStack.getTechStack().getTechName();
+                    return techName == null || !excludedSet.contains(techName.trim().toLowerCase());
+                })
+                .limit(10)
+                .map(userTechStack -> SkillStatDto.builder()
+                        .skill(userTechStack.getTechStack().getTechName())
+                        .count(Math.max(1, (int) Math.round(userTechStack.getScore())))
+                        .build())
+                .toList();
+
+        if (!scoreStats.isEmpty()) {
+            return scoreStats;
+        }
+
+        return buildUserTechStacksFromActivityCounts(userId, excludedTechStacks);
+    }
+
+    private List<SkillStatDto> buildUserTechStacksFromActivityCounts(Long userId, List<String> excludedTechStacks) {
         java.util.Set<String> excludedSet = normalizeTechStackSet(excludedTechStacks);
         List<Object[]> rows = activityHistoryTechStackRepository
                 .findTechStackCountsByUserId(userId, PageRequest.of(0, 10));

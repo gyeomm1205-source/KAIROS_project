@@ -302,6 +302,22 @@ public class RecommendationsServiceImpl implements RecommendationsService {
     }
 
     private List<DailyRecommendationGenerateRequest.SkillStat> buildSkillStats(Long userId) {
+        List<DailyRecommendationGenerateRequest.SkillStat> scoreStats = userTechStackRepository.findByUserUserId(userId).stream()
+                .filter(userTechStack -> userTechStack.getScore() != null && userTechStack.getScore() > 0)
+                .sorted((left, right) -> Double.compare(
+                        right.getScore() == null ? 0.0 : right.getScore(),
+                        left.getScore() == null ? 0.0 : left.getScore()
+                ))
+                .map(userTechStack -> DailyRecommendationGenerateRequest.SkillStat.builder()
+                        .skill(userTechStack.getTechStack().getTechName())
+                        .count(Math.max(1L, Math.round(userTechStack.getScore())))
+                        .build())
+                .toList();
+
+        if (!scoreStats.isEmpty()) {
+            return scoreStats;
+        }
+
         return activityHistoryTechStackRepository.findIncludedTechStackCountsByUserId(userId).stream()
                 .map(row -> DailyRecommendationGenerateRequest.SkillStat.builder()
                         .skill(((TechStack) row[0]).getTechName())
@@ -597,6 +613,7 @@ public class RecommendationsServiceImpl implements RecommendationsService {
 
         if (techStacks.isEmpty()) {
             userTechStackRepository.findTop6ByUserUserIdOrderByScoreDesc(userId).stream()
+                    .filter(userTechStack -> userTechStack.getScore() != null && userTechStack.getScore() > 0)
                     .map(UserTechStack::getTechStack)
                     .map(TechStack::getTechName)
                     .filter(Objects::nonNull)

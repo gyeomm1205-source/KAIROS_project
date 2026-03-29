@@ -276,6 +276,7 @@ public class QuizzesServiceImpl implements QuizzesService {
 
         if (techStacks.isEmpty()) {
             userTechStackRepository.findTop6ByUserUserIdOrderByScoreDesc(userId).stream()
+                    .filter(userTechStack -> userTechStack.getScore() != null && userTechStack.getScore() > 0)
                     .map(UserTechStack::getTechStack)
                     .map(TechStack::getTechName)
                     .filter(Objects::nonNull)
@@ -728,6 +729,7 @@ public class QuizzesServiceImpl implements QuizzesService {
 
         if (techStacks.isEmpty()) {
             userTechStackRepository.findTop6ByUserUserIdOrderByScoreDesc(userId).stream()
+                    .filter(userTechStack -> userTechStack.getScore() != null && userTechStack.getScore() > 0)
                     .map(UserTechStack::getTechStack)
                     .map(TechStack::getTechName)
                     .filter(Objects::nonNull)
