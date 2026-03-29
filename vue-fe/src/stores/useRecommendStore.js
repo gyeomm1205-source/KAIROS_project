@@ -225,7 +225,7 @@ export const useRecommendStore = defineStore('recommend', () => {
           icon: "fas fa-pen-nib",
           title: "velog 글 작성하기",
           desc: data.references?.length
-            ? `추천 레퍼런스 ${data.references.length}개를 바탕으로 글 구조를 잡아봅니다`
+            ? `추천 레퍼런스를 바탕으로 글 구조를 잡아봅니다`
             : "글을 바로 써주기보다, 글 작성에 필요한 레퍼런스를 추천합니다",
           time: data.references?.length ? `${Math.max(20, data.references.length * 10)}분` : "40분",
           tag: "정리",
