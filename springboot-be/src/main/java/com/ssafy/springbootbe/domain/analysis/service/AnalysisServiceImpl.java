@@ -1,5 +1,6 @@
 package com.ssafy.springbootbe.domain.analysis.service;
 
+import com.ssafy.springbootbe.domain.activities.service.LearningStateBaselineService;
 import com.ssafy.springbootbe.domain.activities.service.LearningStateService;
 import com.ssafy.springbootbe.domain.analysis.dto.request.AnalysisCompleteRequest;
 import com.ssafy.springbootbe.domain.analysis.dto.response.AnalysisCompleteResponse;
@@ -35,6 +36,7 @@ public class AnalysisServiceImpl implements AnalysisService {
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final LearningStateService learningStateService;
+    private final LearningStateBaselineService learningStateBaselineService;
 
     @Override
     @Transactional
@@ -48,6 +50,7 @@ public class AnalysisServiceImpl implements AnalysisService {
         log.info("분석 완료 콜백 처리. userId={}, taskId={}, savedCount={}", request.getUserId(), request.getTaskId(), savedCount);
 
         learningStateService.recalculateForUser(user.getUserId());
+        learningStateBaselineService.captureInitialBaselineIfAbsent(user.getUserId());
 
         return AnalysisCompleteResponse.builder()
                 .message("activity_history saved.")

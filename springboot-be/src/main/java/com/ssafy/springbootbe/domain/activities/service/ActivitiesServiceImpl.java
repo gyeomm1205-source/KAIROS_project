@@ -14,6 +14,8 @@ import com.ssafy.springbootbe.persistence.activity.repository.ActivityHistoryTec
 import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
+import com.ssafy.springbootbe.persistence.user.entity.UserTechStackBaseline;
+import com.ssafy.springbootbe.persistence.user.repository.UserTechStackBaselineRepository;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -37,10 +39,14 @@ public class ActivitiesServiceImpl implements ActivitiesService {
     private static final int TOP_TECH_STACKS_LIMIT = 10;
     private static final int TECH_ACTIVITY_RANKING_LIMIT = 5;
     private static final int RECENT_GROWTH_DAYS = 30;
+    private static final double RECENT_GROWTH_BASELINE_FLOOR = 1.0;
+    private static final double RECENT_GROWTH_DELTA_WEIGHT = 0.7;
+    private static final double RECENT_GROWTH_RELATIVE_WEIGHT = 0.3;
 
     private final ActivityHistoryRepository activityHistoryRepository;
     private final ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     private final UserTechStackRepository userTechStackRepository;
+    private final UserTechStackBaselineRepository userTechStackBaselineRepository;
     private final LearningStateService learningStateService;
 
     @Override
@@ -48,9 +54,6 @@ public class ActivitiesServiceImpl implements ActivitiesService {
     public GrowthReportResponse getGrowthReport(Long userId) {
         Pageable topTechPageable = PageRequest.of(0, TOP_TECH_STACKS_LIMIT);
         Pageable rankingPageable = PageRequest.of(0, TECH_ACTIVITY_RANKING_LIMIT);
-        Pageable recentGrowthPageable = PageRequest.of(0, 1);
-        LocalDateTime since = LocalDateTime.now().minusDays(RECENT_GROWTH_DAYS);
-
         List<Object[]> topTechRaws = activityHistoryTechStackRepository
                 .findTechStackCountsByUserId(userId, topTechPageable);
         List<GrowthReportResponse.TechStackCountInfo> topTechStacks = topTechRaws.stream()
@@ -67,24 +70,18 @@ public class ActivitiesServiceImpl implements ActivitiesService {
 
         long totalActivityCount = activityHistoryRepository.countByUserUserId(userId);
 
-        List<Object[]> recentGrowthRaws = activityHistoryTechStackRepository
-                .findTechStackCountsSince(userId, since, recentGrowthPageable);
-        GrowthReportResponse.TechStackInfo recentGrowthTech = null;
-        if (!recentGrowthRaws.isEmpty()) {
-            TechStack ts = (TechStack) recentGrowthRaws.get(0)[0];
-            recentGrowthTech = GrowthReportResponse.TechStackInfo.builder()
-                    .techStackId(ts.getTechStackId())
-                    .techName(ts.getTechName())
-                    .iconUrl(ts.getIconUrl())
-                    .color(ts.getColor())
-                    .build();
-        }
-
         List<LocalDateTime> activityDates = activityHistoryRepository.findActivityDatesByUserId(userId);
         int maxStreakDays = calculateMaxStreakDays(activityDates);
 
         List<UserTechStack> topScoreStacks = userTechStackRepository
                 .findTop6ByUserUserIdOrderByScoreDesc(userId);
+        Map<Long, Double> baselineScoreByTechStackId = userTechStackBaselineRepository.findByUserUserId(userId).stream()
+                .collect(Collectors.toMap(
+                        baseline -> baseline.getTechStack().getTechStackId(),
+                        baseline -> baseline.getBaselineScore() == null ? 0.0 : baseline.getBaselineScore(),
+                        (left, right) -> left,
+                        LinkedHashMap::new
+                ));
         List<GrowthReportResponse.TechStackScoreInfo> techScoreSnapshot = topScoreStacks.stream()
                 .map(uts -> GrowthReportResponse.TechStackScoreInfo.builder()
                         .techStackId(uts.getTechStack().getTechStackId())
@@ -94,6 +91,19 @@ public class ActivitiesServiceImpl implements ActivitiesService {
                         .score(uts.getScore())
                         .build())
                 .collect(Collectors.toList());
+        List<GrowthReportResponse.TechStackGrowthInfo> techGrowthComparisons =
+                buildTechGrowthComparisons(topScoreStacks, baselineScoreByTechStackId);
+        GrowthReportResponse.TechStackGrowthInfo recentGrowth = techGrowthComparisons.stream()
+                .max(Comparator.comparing(this::calculateRecentGrowthScore))
+                .orElse(null);
+        GrowthReportResponse.TechStackInfo recentGrowthTech = recentGrowth == null ? null : GrowthReportResponse.TechStackInfo.builder()
+                .techStackId(recentGrowth.getTechStackId())
+                .techName(recentGrowth.getTechName())
+                .iconUrl(recentGrowth.getIconUrl())
+                .color(recentGrowth.getColor())
+                .build();
+        Double recentGrowthDelta = recentGrowth == null ? null : recentGrowth.getGrowthDelta();
+        GrowthReportResponse.TechStackPercentileInfo topSkillPercentile = buildTopSkillPercentile(topScoreStacks);
 
         List<Object[]> monthlyRaws = activityHistoryRepository.findMonthlyActivityCountsByUserId(userId);
         List<GrowthReportResponse.MonthlyActivityCountInfo> monthlyActivityCounts = buildMonthlyActivityCounts(monthlyRaws);
@@ -118,11 +128,79 @@ public class ActivitiesServiceImpl implements ActivitiesService {
                 .topTechStacks(topTechStacks)
                 .totalActivityCount(totalActivityCount)
                 .recentGrowthTech(recentGrowthTech)
+                .recentGrowthDelta(recentGrowthDelta)
                 .maxStreakDays(maxStreakDays)
                 .techScoreSnapshot(techScoreSnapshot)
+                .techGrowthComparisons(techGrowthComparisons)
+                .topSkillPercentile(topSkillPercentile)
                 .monthlyActivityCounts(monthlyActivityCounts)
                 .techActivityRanking(techActivityRanking)
                 .build();
+    }
+
+    private List<GrowthReportResponse.TechStackGrowthInfo> buildTechGrowthComparisons(
+            List<UserTechStack> currentStacks,
+            Map<Long, Double> baselineScoreByTechStackId
+    ) {
+        return currentStacks.stream()
+                .filter(userTechStack -> userTechStack.getScore() != null)
+                .map(userTechStack -> {
+                    TechStack techStack = userTechStack.getTechStack();
+                    double baselineScore = baselineScoreByTechStackId.getOrDefault(techStack.getTechStackId(), 0.0);
+                    double currentScore = userTechStack.getScore() == null ? 0.0 : userTechStack.getScore();
+                    return GrowthReportResponse.TechStackGrowthInfo.builder()
+                            .techStackId(techStack.getTechStackId())
+                            .techName(techStack.getTechName())
+                            .iconUrl(techStack.getIconUrl())
+                            .color(techStack.getColor())
+                            .baselineScore(roundToTwoDecimals(baselineScore))
+                            .currentScore(roundToTwoDecimals(currentScore))
+                            .growthDelta(roundToTwoDecimals(currentScore - baselineScore))
+                            .build();
+                })
+                .toList();
+    }
+
+    private GrowthReportResponse.TechStackPercentileInfo buildTopSkillPercentile(List<UserTechStack> topScoreStacks) {
+        if (topScoreStacks == null || topScoreStacks.isEmpty()) {
+            return null;
+        }
+
+        UserTechStack topSkill = topScoreStacks.getFirst();
+        TechStack techStack = topSkill.getTechStack();
+        Double score = topSkill.getScore() == null ? 0.0 : topSkill.getScore();
+        long comparedUserCount = userTechStackRepository.countByTechStackTechStackId(techStack.getTechStackId());
+        if (comparedUserCount <= 0) {
+            return null;
+        }
+
+        long higherScoreCount = userTechStackRepository.countByTechStackTechStackIdAndScoreGreaterThan(
+                techStack.getTechStackId(),
+                score
+        );
+        double topPercentile = roundToTwoDecimals(((double) (higherScoreCount + 1) / comparedUserCount) * 100.0);
+
+        return GrowthReportResponse.TechStackPercentileInfo.builder()
+                .techStackId(techStack.getTechStackId())
+                .techName(techStack.getTechName())
+                .iconUrl(techStack.getIconUrl())
+                .color(techStack.getColor())
+                .score(roundToTwoDecimals(score))
+                .topPercentile(topPercentile)
+                .comparedUserCount(comparedUserCount)
+                .build();
+    }
+
+    private double calculateRecentGrowthScore(GrowthReportResponse.TechStackGrowthInfo growthInfo) {
+        if (growthInfo == null) {
+            return 0.0;
+        }
+
+        double baselineScore = growthInfo.getBaselineScore() == null ? 0.0 : growthInfo.getBaselineScore();
+        double delta = growthInfo.getGrowthDelta() == null ? 0.0 : growthInfo.getGrowthDelta();
+        double relativeGrowth = delta / Math.max(baselineScore, RECENT_GROWTH_BASELINE_FLOOR);
+
+        return (delta * RECENT_GROWTH_DELTA_WEIGHT) + (relativeGrowth * RECENT_GROWTH_RELATIVE_WEIGHT);
     }
 
     private int calculateMaxStreakDays(List<LocalDateTime> activityDates) {
@@ -167,6 +245,10 @@ public class ActivitiesServiceImpl implements ActivitiesService {
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private double roundToTwoDecimals(double value) {
+        return Math.round(value * 100.0) / 100.0;
     }
 
     @Override
