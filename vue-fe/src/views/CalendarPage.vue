@@ -50,6 +50,7 @@
                 :is-today="cell.dateStr === todayStr"
                 :is-selected="cell.dateStr === selectedDay"
                 :dimmed-node-ids="dimmedNodeIds"
+                :track-order="visibleTrackOrder"
                 @cell-click="handleCellClick"
                 @add-schedule="openCreateModal"
                 @toggle-tooltip="toggleTooltip"
@@ -196,7 +197,7 @@
             </template>
           </div>
 
-          <div class="week-card-zone week-grid-cols" :class="weekSlideAnimClass">
+          <div ref="weekCardZone" class="week-card-zone week-grid-cols" :class="weekSlideAnimClass">
             <div v-for="(day, idx) in weekDays" :key="day"
               class="week-cell"
               :class="{
@@ -211,15 +212,19 @@
                 <i class="fas fa-plus" />
               </button>
               <div class="week-cards">
-                <WeekScheduleCard
-                  v-for="s in store.getSchedulesForDay(day)" :key="s.id"
-                  v-show="!hiddenTracks.has(s.track)"
-                  :schedule="s"
-                  @edit="openEditModal"
-                  @delete="handleDeleteSchedule"
-                  @mouseenter="onNodeHover(s)"
-                  @mouseleave="onNodeHover(null)"
-                />
+                <template v-for="(s, si) in getWeekSlottedSchedules(day)" :key="s.id">
+                  <div v-if="s._isPlaceholder" class="week-card-placeholder" :data-slot="si" />
+                  <WeekScheduleCard
+                    v-else
+                    v-show="!hiddenTracks.has(s.track)"
+                    :schedule="s"
+                    :data-slot="si"
+                    @edit="openEditModal"
+                    @delete="handleDeleteSchedule"
+                    @mouseenter="onNodeHover(s)"
+                    @mouseleave="onNodeHover(null)"
+                  />
+                </template>
               </div>
             </div>
           </div>
@@ -287,6 +292,7 @@ const currentScrollY = ref(0)
 const calendarWrapper = ref(null)
 const monthScrollBody = ref(null)
 const weekGraphZone = ref(null)
+const weekCardZone = ref(null)
 const lineSvg = ref(null)
 const svgSize = ref({ w: 0, h: 0 })
 const activeConnections = ref([])
@@ -311,6 +317,55 @@ watch([isScheduleModalOpen, isDayDetailOpen, isAIModalOpen], ([s, d, a]) => {
 
 const hiddenTracks = ref(new Set())
 function onHiddenTracksChange(set) { hiddenTracks.value = new Set(set) }
+
+// 커리큘럼 track 고정 슬롯 순서 (hiddenTracks 제외, index 순)
+const visibleTrackOrder = computed(() =>
+  store.allTracks
+    .filter(t => !hiddenTracks.value.has(t.id) && t.id !== 'personal')
+    .map(t => t.id)
+)
+
+// 주간 뷰: slot별 높이 동기화 (placeholder를 실제 카드와 동일 높이로)
+function syncWeekSlotHeights() {
+  const zone = weekCardZone.value
+  if (!zone) return
+  // 이전 고정 높이 초기화
+  zone.querySelectorAll('[data-slot]').forEach(el => { el.style.minHeight = '' })
+  // slot별 최대 높이 측정
+  const maxBySlot = {}
+  zone.querySelectorAll('[data-slot]').forEach(el => {
+    const slot = el.dataset.slot
+    const h = el.getBoundingClientRect().height
+    if (!maxBySlot[slot] || h > maxBySlot[slot]) maxBySlot[slot] = h
+  })
+  // placeholder에 적용
+  zone.querySelectorAll('.week-card-placeholder[data-slot]').forEach(el => {
+    const slot = el.dataset.slot
+    if (maxBySlot[slot]) el.style.minHeight = maxBySlot[slot] + 'px'
+  })
+}
+
+// 주간 뷰: trackOrder 기반 고정 슬롯 배치
+function getWeekSlottedSchedules(day) {
+  const schedules = store.getSchedulesForDay(day)
+  if (!visibleTrackOrder.value.length) return schedules
+  const byTrack = {}
+  schedules.forEach(s => {
+    if (!byTrack[s.track]) byTrack[s.track] = []
+    byTrack[s.track].push(s)
+  })
+  const result = []
+  visibleTrackOrder.value.forEach(trackId => {
+    if (byTrack[trackId]?.length) {
+      byTrack[trackId].forEach(s => result.push(s))
+      delete byTrack[trackId]
+    } else {
+      result.push({ id: `wph-${trackId}-${day}`, track: trackId, _isPlaceholder: true })
+    }
+  })
+  Object.values(byTrack).flat().forEach(s => result.push(s))
+  return result
+}
 
 const interactionState = ref({ hovered: null, clicked: null })
 
@@ -478,7 +533,10 @@ onMounted(() => {
 onBeforeUnmount(() => { window.removeEventListener('resize', requestUpdate); });
 
 watch([currentView, currentYear, currentMonth, focusedDay, hiddenTracks, interactionState], () => {
-  nextTick(() => { setTimeout(requestUpdate, 50); });
+  nextTick(() => {
+    setTimeout(requestUpdate, 50);
+    if (currentView.value === 'week') setTimeout(syncWeekSlotHeights, 100);
+  });
 }, { deep: true });
 // ============================================================================
 
@@ -1045,6 +1103,7 @@ h.is-highlighted { stroke-width: 4; stroke-opacity: 1; }
 .week-cell--today { background: var(--bg-base) !important; outline: 2px solid var(--clr-icon-calendar); outline-offset: -2px; z-index: 5; }
 .week-cell--selected { outline: 2px solid var(--text-primary); outline-offset: -2px; background: transparent !important; }
 .week-cards { display: flex; flex-direction: column; gap: 8px; }
+.week-card-placeholder { visibility: hidden; pointer-events: none; }
 
 .btn-add-week { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: 28px; height: 28px; border-radius: 8px; background: transparent; color: var(--text-primary); border: 2px solid var(--text-primary); cursor: pointer; font-size: 11px; display: flex; align-items: center; justify-content: center; opacity: 0; transition: all 0.1s; }
 .week-cell:hover .btn-add-week { opacity: 1; }
