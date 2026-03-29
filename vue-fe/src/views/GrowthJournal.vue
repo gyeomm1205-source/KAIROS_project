@@ -52,10 +52,20 @@
                   />
                   <polygon
                     :points="skillRadar.map((s, i) => getPoint(i, s.prev / 100)).join(' ')"
+                    fill="transparent"
+                    stroke="var(--text-muted)"
+                    stroke-width="2"
+                    stroke-dasharray="5 3"
+                  />
+                  <circle
+                    v-for="(s, i) in skillRadar"
+                    :key="'prev-dot-' + i"
+                    :cx="getPointCoords(i, s.prev / 100).x"
+                    :cy="getPointCoords(i, s.prev / 100).y"
+                    r="3"
                     fill="var(--bg-surface)"
                     stroke="var(--text-muted)"
                     stroke-width="1.5"
-                    stroke-dasharray="4 2"
                   />
                   <polygon
                     :points="skillRadar.map((s, i) => getPoint(i, s.curr / 100)).join(' ')"
@@ -209,6 +219,7 @@ const chartLegend = [
 const formatMonthLabel = (year, month) => `${year}.${String(month).padStart(2, '0')}`
 const formatScore = (score) => `${Number(score || 0).toFixed(1)}점`
 const clampPercent = (value) => Math.max(0, Math.min(100, value))
+const MIN_BASELINE_DISPLAY_PERCENT = 6
 const readCount = (counts, ...keys) => {
   for (const key of keys) {
     if (counts?.[key] != null) {
@@ -265,7 +276,9 @@ const skillRadar = computed(() => {
 
   return comparisons.map((item) => ({
     skill: item.techName,
-    prev: clampPercent((Number(item.baselineScore || 0) / maxScore) * 100),
+    prev: Number(item.baselineScore || 0) > 0
+      ? clampPercent((Number(item.baselineScore || 0) / maxScore) * 100)
+      : MIN_BASELINE_DISPLAY_PERCENT,
     curr: clampPercent((Number(item.currentScore || 0) / maxScore) * 100),
   }))
 })
