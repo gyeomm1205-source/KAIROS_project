@@ -23,15 +23,17 @@
               <span class="stat-val">{{ store.excludedCount }}건</span>
             </div>
           </div>
-          <button class="btn-outline-small border-dark font-bold px-md" @click="$router.push('/history/growth')">
-            <i class="fas fa-chart-line" /> 나의 성장 일지 <i class="fas fa-arrow-right text-[10px]" />
-          </button>
-          <button class="btn-outline-small border-dark font-bold px-md" @click="openTechExcludeModal">
-            <i class="fas fa-layer-group" /> 기술 스택 제외
-          </button>
+          <div style="display:flex; gap:6px;">
+            <button class="btn-outline-small border-dark font-bold px-md" @click="openTechExcludeModal">
+              <i class="fas fa-layer-group" /> 기술 스택 제외
+            </button>
+            <button class="btn-outline-small border-dark font-bold px-md" @click="$router.push('/history/growth')">
+              <i class="fas fa-chart-line" /> 나의 성장 일지 <i class="fas fa-arrow-right text-[10px]" />
+            </button>
+          </div>
         </div>
 
-        <div class="base-panel p-md mb-md shadow-normal">
+        <div class="base-panel p-md mb-md shadow-normal" ref="filterPanelRef">
           <div class="flex-between flex-wrap gap-md">
             <div class="tag-group-small flex-wrap">
               <button 
@@ -112,8 +114,8 @@
             해당 조건의 기록이 없습니다
           </div>
 
-          <div 
-            v-for="item in store.filteredItems" 
+          <div
+            v-for="item in store.paginatedItems"
             :key="item.id"
             class="table-row"
             :class="{ 'is-excluded': item.excluded }"
@@ -145,6 +147,27 @@
           </div>
         </div>
 
+      <div v-if="store.totalPages > 1" class="pagination mt-md">
+          <button
+            class="page-btn"
+            :disabled="store.currentPage === 1"
+            @click="store.currentPage--"
+          ><i class="fas fa-chevron-left" /></button>
+          <button
+            v-for="page in pageNumbers"
+            :key="page"
+            class="page-btn"
+            :class="{ 'active': page === store.currentPage, 'ellipsis': page === '...' }"
+            :disabled="page === '...'"
+            @click="page !== '...' && (store.currentPage = page)"
+          >{{ page }}</button>
+          <button
+            class="page-btn"
+            :disabled="store.currentPage === store.totalPages"
+            @click="store.currentPage++"
+          ><i class="fas fa-chevron-right" /></button>
+        </div>
+
       <p class="text-xs text-muted text-center mt-md font-bold">
           제외된 기록은 이후 추천 분석에 반영되지 않습니다. 필요하면 언제든 다시 복원할 수 있습니다.
         </p>
@@ -153,18 +176,26 @@
     </main>
 
     <div v-if="showTechExcludeModal" class="modal-overlay" @click.self="closeTechExcludeModal">
-      <div class="base-modal tech-modal shadow-heavy">
+      <div class="tech-modal">
         <div class="modal-header">
-          <h3><i class="fas fa-layer-group" /> 기술 스택 일괄 제외</h3>
+          <div class="modal-title">
+            <i class="fas fa-layer-group" />
+            <span>기술 스택 일괄 제외</span>
+            <span v-if="selectedTechStacks.length > 0" class="modal-count">{{ selectedTechStacks.length }}개 선택</span>
+          </div>
           <button class="btn-close" @click="closeTechExcludeModal"><i class="fas fa-times" /></button>
         </div>
+
         <div class="tech-modal-body custom-scroll">
           <p class="tech-modal-desc">
-            제외할 기술 스택을 선택하면, 해당 태그가 들어간 히스토리 기록이 한 번에 제외되고 추천 맥락에서도 빠집니다.
+            선택한 기술 스택이 포함된 히스토리 기록을 한 번에 제외합니다. 추천 맥락에서도 빠집니다.
           </p>
           <div class="tech-chip-toolbar">
-            <button class="btn-text-muted font-bold" @click="selectAllTechStacks">전체 선택</button>
-            <button class="btn-text-muted font-bold" @click="clearSelectedTechStacks">선택 초기화</button>
+            <div class="flex-align gap-sm">
+              <button class="chip-action-btn" @click="selectAllTechStacks">전체 선택</button>
+              <button class="chip-action-btn" @click="clearSelectedTechStacks">선택 초기화</button>
+            </div>
+            <span class="chip-count-hint">총 {{ availableTechStacks.length }}개</span>
           </div>
           <div class="tech-chip-grid">
             <button
@@ -174,15 +205,22 @@
               :class="{ selected: selectedTechStacks.includes(tag) }"
               @click="toggleTechStack(tag)"
             >
+              <i v-if="selectedTechStacks.includes(tag)" class="fas fa-check chip-check" />
               {{ tag }}
             </button>
           </div>
-          <div class="tech-modal-footer">
-            <button class="btn-outline-small" @click="closeTechExcludeModal">취소</button>
-            <button class="btn-primary" :disabled="selectedTechStacks.length === 0 || isApplyingTechExclusion" @click="applyTechExclusion">
-              {{ isApplyingTechExclusion ? '적용 중...' : `제외 적용 (${selectedTechStacks.length})` }}
-            </button>
-          </div>
+        </div>
+
+        <div class="tech-modal-footer">
+          <button class="btn-outline-small" @click="closeTechExcludeModal">취소</button>
+          <button
+            class="btn-primary-modal"
+            :disabled="selectedTechStacks.length === 0 || isApplyingTechExclusion"
+            @click="applyTechExclusion"
+          >
+            <i class="fas fa-ban" />
+            {{ isApplyingTechExclusion ? '적용 중...' : `제외 적용 (${selectedTechStacks.length})` }}
+          </button>
         </div>
       </div>
     </div>
@@ -190,7 +228,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { useHistoryStore } from '@/stores/useHistoryStore'
@@ -232,12 +270,11 @@ const closeTechExcludeModal = () => {
 }
 
 const toggleTechStack = (tag) => {
-  const idx = selectedTechStacks.value.indexOf(tag)
-  if (idx === -1) {
-    selectedTechStacks.value.push(tag)
-    return
+  if (selectedTechStacks.value.includes(tag)) {
+    selectedTechStacks.value = selectedTechStacks.value.filter(t => t !== tag)
+  } else {
+    selectedTechStacks.value = [...selectedTechStacks.value, tag]
   }
-  selectedTechStacks.value.splice(idx, 1)
 }
 
 const selectAllTechStacks = () => {
@@ -295,6 +332,31 @@ const recordKindConfig = {
 
 const showSortMenu = ref(false)
 const showSearchPanel = ref(false)
+const filterPanelRef = ref(null)
+
+const onDocClick = (e) => {
+  if (showSearchPanel.value && filterPanelRef.value && !filterPanelRef.value.contains(e.target)) {
+    showSearchPanel.value = false
+  }
+}
+onMounted(() => document.addEventListener('mousedown', onDocClick))
+onUnmounted(() => document.removeEventListener('mousedown', onDocClick))
+
+const pageNumbers = computed(() => {
+  const total = store.totalPages
+  const current = store.currentPage
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1)
+
+  const pages = []
+  pages.push(1)
+  if (current > 3) pages.push('...')
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) {
+    pages.push(p)
+  }
+  if (current < total - 2) pages.push('...')
+  pages.push(total)
+  return pages
+})
 
 const currentDate = new Date()
 const currentYear = currentDate.getFullYear()
@@ -435,31 +497,84 @@ const monthOptions = computed(() => {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.42);
+  background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
   z-index: 200;
+  backdrop-filter: blur(2px);
 }
 
-.base-modal.tech-modal {
-  width: min(760px, 100%);
-  max-height: min(80vh, 760px);
+.tech-modal {
+  width: min(680px, 100%);
+  max-height: min(82vh, 720px);
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 32px 80px rgba(0, 0, 0, 0.28);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: 0.05em;
+}
+
+.modal-title i { font-size: 14px; color: var(--text-muted); }
+
+.modal-count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--bg-base);
+  background: var(--text-primary);
+  padding: 3px 10px;
+  border-radius: 40px;
+}
+
+.btn-close {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  border-radius: 40px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  font-family: inherit;
+}
+
+.btn-close:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
 
 .tech-modal-body {
   padding: 24px;
   overflow-y: auto;
-  max-height: calc(80vh - 80px);
+  flex: 1;
 }
 
 .tech-modal-desc {
-  margin: 0 0 16px;
+  margin: 0 0 20px;
   font-size: 13px;
   color: var(--text-muted);
   font-weight: 600;
@@ -469,50 +584,92 @@ const monthOptions = computed(() => {
 .tech-chip-toolbar {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  flex-wrap: wrap;
 }
+
+.chip-action-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 40px;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.chip-action-btn:hover { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+
+.chip-count-hint { font-size: 12px; font-weight: 600; color: var(--text-muted); }
 
 .tech-chip-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  max-height: 44vh;
-  overflow-y: auto;
-  padding-right: 4px;
+  gap: 8px;
 }
 
 .tech-chip {
   border: 1px solid var(--border);
   background: transparent;
-  color: var(--text-primary);
+  color: var(--text-muted);
   border-radius: 999px;
-  padding: 9px 14px;
+  padding: 8px 14px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.tech-chip:hover {
-  background: var(--bg-hover);
-  border-color: var(--text-primary);
-}
+.tech-chip:hover { background: var(--bg-hover); border-color: var(--text-primary); color: var(--text-primary); }
 
-.tech-chip.selected {
-  background: var(--text-primary);
-  color: var(--bg-base);
-  border-color: var(--text-primary);
-}
+.tech-chip.selected { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
+
+.chip-check { font-size: 10px; }
 
 .tech-modal-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 12px;
-  margin-top: 20px;
+  padding: 16px 24px;
+  border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
+
+.btn-primary-modal {
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border: 1px solid var(--text-primary);
+  padding: 10px 20px;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: inherit;
+  border-radius: 40px;
+  letter-spacing: 0.05em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-primary-modal:hover:not(:disabled) { opacity: 0.82; }
+.btn-primary-modal:disabled { opacity: 0.3; cursor: default; }
+
+.pagination { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.page-btn { min-width: 36px; height: 36px; padding: 0 10px; background: transparent; border: 1px solid var(--border); color: var(--text-muted); font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; border-radius: 40px; font-family: inherit; display: inline-flex; align-items: center; justify-content: center; }
+.page-btn:hover:not(:disabled):not(.ellipsis) { border-color: var(--text-primary); color: var(--text-primary); background: var(--bg-hover); }
+.page-btn.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); font-weight: 800; }
+.page-btn:disabled { opacity: 0.3; cursor: default; }
+.page-btn.ellipsis { border: none; cursor: default; }
 
 @media (max-width: 768px) {
   .table-header, .table-row { grid-template-columns: 1fr; gap: 8px; }

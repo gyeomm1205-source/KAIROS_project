@@ -70,6 +70,9 @@
                 <div>
                   <div class="panel-title-group">
                     <h3 class="panel-title">{{ selectedActivityCard?.title || '추천 학습' }}</h3>
+                    <button class="btn-primary-small" @click="openCurriculumModal">
+                      <i class="fas fa-book-open" /> 커리큘럼 추천받기
+                    </button>
                   </div>
                   <span class="panel-sub">{{ recommendationSubLabel }}</span>
                 </div>
@@ -1090,10 +1093,12 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .curriculum-modal-state.error-state i { color: var(--clr-danger, #ff6b6b); }
 .curriculum-option { display: flex; flex-direction: column; padding: 4px; min-height: 0; }
 .curriculum-option-header { flex-shrink: 0; margin-bottom: 16px; }
-.option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 4px; letter-spacing: 0.1em; margin-bottom: 8px; }
-.badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
-.badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
-.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
+.option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 40px; letter-spacing: 0.12em; margin-bottom: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
+.badge-a {}
+.badge-b {}
+.option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
+.option-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 600; margin: 4px 0 8px; line-height: 1.5; }
+.option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }
 .curriculum-items::-webkit-scrollbar { display: none; }
 .curriculum-option-footer { flex-shrink: 0; border-top: 1px solid var(--border); margin-top: auto; padding-top: 16px; }

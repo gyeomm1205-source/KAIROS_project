@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { getActivities, patchActivityInclusion } from '@/api/aiApi'
+
+const PAGE_SIZE = 20
 
 const TYPE_MAP = {
   GITHUB_COMMIT: 'dev',
@@ -63,6 +65,7 @@ export const useHistoryStore = defineStore('history', () => {
   const keyword = ref('')
   const selectedYear = ref('')
   const selectedMonth = ref('')
+  const currentPage = ref(1)
 
   const loadActivities = async () => {
     try {
@@ -148,6 +151,16 @@ export const useHistoryStore = defineStore('history', () => {
       })
   })
 
+  watch([filter, keyword, sort, selectedYear, selectedMonth], () => {
+    currentPage.value = 1
+  })
+
+  const totalPages = computed(() => Math.max(1, Math.ceil(filteredItems.value.length / PAGE_SIZE)))
+  const paginatedItems = computed(() => {
+    const start = (currentPage.value - 1) * PAGE_SIZE
+    return filteredItems.value.slice(start, start + PAGE_SIZE)
+  })
+
   const totalCount = computed(() => items.value.length)
   const thisWeekCount = computed(() => {
     const now = new Date()
@@ -184,7 +197,8 @@ export const useHistoryStore = defineStore('history', () => {
   }
 
   return {
-    items, filter, sort, keyword, selectedYear, selectedMonth,
-    loadActivities, toggleExclude, bulkExcludeByTechStacks, deleteItem, filteredItems, totalCount, thisWeekCount, excludedCount, excludedTechStacks, resetQueries
+    items, filter, sort, keyword, selectedYear, selectedMonth, currentPage,
+    loadActivities, toggleExclude, bulkExcludeByTechStacks, deleteItem,
+    filteredItems, paginatedItems, totalPages, totalCount, thisWeekCount, excludedCount, excludedTechStacks, resetQueries
   }
 })
