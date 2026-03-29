@@ -18,4 +18,5 @@ public class CurriculumGenerateRequest {
     private AnalysisDataRequest analysisData;
     private List<SkillStatDto> userTechStacks;
     private List<RecentActivityDto> recentActivities;
+    private List<String> excludedTechStacks;
 }

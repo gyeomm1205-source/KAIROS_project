@@ -75,18 +75,50 @@ export const useHistoryStore = defineStore('history', () => {
     }
   }
 
+  const setInclusion = async (id, isIncluded) => {
+    const item = items.value.find(i => i.id === id)
+    if (!item) return false
+
+    const nextExcluded = !isIncluded
+    const prevExcluded = item.excluded
+    item.excluded = nextExcluded
+
+    try {
+      await patchActivityInclusion(id, { isIncluded })
+      return true
+    } catch (e) {
+      console.error('제외/복원 실패, 롤백:', e)
+      item.excluded = prevExcluded
+      return false
+    }
+  }
+
   const toggleExclude = async (id) => {
     const item = items.value.find(i => i.id === id)
     if (!item) return
+    await setInclusion(id, item.excluded)
+  }
 
-    item.excluded = !item.excluded
+  const bulkExcludeByTechStacks = async (techStacks) => {
+    const normalizedTargets = new Set(
+      (techStacks || [])
+        .map(tag => (tag || '').trim().toLowerCase())
+        .filter(Boolean)
+    )
+    if (!normalizedTargets.size) return { updated: 0 }
 
-    try {
-      await patchActivityInclusion(id, { isIncluded: !item.excluded })
-    } catch (e) {
-      console.error('제외/복원 실패, 롤백:', e)
-      item.excluded = !item.excluded
+    const targets = items.value.filter((item) =>
+      (item.tags || []).some((tag) => normalizedTargets.has((tag || '').trim().toLowerCase()))
+    )
+
+    let updated = 0
+    for (const item of targets) {
+      if (item.excluded) continue
+      const ok = await setInclusion(item.id, false)
+      if (ok) updated += 1
     }
+
+    return { updated, matched: targets.length }
   }
 
   const parseHistoryDate = (dateStr) => {
@@ -124,6 +156,22 @@ export const useHistoryStore = defineStore('history', () => {
     return items.value.filter((item) => item.date >= weekAgoStr).length
   })
   const excludedCount = computed(() => items.value.filter((item) => item.excluded).length)
+  const excludedTechStacks = computed(() => {
+    const seen = new Set()
+    const stacks = []
+    items.value
+      .filter((item) => item.excluded)
+      .flatMap((item) => item.tags || [])
+      .forEach((tag) => {
+        const value = (tag || '').trim()
+        const key = value.toLowerCase()
+        if (value && !seen.has(key)) {
+          seen.add(key)
+          stacks.push(value)
+        }
+      })
+    return stacks
+  })
 
   const resetQueries = () => {
     keyword.value = ""
@@ -137,6 +185,6 @@ export const useHistoryStore = defineStore('history', () => {
 
   return {
     items, filter, sort, keyword, selectedYear, selectedMonth,
-    loadActivities, toggleExclude, deleteItem, filteredItems, totalCount, thisWeekCount, excludedCount, resetQueries
+    loadActivities, toggleExclude, bulkExcludeByTechStacks, deleteItem, filteredItems, totalCount, thisWeekCount, excludedCount, excludedTechStacks, resetQueries
   }
 })

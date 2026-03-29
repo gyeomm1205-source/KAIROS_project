@@ -185,9 +185,11 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { postCurriculumGenerate, postCurriculumPreview, postCurriculaConfirm } from '@/api/aiApi'
 import { useCalendarStore } from '@/stores/useCalendarStore'
+import { useHistoryStore } from '@/stores/useHistoryStore'
 
 const router = useRouter()
 const store = useCalendarStore()
+const historyStore = useHistoryStore()
 const showCoachmark = ref(false)
 const isAnimating = ref(false)
 const isLoading = ref(true)
@@ -404,7 +406,9 @@ onMounted(async () => {
 
     let data
     try {
-      const res = await postCurriculumPreview({ analysisData: curriculumAnalysisData })
+      await historyStore.loadActivities()
+      const excludedTechStacks = historyStore.excludedTechStacks
+      const res = await postCurriculumPreview({ analysisData: curriculumAnalysisData, excludedTechStacks })
       data = res.data
       if (data.curriculumPreviewKey) {
         store.curriculumPreviewKey = data.curriculumPreviewKey
@@ -415,7 +419,8 @@ onMounted(async () => {
         userId: 1,
         curriculumType: 'ONBOARDING',
         considerPersonalSchedule: false,
-        analysisData: curriculumAnalysisData
+        analysisData: curriculumAnalysisData,
+        excludedTechStacks: historyStore.excludedTechStacks,
       })
       data = res.data
     }

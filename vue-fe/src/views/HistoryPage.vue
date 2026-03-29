@@ -26,6 +26,9 @@
           <button class="btn-outline-small border-dark font-bold px-md" @click="$router.push('/history/growth')">
             <i class="fas fa-chart-line" /> 나의 성장 일지 <i class="fas fa-arrow-right text-[10px]" />
           </button>
+          <button class="btn-outline-small border-dark font-bold px-md" @click="openTechExcludeModal">
+            <i class="fas fa-layer-group" /> 기술 스택 제외
+          </button>
         </div>
 
         <div class="base-panel p-md mb-md shadow-normal">
@@ -142,12 +145,47 @@
           </div>
         </div>
 
-        <p class="text-xs text-muted text-center mt-md font-bold">
+      <p class="text-xs text-muted text-center mt-md font-bold">
           제외된 기록은 이후 추천 분석에 반영되지 않습니다. 필요하면 언제든 다시 복원할 수 있습니다.
         </p>
 
       </div>
     </main>
+
+    <div v-if="showTechExcludeModal" class="modal-overlay" @click.self="closeTechExcludeModal">
+      <div class="base-modal tech-modal shadow-heavy">
+        <div class="modal-header">
+          <h3><i class="fas fa-layer-group" /> 기술 스택 일괄 제외</h3>
+          <button class="btn-close" @click="closeTechExcludeModal"><i class="fas fa-times" /></button>
+        </div>
+        <div class="tech-modal-body custom-scroll">
+          <p class="tech-modal-desc">
+            제외할 기술 스택을 선택하면, 해당 태그가 들어간 히스토리 기록이 한 번에 제외되고 추천 맥락에서도 빠집니다.
+          </p>
+          <div class="tech-chip-toolbar">
+            <button class="btn-text-muted font-bold" @click="selectAllTechStacks">전체 선택</button>
+            <button class="btn-text-muted font-bold" @click="clearSelectedTechStacks">선택 초기화</button>
+          </div>
+          <div class="tech-chip-grid">
+            <button
+              v-for="tag in availableTechStacks"
+              :key="tag"
+              class="tech-chip"
+              :class="{ selected: selectedTechStacks.includes(tag) }"
+              @click="toggleTechStack(tag)"
+            >
+              {{ tag }}
+            </button>
+          </div>
+          <div class="tech-modal-footer">
+            <button class="btn-outline-small" @click="closeTechExcludeModal">취소</button>
+            <button class="btn-primary" :disabled="selectedTechStacks.length === 0 || isApplyingTechExclusion" @click="applyTechExclusion">
+              {{ isApplyingTechExclusion ? '적용 중...' : `제외 적용 (${selectedTechStacks.length})` }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -160,10 +198,70 @@ import { getTechIcon } from '@/utils/techIcons'
 
 const router = useRouter()
 const store = useHistoryStore()
+const showTechExcludeModal = ref(false)
+const selectedTechStacks = ref([])
+const isApplyingTechExclusion = ref(false)
 
 onMounted(() => {
   store.loadActivities()
 })
+
+const availableTechStacks = computed(() => {
+  const seen = new Set()
+  const list = []
+  store.items
+    .flatMap((item) => item.tags || [])
+    .forEach((tag) => {
+      const value = (tag || '').trim()
+      const key = value.toLowerCase()
+      if (value && !seen.has(key)) {
+        seen.add(key)
+        list.push(value)
+      }
+    })
+  return list.sort((a, b) => a.localeCompare(b))
+})
+
+const openTechExcludeModal = () => {
+  selectedTechStacks.value = [...store.excludedTechStacks]
+  showTechExcludeModal.value = true
+}
+
+const closeTechExcludeModal = () => {
+  showTechExcludeModal.value = false
+}
+
+const toggleTechStack = (tag) => {
+  const idx = selectedTechStacks.value.indexOf(tag)
+  if (idx === -1) {
+    selectedTechStacks.value.push(tag)
+    return
+  }
+  selectedTechStacks.value.splice(idx, 1)
+}
+
+const selectAllTechStacks = () => {
+  selectedTechStacks.value = [...availableTechStacks.value]
+}
+
+const clearSelectedTechStacks = () => {
+  selectedTechStacks.value = []
+}
+
+const applyTechExclusion = async () => {
+  if (!selectedTechStacks.value.length) return
+
+  isApplyingTechExclusion.value = true
+  try {
+    await store.bulkExcludeByTechStacks(selectedTechStacks.value)
+    selectedTechStacks.value = []
+    showTechExcludeModal.value = false
+  } catch (e) {
+    console.error('기술 스택 일괄 제외 실패:', e)
+  } finally {
+    isApplyingTechExclusion.value = false
+  }
+}
 
 const categoryFilters = [
   { value: "all", label: "전체" },
@@ -333,6 +431,88 @@ const monthOptions = computed(() => {
 .btn-exclude:hover { background: var(--bg-hover); border-color: var(--text-primary); }
 .btn-restore { background: transparent; color: var(--text-muted); border-style: dashed;}
 .btn-exclude i { margin-top: 0; }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.42);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 200;
+}
+
+.base-modal.tech-modal {
+  width: min(760px, 100%);
+  max-height: min(80vh, 760px);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+}
+
+.tech-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: calc(80vh - 80px);
+}
+
+.tech-modal-desc {
+  margin: 0 0 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-weight: 600;
+  line-height: 1.6;
+}
+
+.tech-chip-toolbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.tech-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-height: 44vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.tech-chip {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 999px;
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.tech-chip:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-primary);
+}
+
+.tech-chip.selected {
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border-color: var(--text-primary);
+}
+
+.tech-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
 
 @media (max-width: 768px) {
   .table-header, .table-row { grid-template-columns: 1fr; gap: 8px; }

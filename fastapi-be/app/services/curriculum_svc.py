@@ -103,11 +103,15 @@ _ONBOARDING_SYSTEM_PROMPT = """\
 신규 가입자의 GitHub/Velog 활동 분석 결과와 기술 숙련도 데이터를 바탕으로,
 이 사람에게 지금 가장 필요한 학습 주제를 직접 결정하고 날짜가 지정된 커리큘럼을 설계합니다.
 
+[제외 기술 스택]
+{excluded_tech_stacks}
+
 [주제 선정 기준 — 반드시 아래 순서로 판단하세요]
 1. 사용 빈도 상위 기술 중 심화 학습 시 임팩트가 큰 것을 우선합니다.
 2. 추천 포지션(recommendedPositions)과 연관성이 높은 기술을 선호합니다.
 3. 단순 반복(알고리즘 풀이, README 수정 등)보다 실제 프로젝트 기술에 집중합니다.
 4. 주제는 하나의 구체적인 기술 또는 기술 조합으로 한정하세요.
+5. 제외된 기술 스택은 커리큘럼 주제로 선택하지 말고, 노드 제목/설명/요약에도 드러내지 마세요.
 
 """ + _COMMON_RULES
 
@@ -164,11 +168,15 @@ _AUTO_USER_TEMPLATE = """\
 [기술 숙련도 통계 (DB 기반, 활동 빈도 순)]
 {tech_stats}
 
+[제외 기술 스택]
+{excluded_tech_stacks}
+
 [일정 정보]
 - 오늘: {today}
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
 위 활동 이력과 기술 통계를 바탕으로 이 사람에게 지금 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+제외된 기술 스택은 커리큘럼 주제 선정에서 완전히 배제하세요.
 
 [노드 작성 기준]
 - title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
@@ -194,6 +202,9 @@ _MANUAL_USER_TEMPLATE = """\
 - 기술 숙련도 통계 (참고용):
 {tech_stats}
 
+[제외 기술 스택]
+{excluded_tech_stacks}
+
 [설문 응답]
 {survey_text}
 
@@ -202,6 +213,7 @@ _MANUAL_USER_TEMPLATE = """\
 - 바쁜 기간(건너뛸 날짜): {busy_dates}
 
 위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+제외된 기술 스택은 커리큘럼 주제로 선택하지 말고, 설명에도 반복해서 언급하지 마세요.
 
 [노드 작성 기준]
 - title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
@@ -359,12 +371,15 @@ def _build_onboarding_context(request: CurriculumRequest) -> dict[str, Any]:
     today = date.today().isoformat()
     busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
     analysis = request.analysis_data
+    excluded = _excluded_set(request.excluded_tech_stacks)
 
     # tech_details: 사용 빈도 내림차순 정렬, 상위 7개
     tech_details_lines: list[str] = []
     if analysis and analysis.tech_details:
         sorted_tech = sorted(analysis.tech_details, key=lambda t: t.usage_count, reverse=True)
         for t in sorted_tech[:7]:
+            if t.tech_name and t.tech_name.strip().lower() in excluded:
+                continue
             tech_details_lines.append(
                 f"  - {t.tech_name}: 사용 {t.usage_count}회, 숙련도 {t.proficiency_percentage}%"
             )
@@ -377,13 +392,14 @@ def _build_onboarding_context(request: CurriculumRequest) -> dict[str, Any]:
         positions_str = ", ".join(pos_parts)
 
     # user_tech_stacks (DB 집계)
-    tech_stats_str = _fmt_skill_stats(request.user_tech_stacks)
+    tech_stats_str = _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded))
 
     return {
         "summary":               (analysis.summary if analysis else "정보 없음"),
         "tech_details":          tech_details_str,
         "recommended_positions": positions_str,
         "tech_stats":            tech_stats_str,
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
         "today":                 today,
         "busy_dates":            busy_dates,
     }
@@ -393,11 +409,12 @@ def _build_auto_context(request: CurriculumRequest) -> dict[str, Any]:
     """AUTO: recent_activities + user_tech_stacks + 캘린더."""
     today = date.today().isoformat()
     busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
+    excluded = _excluded_set(request.excluded_tech_stacks)
 
     # recent_activities (최신 10개)
     activities_lines: list[str] = []
     for act in request.recent_activities[:10]:
-        stacks = ", ".join(act.tech_stacks) or "없음"
+        stacks = ", ".join(_filter_stack_list(act.tech_stacks, excluded)) or "없음"
         activities_lines.append(
             f"  - [{act.activity_date[:10]}] [{act.activity_type}] {act.title} (기술: {stacks}, 분류: {act.category})"
         )
@@ -405,7 +422,8 @@ def _build_auto_context(request: CurriculumRequest) -> dict[str, Any]:
 
     return {
         "recent_activities": activities_str,
-        "tech_stats":        _fmt_skill_stats(request.user_tech_stacks),
+        "tech_stats":        _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded)),
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
         "today":             today,
         "busy_dates":        busy_dates,
     }
@@ -416,12 +434,14 @@ def _build_manual_context(request: CurriculumRequest) -> dict[str, Any]:
     today = date.today().isoformat()
     busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
     manual = request.manual_generation
+    excluded = _excluded_set(request.excluded_tech_stacks)
 
     return {
         "topic":        (manual.topic or "개발 역량 강화") if manual else "개발 역량 강화",
         "goal_type":    (manual.goal_type or "전반적 학습") if manual else "전반적 학습",
         "specific_goal": (manual.specific_goal or "실무 수준 달성") if manual else "실무 수준 달성",
-        "tech_stats":   _fmt_skill_stats(request.user_tech_stacks),
+        "tech_stats":   _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded)),
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
         "survey_text":  _fmt_survey(manual) if manual else "없음",
         "today":        today,
         "busy_dates":   busy_dates,
@@ -434,19 +454,33 @@ def _build_manual_context(request: CurriculumRequest) -> dict[str, Any]:
 
 def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
     """규칙 기반 폴백 — LLM 호출 없음."""
+    excluded = _excluded_set(request.excluded_tech_stacks)
+
     # 주제 결정
     match request.curriculum_type:
         case CurriculumType.onboarding:
             if request.analysis_data and request.analysis_data.tech_details:
-                top = max(request.analysis_data.tech_details, key=lambda t: t.usage_count)
+                allowed_details = [
+                    t for t in request.analysis_data.tech_details
+                    if t.tech_name and t.tech_name.strip().lower() not in excluded
+                ]
+                top = max(allowed_details or request.analysis_data.tech_details, key=lambda t: t.usage_count)
                 topic = f"{top.tech_name} 심화 학습"
             elif request.user_tech_stacks:
-                topic = f"{request.user_tech_stacks[0].skill} 심화 학습"
+                allowed_stats = [
+                    stat for stat in request.user_tech_stacks
+                    if stat.skill and stat.skill.strip().lower() not in excluded
+                ]
+                topic = f"{(allowed_stats or request.user_tech_stacks)[0].skill} 심화 학습"
             else:
                 topic = "개발 역량 강화"
         case CurriculumType.auto:
-            if request.user_tech_stacks:
-                topic = f"{request.user_tech_stacks[0].skill} 심화 학습"
+            allowed_stats = [
+                stat for stat in request.user_tech_stacks
+                if stat.skill and stat.skill.strip().lower() not in excluded
+            ]
+            if allowed_stats:
+                topic = f"{allowed_stats[0].skill} 심화 학습"
             else:
                 topic = "개발 역량 강화"
         case CurriculumType.manual:
@@ -568,10 +602,11 @@ def _derive_template_tech_stacks(request: CurriculumRequest) -> list[str]:
     if not tech_stacks:
         tech_stacks.extend(stat.skill for stat in request.user_tech_stacks[:5])
 
+    excluded = _excluded_set(request.excluded_tech_stacks)
     normalized: list[str] = []
     for tech in tech_stacks:
         value = (tech or "").strip()
-        if value and value not in normalized:
+        if value and value.lower() not in excluded and value not in normalized:
             normalized.append(value)
     return normalized[:5]
 
@@ -592,6 +627,7 @@ def _build_focus_instruction(request: CurriculumRequest, focus_mode: str) -> dic
 
 
 def _choose_focus_topic(request: CurriculumRequest, focus_mode: str) -> str:
+    excluded = _excluded_set(request.excluded_tech_stacks)
     if request.curriculum_type == CurriculumType.onboarding and request.analysis_data and request.analysis_data.tech_details:
         techs = sorted(
             request.analysis_data.tech_details,
@@ -602,14 +638,22 @@ def _choose_focus_topic(request: CurriculumRequest, focus_mode: str) -> str:
                 request.analysis_data.tech_details,
                 key=lambda t: (t.proficiency_percentage, t.usage_count)
             )
-            return selected.tech_name
-        return techs[0].tech_name
+            if selected.tech_name and selected.tech_name.strip().lower() not in excluded:
+                return selected.tech_name
+        for item in techs:
+            if item.tech_name and item.tech_name.strip().lower() not in excluded:
+                return item.tech_name
+        return "개발 역량 강화"
 
     if request.user_tech_stacks:
         sorted_stats = sorted(request.user_tech_stacks, key=lambda s: s.count, reverse=True)
         if focus_mode == "strength":
-            return sorted_stats[0].skill
-        return sorted_stats[-1].skill
+            for stat in sorted_stats:
+                if stat.skill and stat.skill.strip().lower() not in excluded:
+                    return stat.skill
+        for stat in reversed(sorted_stats):
+            if stat.skill and stat.skill.strip().lower() not in excluded:
+                return stat.skill
 
     if request.manual_generation and request.manual_generation.topic:
         return request.manual_generation.topic
@@ -624,6 +668,34 @@ def _normalize_tech_stack_list(values: list[str]) -> list[str]:
         if value and value not in normalized:
             normalized.append(value)
     return normalized[:5]
+
+
+def _excluded_set(values: list[str] | None) -> set[str]:
+    return {
+        value.strip().lower()
+        for value in (values or [])
+        if value and value.strip()
+    }
+
+
+def _filter_stack_list(values: list[str] | None, excluded: set[str]) -> list[str]:
+    if not values:
+        return []
+    filtered: list[str] = []
+    for value in values:
+        normalized = (value or "").strip()
+        if normalized and normalized.lower() not in excluded and normalized not in filtered:
+            filtered.append(normalized)
+    return filtered
+
+
+def _filter_skill_stats(values: list[SkillStat], excluded: set[str]) -> list[SkillStat]:
+    if not values:
+        return []
+    return [
+        stat for stat in values
+        if stat.skill and stat.skill.strip().lower() not in excluded
+    ]
 
 
 # ---------------------------------------------------------------------------
