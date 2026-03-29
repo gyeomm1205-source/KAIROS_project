@@ -13,15 +13,15 @@ imagePullSecrets:
 images:
   vueFe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: vue-fe-9785c425
+    tag: vue-fe-6e002c09
     pullPolicy: IfNotPresent
   springbootBe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: springboot-be-9785c425
+    tag: springboot-be-6e002c09
     pullPolicy: IfNotPresent
   fastapiBe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: fastapi-be-9785c425
+    tag: fastapi-be-6e002c09
     pullPolicy: IfNotPresent
 
 ingress:
