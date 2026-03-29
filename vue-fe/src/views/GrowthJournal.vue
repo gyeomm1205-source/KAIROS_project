@@ -290,7 +290,7 @@ const topSkills = computed(() => {
   }))
 })
 
-const monthlyActivity = computed(() => {
+const rawMonthlyActivity = computed(() => {
   const items = growthReport.value.monthlyActivityCounts || []
   const createdAt = growthReport.value.userCreatedAt
   const joinDate = createdAt ? new Date(createdAt) : null
@@ -325,21 +325,24 @@ const monthlyActivity = computed(() => {
       quiz,
       reference,
       total,
-      fillRatio: 0,
       segments,
       isJoinMonth: monthKey === joinMonthKey,
     }
-  }).map((item) => ({
-    ...item,
-    fillRatio: clampPercent((item.total / maxBar.value) * 100),
-  }))
+  })
 })
 
 const maxBar = computed(() => {
-  if (!monthlyActivity.value.length) {
+  if (!rawMonthlyActivity.value.length) {
     return 1
   }
-  return Math.max(1, ...monthlyActivity.value.map((item) => item.total))
+  return Math.max(1, ...rawMonthlyActivity.value.map((item) => item.total))
+})
+
+const monthlyActivity = computed(() => {
+  return rawMonthlyActivity.value.map((item) => ({
+    ...item,
+    fillRatio: clampPercent((item.total / maxBar.value) * 100),
+  }))
 })
 
 const getAngle = (i) => (Math.PI * 2 * i) / Math.max(skillRadar.value.length, 1) - Math.PI / 2
