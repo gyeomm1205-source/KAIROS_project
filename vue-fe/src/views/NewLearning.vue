@@ -21,11 +21,18 @@
           <h3 class="field-label"><i class="fas fa-search" /> 학습 주제</h3>
           <p class="field-desc">배우고 싶은 기술이나 주제를 입력하세요</p>
           <TechTagAutocomplete
-            v-model="topic"
+            v-model="topicInput"
             class="brutal-input mb-sm"
             placeholder="예: GraphQL, Docker, 디자인 시스템..."
-            @select="val => topic = val"
+            @select="val => { topic = val; topicInput = '' }"
           />
+          <div v-if="topic" class="selected-topic-wrap mb-sm">
+            <span class="selected-topic-chip">
+              <i v-if="hasTechIcon(topic)" :class="getTechIcon(topic)" class="tech-icon" />
+              {{ topic }}
+              <button class="chip-remove" @click="topic = ''">×</button>
+            </span>
+          </div>
           <div class="tag-group-small flex-wrap">
             <button
               v-for="st in suggestedTopics"
@@ -289,6 +296,7 @@ const goalTypes = [
   { value: "deep", label: "심화 학습", desc: "이미 기초는 알고 있어서 깊이 파고 싶어요" },
 ]
 
+const topicInput = ref("")
 const topic = ref("")
 const goal = ref("")
 const selectedGoalType = ref("")
@@ -528,7 +536,13 @@ const computedReferences = computed(() => [
 
 .goal-card { padding: 24px; text-align: left; background: transparent; border: 1px solid var(--border); cursor: pointer; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: flex; flex-direction: column; gap: 8px; border-radius: 8px; font-family: inherit; }
 .goal-card:hover { border-color: var(--text-primary); background: var(--bg-hover);}
-.goal-card.active { border-color: var(--text-primary); background: transparent; }
+.goal-card.active { border-color: var(--text-primary); background: var(--bg-hover); box-shadow: inset 3px 0 0 var(--text-primary); }
+.goal-card.active .goal-label { color: var(--text-primary); }
+
+.selected-topic-wrap { display: flex; align-items: center; gap: 8px; }
+.selected-topic-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--text-primary); color: var(--bg-base); border: 1px solid var(--text-primary); border-radius: 40px; font-size: 12px; font-weight: 700; }
+.chip-remove { background: none; border: none; color: var(--bg-base); cursor: pointer; font-size: 14px; line-height: 1; padding: 0 0 0 4px; font-weight: 700; opacity: 0.7; }
+.chip-remove:hover { opacity: 1; }
 .goal-label { font-size: 14px; font-weight: 800; color: var(--text-primary); }
 .goal-desc { font-size: 12px; color: var(--text-muted); font-weight: 600; }
 
