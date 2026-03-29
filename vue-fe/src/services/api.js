@@ -49,7 +49,12 @@ let isRefreshing = false;
 let pendingRequests = [];
 
 function onRefreshed(newToken) {
-  pendingRequests.forEach(cb => cb(newToken));
+  pendingRequests.forEach(({ resolve }) => resolve(newToken));
+  pendingRequests = [];
+}
+
+function onRefreshFailed(err) {
+  pendingRequests.forEach(({ reject }) => reject(err));
   pendingRequests = [];
 }
 
@@ -58,7 +63,7 @@ function handle401(error) {
 
   if (originalRequest.url?.includes('/auth/reissue')) {
     clearAuthToken();
-    window.location.href = '/login';
+    // window.location.href = '/login'; // [임시 비활성화]
     return Promise.reject(error);
   }
 
@@ -70,18 +75,21 @@ function handle401(error) {
         isRefreshing = false;
         onRefreshed(data.accessToken);
       })
-      .catch(() => {
+      .catch((err) => {
         isRefreshing = false;
-        pendingRequests = [];
         clearAuthToken();
-        window.location.href = '/login';
+        onRefreshFailed(err);
+        // window.location.href = '/login'; // [임시 비활성화]
       });
   }
 
-  return new Promise(resolve => {
-    pendingRequests.push(newToken => {
-      originalRequest.headers.Authorization = `Bearer ${newToken}`;
-      resolve(springApi(originalRequest));
+  return new Promise((resolve, reject) => {
+    pendingRequests.push({
+      resolve: (newToken) => {
+        originalRequest.headers.Authorization = `Bearer ${newToken}`;
+        resolve(springApi(originalRequest));
+      },
+      reject,
     });
   });
 }

@@ -14,9 +14,14 @@
       <h2 class="login-title">WELCOME BACK.</h2>
       <p class="login-sub">구글 계정으로 간편하게 시작하세요.</p>
 
-      <button class="btn-google" @click="handleGoogleLoginClick">
+      <!-- [임시 비활성화] 구글 로그인 → 우회 버튼으로 교체 -->
+      <!-- <button class="btn-google" @click="handleGoogleLoginClick">
         <div class="google-icon">G</div>
         CONTINUE WITH GOOGLE
+      </button> -->
+      <button class="btn-google" @click="$router.replace('/history')">
+        <div class="google-icon">→</div>
+        [DEV] 로그인 없이 입장
       </button>
 
     </div>

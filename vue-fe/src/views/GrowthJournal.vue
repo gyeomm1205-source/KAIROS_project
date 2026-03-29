@@ -338,7 +338,7 @@ onMounted(async () => {
 .shrink-0 { flex-shrink: 0; }
 
 /* Panels & Shadows */
-.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
 .stat-card { padding: 24px; box-shadow: none; }
 .stat-card:hover { transform: translateY(-2px); background: var(--bg-hover); }
 .shadow-normal { box-shadow: none; }
