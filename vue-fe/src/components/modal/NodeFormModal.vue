@@ -133,16 +133,19 @@
             <!-- 구분선 -->
             <div class="divider" />
 
-            <!-- 섹션 2: 연결 -->
-            <div class="form-section">
-              <div class="section-label">노드 연결 <span class="opt-badge">선택</span></div>
-              <EdgeConnectorSection
-                v-model:parentIds="localForm.parentIds"
-                v-model:childIds="localForm.childIds"
-                :parents="availableParents"
-                :children="availableChildren"
-                @jump="$emit('jump', $event)"
-              />
+            <!-- 섹션 2: 진행 상태 (커리큘럼 노드 편집 시만) -->
+            <div v-if="mode === 'edit' && isCurriculumNode" class="form-section">
+              <div class="section-label">진행 상태</div>
+              <div class="progress-btn-group">
+                <button
+                  v-for="opt in progressOptions" :key="opt.value"
+                  class="progress-btn"
+                  :class="{ active: localProgress === opt.value }"
+                  @click="localProgress = opt.value"
+                >
+                  <i :class="opt.icon" /> {{ opt.label }}
+                </button>
+              </div>
             </div>
 
           </div>
@@ -201,10 +204,18 @@ const emit = defineEmits(['update:modelValue', 'save', 'jump', 'delete'])
 const store = useCalendarStore()
 
 const localForm  = ref(defaultForm())
+const localProgress = ref('NOT_STARTED')
 const titleError = ref(false)
 const trackError = ref(false)
 const dropdownOpen = ref(false)
 const showDeleteConfirm = ref(false)
+
+const progressOptions = [
+  { value: 'NOT_STARTED', label: '미완료', icon: 'fas fa-circle' },
+  { value: 'IN_PROGRESS', label: '진행중', icon: 'fas fa-spinner' },
+  { value: 'COMPLETED', label: '완료', icon: 'fas fa-check-circle' },
+]
+const isCurriculumNode = computed(() => props.editNodeId?.startsWith('cn-'))
 const trackFieldRef = ref(null)
 const trackTriggerRef = ref(null)
 const dropdownStyle = ref({})
@@ -229,6 +240,7 @@ watch(() => props.initialForm, (val) => {
   trackError.value = false
   dropdownOpen.value = false
   showDeleteConfirm.value = false
+  localProgress.value = val?.progressStatus || 'NOT_STARTED'
 }, { immediate: true })
 
 function toggleDropdown() {
@@ -567,4 +579,15 @@ input::-webkit-calendar-picker-indicator {
 .dd-fade-leave-active { transition: opacity 0.18s, transform 0.18s; }
 .dd-fade-enter-from,
 .dd-fade-leave-to { opacity: 0; transform: translateY(-6px); }
+
+.progress-btn-group { display: flex; gap: 8px; }
+.progress-btn {
+  flex: 1; padding: 8px 12px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); font-size: 12px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.progress-btn:hover { border-color: var(--text-primary); color: var(--text-primary); }
+.progress-btn.active { background: var(--text-primary); color: var(--bg-base); border-color: var(--text-primary); }
 </style>
