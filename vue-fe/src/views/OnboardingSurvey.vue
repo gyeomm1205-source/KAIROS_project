@@ -112,11 +112,17 @@
 
         <div class="pill-group">
           <button
-            v-for="t in availableSuggestedTechs" :key="t"
+            v-for="t in visibleSuggestedTechs" :key="t"
             class="tag dashed"
             @click="addTech(t)"
           >
             <i v-if="hasTechIcon(t)" :class="getTechIcon(t)" />+ {{ t }}
+          </button>
+          <button v-if="hasMoreTechs && !showAllTechs" class="tag btn-more" @click="showAllTechs = true">
+            + {{ availableSuggestedTechs.length - TECH_INITIAL_COUNT }}개 더보기
+          </button>
+          <button v-if="showAllTechs && hasMoreTechs" class="tag btn-more" @click="showAllTechs = false">
+            접기
           </button>
         </div>
       </div>
@@ -275,6 +281,14 @@ const removeTech = (t) => {
 const availableSuggestedTechs = computed(() => {
   return suggestedTechs.value.filter(t => !techs.value.includes(t))
 })
+
+const TECH_INITIAL_COUNT = 12
+const showAllTechs = ref(false)
+const visibleSuggestedTechs = computed(() => {
+  if (showAllTechs.value) return availableSuggestedTechs.value
+  return availableSuggestedTechs.value.slice(0, TECH_INITIAL_COUNT)
+})
+const hasMoreTechs = computed(() => availableSuggestedTechs.value.length > TECH_INITIAL_COUNT)
 
 const submitSurvey = async () => {
   if (!canProceedStep.value || isSubmitting.value) return
@@ -444,6 +458,8 @@ const submitSurvey = async () => {
 }
 .tag:hover { border-color: var(--text-primary); color: var(--text-primary); }
 .tag.dashed { border-style: dashed; }
+.tag.btn-more { border-style: solid; color: var(--text-muted); font-weight: 700; letter-spacing: 0.03em; }
+.tag.btn-more:hover { color: var(--text-primary); border-color: var(--text-primary); }
 .tag.active {
   border-style: solid; border-color: var(--clr-success);
   background: transparent; color: var(--text-primary);
