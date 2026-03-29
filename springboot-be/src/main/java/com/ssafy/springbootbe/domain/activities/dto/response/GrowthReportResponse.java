@@ -16,8 +16,11 @@ public class GrowthReportResponse {
     private List<TechStackCountInfo> topTechStacks;
     private Long totalActivityCount;
     private TechStackInfo recentGrowthTech;
+    private Double recentGrowthDelta;
     private Integer maxStreakDays;
     private List<TechStackScoreInfo> techScoreSnapshot;
+    private List<TechStackGrowthInfo> techGrowthComparisons;
+    private TechStackPercentileInfo topSkillPercentile;
     private List<MonthlyActivityCountInfo> monthlyActivityCounts;
     private List<TechStackCountInfo> techActivityRanking;
 
@@ -50,7 +53,33 @@ public class GrowthReportResponse {
         private String techName;
         private String iconUrl;
         private String color;
-        private Integer score;
+        private Double score;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class TechStackGrowthInfo {
+        private Long techStackId;
+        private String techName;
+        private String iconUrl;
+        private String color;
+        private Double baselineScore;
+        private Double currentScore;
+        private Double growthDelta;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class TechStackPercentileInfo {
+        private Long techStackId;
+        private String techName;
+        private String iconUrl;
+        private String color;
+        private Double score;
+        private Double topPercentile;
+        private Long comparedUserCount;
     }
 
     @Getter

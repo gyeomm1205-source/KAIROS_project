@@ -15,4 +15,10 @@ public interface UserTechStackRepository extends JpaRepository<UserTechStack, Lo
     Optional<UserTechStack> findByUserUserIdAndTechStackTechStackId(Long userId, Long techStackId);
 
     List<UserTechStack> findTop6ByUserUserIdOrderByScoreDesc(Long userId);
+
+    List<UserTechStack> findByTechStackTechStackIdOrderByScoreDesc(Long techStackId);
+
+    long countByTechStackTechStackId(Long techStackId);
+
+    long countByTechStackTechStackIdAndScoreGreaterThan(Long techStackId, Double score);
 }

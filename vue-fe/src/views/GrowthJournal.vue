@@ -12,7 +12,6 @@
           <i class="fas fa-arrow-left" /> 히스토리로 돌아가기
         </button>
 
-        <!-- Summary Cards -->
         <div class="grid-4 col-gap mb-lg">
           <div class="base-panel stat-card" v-for="s in summaryStats" :key="s.label">
             <div class="flex-align gap-sm mb-sm text-xs text-muted font-bold">
@@ -25,62 +24,70 @@
         </div>
 
         <div class="grid-2 col-gap gap-y mb-lg">
-          <!-- Left: Skill Radar & Top Skills -->
           <div class="flex-col gap-lg">
-            <!-- Spider Chart -->
             <div class="base-panel p-md shadow-normal text-center h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-md">
                 <i class="fas fa-bullseye text-muted" /> 기술별 성장 그래프
               </h3>
-              
-              <div class="radar-container mt-auto mb-auto">
+
+              <div v-if="skillRadar.length" class="radar-container mt-auto mb-auto">
                 <svg viewBox="0 0 300 300" class="radar-svg">
-                  <!-- Guide circles/polygons -->
                   <polygon
                     v-for="r in [0.25, 0.5, 0.75, 1]"
-                    :key="'guide-'+r"
+                    :key="'guide-' + r"
                     :points="getPolygonPoints(r)"
-                    fill="none" stroke="var(--border)" stroke-width="1"
+                    fill="none"
+                    stroke="var(--border)"
+                    stroke-width="1"
                   />
-                  <!-- Axis lines -->
                   <line
                     v-for="(s, i) in skillRadar"
-                    :key="'axis-'+i"
-                    x1="150" y1="150"
+                    :key="'axis-' + i"
+                    x1="150"
+                    y1="150"
                     :x2="150 + Math.cos(getAngle(i)) * 120"
                     :y2="150 + Math.sin(getAngle(i)) * 120"
-                    stroke="var(--border)" stroke-width="1"
+                    stroke="var(--border)"
+                    stroke-width="1"
                   />
-                  <!-- Previous (lighter) -->
                   <polygon
                     :points="skillRadar.map((s, i) => getPoint(i, s.prev / 100)).join(' ')"
-                    fill="var(--bg-surface)" stroke="var(--text-muted)" stroke-width="1.5" stroke-dasharray="4 2"
+                    fill="var(--bg-surface)"
+                    stroke="var(--text-muted)"
+                    stroke-width="1.5"
+                    stroke-dasharray="4 2"
                   />
-                  <!-- Current (darker) -->
                   <polygon
                     :points="skillRadar.map((s, i) => getPoint(i, s.curr / 100)).join(' ')"
-                    fill="rgba(25,25,25,0.1)" stroke="var(--clr-primary)" stroke-width="2"
+                    fill="rgba(25,25,25,0.1)"
+                    stroke="var(--clr-primary)"
+                    stroke-width="2"
                   />
-                  <!-- Dots -->
                   <circle
                     v-for="(s, i) in skillRadar"
-                    :key="'dot-'+i"
+                    :key="'dot-' + i"
                     :cx="getPointCoords(i, s.curr / 100).x"
                     :cy="getPointCoords(i, s.curr / 100).y"
-                    r="4" fill="var(--clr-primary)"
+                    r="4"
+                    fill="var(--clr-primary)"
                   />
-                  <!-- Labels -->
                   <text
                     v-for="(s, i) in skillRadar"
-                    :key="'label-'+i"
+                    :key="'label-' + i"
                     :x="getPointCoords(i, 1.15).x"
                     :y="getPointCoords(i, 1.15).y"
-                    text-anchor="middle" dominant-baseline="middle"
-                    fill="var(--text-muted)" font-size="11" font-weight="700"
+                    text-anchor="middle"
+                    dominant-baseline="middle"
+                    fill="var(--text-muted)"
+                    font-size="11"
+                    font-weight="700"
                   >
                     {{ s.skill }}
                   </text>
                 </svg>
+              </div>
+              <div v-else class="empty-panel mt-auto mb-auto">
+                비교할 성장 데이터가 아직 없어요.
               </div>
 
               <div class="flex-align gap-lg justify-center mt-md">
@@ -95,30 +102,31 @@
               </div>
             </div>
 
-            <!-- Top Skills Table -->
             <div class="base-panel p-md shadow-normal">
-              <h3 class="panel-title-sm mb-md">기술별 활동 현황</h3>
+              <h3 class="panel-title-sm mb-md">기술별 숙련도 현황</h3>
               <div class="flex-col gap-sm">
-                <div v-for="(s, i) in topSkills" :key="s.name" class="flex-align gap-md">
+                <div v-if="topSkills.length === 0" class="empty-panel">
+                  표시할 기술 데이터가 아직 없어요.
+                </div>
+                <div v-for="(s, i) in topSkills" v-else :key="s.name" class="flex-align gap-md">
                   <span class="text-xs text-muted font-bold w-4 text-right">{{ i + 1 }}</span>
                   <span class="text-sm font-bold skill-name truncate">{{ s.name }}</span>
                   <div class="track-bg flex-1 relative">
-                    <div class="track-fill" :style="{ width: `${(s.count / 18) * 100}%` }"></div>
-                    <span class="absolute right-2 top-0 text-[10px] text-muted font-bold lh-full">{{ s.count }}회</span>
+                    <div class="track-fill" :style="{ width: `${s.ratio}%` }"></div>
+                    <span class="metric-value">{{ s.displayValue }}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <!-- Right: Monthly Activity -->
           <div class="flex-col gap-lg h-full">
             <div class="base-panel p-md shadow-normal h-full flex-col">
               <h3 class="panel-title-sm flex-align gap-sm justify-center mb-lg">
                 <i class="fas fa-chart-bar text-muted" /> 월별 학습량 변화
               </h3>
-              
-              <div class="flex-col gap-md mb-md flex-1 justify-center">
+
+              <div v-if="monthlyActivity.length" class="flex-col gap-md mb-md flex-1 justify-center">
                 <div v-for="m in monthlyActivity" :key="m.month">
                   <div class="flex-between mb-xs">
                     <span class="text-sm font-bold">{{ m.month }}</span>
@@ -132,6 +140,9 @@
                   </div>
                 </div>
               </div>
+              <div v-else class="empty-panel flex-1">
+                월별 활동 데이터가 아직 없어요.
+              </div>
 
               <div class="flex-align gap-md flex-wrap mt-auto pt-md border-t justify-center">
                 <div v-for="l in chartLegend" :key="l.label" class="flex-align gap-sm">
@@ -143,7 +154,6 @@
           </div>
         </div>
 
-        <!-- Bottom Summary -->
         <div class="base-panel summary-box">
           <div class="flex-start gap-md">
             <i class="fas fa-arrow-trend-up text-muted mt-xs text-lg shrink-0" />
@@ -155,109 +165,190 @@
             </div>
           </div>
         </div>
-
       </div>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import AppSidebar from '@/components/AppSidebar.vue'
 import { getGrowthReport, postGrowthSummary } from '@/api/aiApi'
 
 const growthSummary = ref('성장 요약을 불러오는 중...')
-
-const summaryStats = [
-  { icon: "fas fa-bolt", label: "가장 자주 다룬 기술", value: "React", sub: "총 18회 활동" },
-  { icon: "fas fa-chart-bar", label: "누적 활동 수", value: "36회", sub: "가입 후 총 활동 수" },
-  { icon: "fas fa-fire", label: "최근 성장 도메인", value: "SSR/SSG", sub: "" },
-  { icon: "fas fa-chart-bar", label: "연속 학습 최장 기록", value: "10일", sub: "1월 기록 · 현재 7일째" },
-]
-
-const topSkills = [
-  { name: "React", count: 18 },
-  { name: "TypeScript", count: 12 },
-  { name: "Next.js", count: 9 },
-  { name: "Docker", count: 5 },
-  { name: "REST API", count: 4 },
-]
-
-const skillRadar = [
-  { skill: "프론트엔드", prev: 45, curr: 78 },
-  { skill: "상태관리", prev: 30, curr: 72 },
-  { skill: "SSR/SSG", prev: 10, curr: 55 },
-  { skill: "DevOps", prev: 5, curr: 35 },
-  { skill: "백엔드", prev: 20, curr: 28 },
-  { skill: "CS 기초", prev: 40, curr: 52 },
-]
-
-const monthlyActivity = [
-  { month: "1월", study: 8, dev: 4, blog: 2, review: 1, total: 15 },
-  { month: "2월", study: 4, dev: 3, blog: 1, review: 1, total: 9 },
-  { month: "3월", study: 5, dev: 3, blog: 2, review: 2, total: 12 },
-]
-
-const maxBar = Math.max(...monthlyActivity.map((m) => m.total))
+const growthReport = ref({
+  topTechStacks: [],
+  totalActivityCount: 0,
+  recentGrowthTech: null,
+  recentGrowthDelta: null,
+  maxStreakDays: 0,
+  techScoreSnapshot: [],
+  techGrowthComparisons: [],
+  topSkillPercentile: null,
+  monthlyActivityCounts: [],
+  techActivityRanking: [],
+})
 
 const chartLegend = [
-  { label: "학습", colorClass: "color-1" },
-  { label: "개발", colorClass: "color-2" },
-  { label: "블로그", colorClass: "color-3" },
-  { label: "복습", colorClass: "color-4" },
+  { label: '학습', colorClass: 'color-1' },
+  { label: '개발', colorClass: 'color-2' },
+  { label: '블로그', colorClass: 'color-3' },
+  { label: '복습', colorClass: 'color-4' },
 ]
 
-// Radar chart logic
-const getAngle = (i) => (Math.PI * 2 * i) / skillRadar.length - Math.PI / 2
+const formatMonthLabel = (year, month) => `${year}.${String(month).padStart(2, '0')}`
+const formatScore = (score) => `${Number(score || 0).toFixed(1)}점`
+const clampPercent = (value) => Math.max(0, Math.min(100, value))
+
+const summaryStats = computed(() => {
+  const topTech = growthReport.value.topTechStacks?.[0]
+  const percentile = growthReport.value.topSkillPercentile
+  const recentGrowthLabel = growthReport.value.recentGrowthTech?.techName || '아직 집계 전'
+  const recentGrowthDelta = growthReport.value.recentGrowthDelta
+
+  return [
+    {
+      icon: 'fas fa-bolt',
+      label: '가장 자주 다룬 기술',
+      value: topTech?.techName || '-',
+      sub: topTech ? `총 ${topTech.count}회 활동` : '기록이 쌓이면 표시돼요',
+    },
+    {
+      icon: 'fas fa-chart-bar',
+      label: '누적 활동 수',
+      value: `${growthReport.value.totalActivityCount || 0}회`,
+      sub: '가입 후 총 활동 수',
+    },
+    {
+      icon: 'fas fa-fire',
+      label: '최근 급성장 기술',
+      value: recentGrowthLabel,
+      sub: recentGrowthDelta == null ? '성장 비교 데이터 준비 중' : `baseline 대비 +${recentGrowthDelta.toFixed(1)}점`,
+    },
+    {
+      icon: 'fas fa-ranking-star',
+      label: '대표 기술 백분위',
+      value: percentile?.topPercentile ? `상위 ${percentile.topPercentile}%` : '-',
+      sub: percentile ? `${percentile.techName} 보유 사용자 ${percentile.comparedUserCount}명 기준` : '비교할 사용자 풀이 부족해요',
+    },
+  ]
+})
+
+const skillRadar = computed(() => {
+  const comparisons = (growthReport.value.techGrowthComparisons || []).slice(0, 6)
+  if (!comparisons.length) {
+    return []
+  }
+
+  const maxScore = Math.max(
+    1,
+    ...comparisons.flatMap((item) => [Number(item.baselineScore || 0), Number(item.currentScore || 0)]),
+  )
+
+  return comparisons.map((item) => ({
+    skill: item.techName,
+    prev: clampPercent((Number(item.baselineScore || 0) / maxScore) * 100),
+    curr: clampPercent((Number(item.currentScore || 0) / maxScore) * 100),
+  }))
+})
+
+const topSkills = computed(() => {
+  const scoreSnapshot = growthReport.value.techScoreSnapshot || []
+  if (scoreSnapshot.length) {
+    const maxScore = Math.max(1, ...scoreSnapshot.map((item) => Number(item.score || 0)))
+    return scoreSnapshot.map((item) => ({
+      name: item.techName,
+      ratio: clampPercent((Number(item.score || 0) / maxScore) * 100),
+      displayValue: formatScore(item.score),
+    }))
+  }
+
+  const ranking = growthReport.value.techActivityRanking || []
+  const maxCount = Math.max(1, ...ranking.map((item) => Number(item.count || 0)))
+  return ranking.map((item) => ({
+    name: item.techName,
+    ratio: clampPercent((Number(item.count || 0) / maxCount) * 100),
+    displayValue: `${item.count || 0}회`,
+  }))
+})
+
+const monthlyActivity = computed(() => {
+  return (growthReport.value.monthlyActivityCounts || []).map((item) => {
+    const counts = item.counts || {}
+    const study = Number(counts.REFERENCE || 0)
+    const dev = Number(counts.GITHUB_COMMIT || 0) + Number(counts.GITHUB_PR || 0)
+    const blog = Number(counts.VELOG_POST || 0)
+    const review = Number(counts.QUIZ || 0)
+    const total = study + dev + blog + review
+
+    return {
+      month: formatMonthLabel(item.year, item.month),
+      study,
+      dev,
+      blog,
+      review,
+      total,
+    }
+  })
+})
+
+const maxBar = computed(() => {
+  if (!monthlyActivity.value.length) {
+    return 1
+  }
+  return Math.max(1, ...monthlyActivity.value.map((item) => item.total))
+})
+
+const getAngle = (i) => (Math.PI * 2 * i) / Math.max(skillRadar.value.length, 1) - Math.PI / 2
 const getPointCoords = (i, ratio) => ({
   x: 150 + Math.cos(getAngle(i)) * 100 * ratio,
-  y: 150 + Math.sin(getAngle(i)) * 100 * ratio
+  y: 150 + Math.sin(getAngle(i)) * 100 * ratio,
 })
 const getPoint = (i, ratio) => {
-  const c = getPointCoords(i, ratio)
-  return `${c.x},${c.y}`
+  const coords = getPointCoords(i, ratio)
+  return `${coords.x},${coords.y}`
 }
-const getPolygonPoints = (ratio) => {
-  return skillRadar.map((_, i) => getPoint(i, ratio)).join(" ")
-}
+const getPolygonPoints = (ratio) => skillRadar.value.map((_, i) => getPoint(i, ratio)).join(' ')
+
+const buildGrowthSummaryStats = (report) => ({
+  topTechStacks: (report.topTechStacks || []).map((item) => item.techName),
+  totalActivityCount: report.totalActivityCount || 0,
+  recentGrowthTech: report.recentGrowthTech?.techName || null,
+  maxStreakDays: report.maxStreakDays || 0,
+  techScoreSnapshot: Object.fromEntries(
+    (report.techScoreSnapshot || []).map((item) => [item.techName, Math.round(Number(item.score || 0))]),
+  ),
+  monthlyActivityCounts: Object.fromEntries(
+    (report.monthlyActivityCounts || []).map((item) => [
+      `${item.year}-${String(item.month).padStart(2, '0')}`,
+      item.counts || {},
+    ]),
+  ),
+  techActivityRanking: (report.techActivityRanking || []).map((item) => item.techName),
+})
 
 onMounted(async () => {
-  // 1. Spring Boot에서 성장 통계 조회 시도
-  let stats = {
-    topTechStacks: topSkills.map(s => s.name),
-    totalActivityCount: 36,
-    recentGrowthTech: 'SSR/SSG',
-    maxStreakDays: 10,
-    techScoreSnapshot: {},
-    monthlyActivityCounts: {},
-    techActivityRanking: topSkills.map(s => s.name)
-  }
+  let statsForSummary = buildGrowthSummaryStats(growthReport.value)
 
   try {
     const { data: report } = await getGrowthReport()
-    stats = {
-      topTechStacks: (report.topTechStacks || []).map(t => t.techName),
-      totalActivityCount: report.totalActivityCount || 0,
-      recentGrowthTech: report.recentGrowthTech?.techName || null,
-      maxStreakDays: report.maxStreakDays || 0,
-      techScoreSnapshot: report.techScoreSnapshot || {},
-      monthlyActivityCounts: report.monthlyActivityCounts || {},
-      techActivityRanking: (report.techActivityRanking || []).map(t => t.techName)
+    growthReport.value = {
+      ...growthReport.value,
+      ...report,
     }
-  } catch (e) {
-    console.error('growth-report 조회 실패 (Mock 유지):', e)
+    statsForSummary = buildGrowthSummaryStats(growthReport.value)
+  } catch (error) {
+    console.error('growth-report 조회 실패:', error)
   }
 
-  // 2. FastAPI에서 성장 요약문 생성
   try {
-    const { data } = await postGrowthSummary({ userId: 1, stats })
+    const { data } = await postGrowthSummary({ userId: 1, stats: statsForSummary })
     growthSummary.value = data.summary
-  } catch (e) {
+  } catch (error) {
     growthSummary.value = '성장 요약을 불러오지 못했습니다.'
-    console.error('growth/summary 호출 실패:', e)
+    console.error('growth/summary 호출 실패:', error)
   }
 })
-
 </script>
 
 <style scoped>
@@ -266,17 +357,17 @@ onMounted(async () => {
 .custom-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 .custom-scroll::-webkit-scrollbar { display: none; }
 
-.page-header { 
-  display: flex !important; align-items: center; 
-  height: 64px !important; min-height: 64px; max-height: 64px; 
+.page-header {
+  display: flex !important; align-items: center;
+  height: 64px !important; min-height: 64px; max-height: 64px;
   flex-shrink: 0;
-  padding: 0 24px; border-bottom: 1px solid var(--border); 
-  background: var(--bg-surface); position: sticky; top: 0; z-index: 10; 
-  box-sizing: border-box; 
+  padding: 0 24px; border-bottom: 1px solid var(--border);
+  background: var(--bg-surface); position: sticky; top: 0; z-index: 10;
+  box-sizing: border-box;
 }
-.header-title { 
-  font-size: 15px; font-weight: 900; letter-spacing: 0.15em; 
-  color: var(--text-primary); display: flex; align-items: center; gap: 12px; 
+.header-title {
+  font-size: 15px; font-weight: 900; letter-spacing: 0.15em;
+  color: var(--text-primary); display: flex; align-items: center; gap: 12px;
   text-transform: uppercase;
 }
 .header-title i { font-size: 18px; width: 24px; text-align: center; }
@@ -285,7 +376,6 @@ onMounted(async () => {
 .max-w-xl { max-width: 1000px; }
 .mx-auto { margin-left: auto; margin-right: auto; }
 
-/* Utils */
 .flex-align { display: flex; align-items: center; }
 .flex-between { display: flex; align-items: center; justify-content: space-between; }
 .flex-col { display: flex; flex-direction: column; }
@@ -328,17 +418,15 @@ onMounted(async () => {
 .text-xs { font-size: 11px; }
 .text-sm { font-size: 13px; }
 .text-lg { font-size: 18px; }
-.text-\[10px\] { font-size: 10px; }
 .text-muted { color: var(--text-muted); }
-.text-primary { color: var(--text-primary); }
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.skill-name { width: 80px; flex-shrink: 0; }
+.skill-name { width: 90px; flex-shrink: 0; }
 .lh-lg { line-height: 1.6; }
-.lh-full { line-height: 24px; }
 .shrink-0 { flex-shrink: 0; }
+.w-4 { width: 16px; }
 
 /* Panels & Shadows */
-.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 12px; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
+.base-panel { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 0px; transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s; }
 .stat-card { padding: 24px; box-shadow: none; }
 .stat-card:hover { transform: translateY(-2px); background: var(--bg-hover); }
 .shadow-normal { box-shadow: none; }
@@ -346,7 +434,6 @@ onMounted(async () => {
 
 .panel-title-sm { font-size: 15px; font-weight: 900; color: var(--text-primary); margin: 0; }
 
-/* Elements */
 .btn-back { background: transparent; border: none; font-size: 13px; font-weight: 700; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 0; margin-bottom: 24px; transition: color 0.1s; font-family: inherit; }
 .btn-back:hover { color: var(--text-primary); }
 
@@ -354,9 +441,9 @@ onMounted(async () => {
 .stat-value { font-size: 24px; font-weight: 900; color: var(--clr-accent-text); font-family: 'Escoredream', system-ui, sans-serif; }
 .stat-sub { font-size: 11px; color: var(--text-muted); font-weight: 600; }
 
-/* Bars & Tracks */
-.track-bg { height: 12px; background: var(--bg-elevated); border: 1px solid var(--border); width: 100%; border-radius: 0; overflow: hidden; }
+.track-bg { height: 12px; background: var(--bg-elevated); border: 1px solid var(--border); width: 100%; border-radius: 0; overflow: hidden; position: relative; }
 .track-fill { height: 100%; background: var(--text-primary); transition: width 0.3s; opacity: 0.8; }
+.metric-value { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; color: var(--text-muted); font-weight: 700; white-space: nowrap; }
 
 .bar-chart-track { height: 16px; border: 1px solid var(--border); border-radius: 0; overflow: hidden; width: 100%; gap: 1px; background: var(--border); }
 .bar-segment { height: 100%; transition: width 0.3s; }
@@ -370,12 +457,21 @@ onMounted(async () => {
 .border-dashed { border-top: 2px dashed var(--text-muted); height: 0; background: transparent; }
 .bg-dark { background: var(--text-primary); }
 
-/* SVG Canvas */
-.radar-container { width: 100%; max-width: 280px; aspect-ratio: 1/1; margin: 0 auto; position: relative; }
+.radar-container { width: 100%; max-width: 280px; aspect-ratio: 1 / 1; margin: 0 auto; position: relative; }
 .radar-svg { width: 100%; height: 100%; display: block; overflow: visible; }
 
-/* Bottom Summary */
 .summary-box { background: var(--bg-elevated); padding: 32px; border: 1px dashed var(--border); box-shadow: none; position: relative; }
 .summary-box::before { content: ''; position: absolute; inset: 0; border: 1px solid var(--border); pointer-events: none; }
 
+.empty-panel {
+  min-height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.6;
+}
 </style>

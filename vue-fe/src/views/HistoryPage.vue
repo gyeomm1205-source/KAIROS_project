@@ -154,8 +154,8 @@
             @click="store.currentPage--"
           ><i class="fas fa-chevron-left" /></button>
           <button
-            v-for="page in pageNumbers"
-            :key="page"
+            v-for="(page, index) in pageNumbers"
+            :key="`${page}-${index}`"
             class="page-btn"
             :class="{ 'active': page === store.currentPage, 'ellipsis': page === '...' }"
             :disabled="page === '...'"

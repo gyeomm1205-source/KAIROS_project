@@ -14,6 +14,7 @@ import com.ssafy.springbootbe.persistence.activity.type.ActivityType;
 import com.ssafy.springbootbe.persistence.techstack.entity.TechStack;
 import com.ssafy.springbootbe.persistence.user.entity.User;
 import com.ssafy.springbootbe.persistence.user.entity.UserTechStack;
+import com.ssafy.springbootbe.persistence.user.repository.UserTechStackBaselineRepository;
 import com.ssafy.springbootbe.persistence.user.repository.UserTechStackRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +43,8 @@ class ActivitiesServiceImplTest {
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
     @Mock private UserTechStackRepository userTechStackRepository;
+    @Mock private UserTechStackBaselineRepository userTechStackBaselineRepository;
+    @Mock private LearningStateService learningStateService;
 
     @InjectMocks
     private ActivitiesServiceImpl activitiesService;
@@ -61,6 +64,9 @@ class ActivitiesServiceImplTest {
                 .title("커밋 제목")
                 .activityDate(LocalDateTime.of(2025, 3, 1, 12, 0))
                 .build();
+        given(userTechStackBaselineRepository.findByUserUserId(anyLong())).willReturn(List.of());
+        given(userTechStackRepository.countByTechStackTechStackId(anyLong())).willReturn(10L);
+        given(userTechStackRepository.countByTechStackTechStackIdAndScoreGreaterThan(anyLong(), any())).willReturn(1L);
     }
 
     // ===== findActivities =====
@@ -276,7 +282,7 @@ class ActivitiesServiceImplTest {
         UserTechStack uts = UserTechStack.builder()
                 .userTechStackId(1L)
                 .techStack(springStack)
-                .score(80)
+                .score(80.0)
                 .build();
 
         List<Object[]> monthlyRaws = new java.util.ArrayList<>();
@@ -294,7 +300,7 @@ class ActivitiesServiceImplTest {
         assertThat(response.getRecentGrowthTech().getTechName()).isEqualTo("Spring Boot");
         assertThat(response.getMaxStreakDays()).isEqualTo(3);
         assertThat(response.getTechScoreSnapshot()).hasSize(1);
-        assertThat(response.getTechScoreSnapshot().get(0).getScore()).isEqualTo(80);
+        assertThat(response.getTechScoreSnapshot().get(0).getScore()).isEqualTo(80.0);
         assertThat(response.getMonthlyActivityCounts()).hasSize(1);
         assertThat(response.getTechActivityRanking()).hasSize(2);
     }

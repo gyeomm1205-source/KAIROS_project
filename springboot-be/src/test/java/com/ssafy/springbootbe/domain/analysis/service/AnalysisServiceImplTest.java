@@ -1,5 +1,7 @@
 package com.ssafy.springbootbe.domain.analysis.service;
 
+import com.ssafy.springbootbe.domain.activities.service.LearningStateBaselineService;
+import com.ssafy.springbootbe.domain.activities.service.LearningStateService;
 import com.ssafy.springbootbe.domain.analysis.dto.request.AnalysisCompleteRequest;
 import com.ssafy.springbootbe.domain.analysis.dto.response.AnalysisCompleteResponse;
 import com.ssafy.springbootbe.persistence.activity.entity.ActivityHistory;
@@ -38,6 +40,8 @@ class AnalysisServiceImplTest {
     @Mock private UserTechStackRepository userTechStackRepository;
     @Mock private ActivityHistoryRepository activityHistoryRepository;
     @Mock private ActivityHistoryTechStackRepository activityHistoryTechStackRepository;
+    @Mock private LearningStateService learningStateService;
+    @Mock private LearningStateBaselineService learningStateBaselineService;
 
     @InjectMocks
     private AnalysisServiceImpl analysisService;
