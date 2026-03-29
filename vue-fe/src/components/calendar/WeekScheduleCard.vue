@@ -1,5 +1,6 @@
 <template>
-  <div class="week-card" :style="{ borderLeftColor: trackColor }">
+  <div class="week-card" :class="{ 'is-expanded': isExpanded }" :style="{ borderLeftColor: trackColor }"
+    @mouseenter="onEnter" @mouseleave="onLeave">
     <div class="week-card-header">
       <span class="week-card-track" :style="{ color: trackColor }">
         <span class="track-dot" :style="{ background: trackColor }" />
@@ -7,7 +8,8 @@
       </span>
       <span class="week-card-time">{{ schedule.tooltip?.time }}</span>
     </div>
-    <div class="week-card-title">{{ schedule.tooltip?.title || schedule.text }}</div>
+    <div ref="titleRef" class="week-card-title" :class="{ 'title-clamped': !isExpanded }">{{ schedule.tooltip?.title || schedule.text }}</div>
+    <span v-if="isClamped && !isExpanded" class="clamp-hint">more</span>
     <div v-if="schedule.tooltip?.tags?.length" class="week-card-tags">
       <span v-for="(t, i) in schedule.tooltip.tags" :key="i" class="week-tag">{{ t }}</span>
     </div>
@@ -19,7 +21,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, onMounted, nextTick, watch } from 'vue'
 import { useCalendarStore } from '@/stores/useCalendarStore'
 
 const props = defineProps({ schedule: { type: Object, required: true } })
@@ -29,6 +31,20 @@ const store      = useCalendarStore()
 const track      = computed(() => store.getTrackById(props.schedule.track))
 const trackColor = computed(() => track.value?.color || '#6b7280')
 const trackName  = computed(() => track.value?.name  || '')
+
+const titleRef = ref(null)
+const isClamped = ref(false)
+const isExpanded = ref(false)
+
+function checkClamp() {
+  const el = titleRef.value
+  if (el) isClamped.value = el.scrollHeight > el.clientHeight + 1
+}
+onMounted(() => nextTick(checkClamp))
+watch(() => props.schedule, () => nextTick(checkClamp))
+
+function onEnter() { if (isClamped.value) isExpanded.value = true }
+function onLeave() { isExpanded.value = false }
 </script>
 
 <style scoped>
@@ -71,6 +87,21 @@ const trackName  = computed(() => track.value?.name  || '')
   font-size: 13px; font-weight: 700;
   color: var(--text-primary); line-height: 1.4;
   font-family: 'Escoredream', sans-serif;
+  min-height: calc(13px * 1.4 * 3);
+}
+.title-clamped {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.clamp-hint {
+  font-size: 9px; font-weight: 700; color: var(--text-muted);
+  letter-spacing: 0.05em; cursor: default; align-self: flex-end;
+}
+.week-card.is-expanded {
+  position: relative; z-index: 10;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
 }
 .week-card-tags { display: flex; flex-wrap: wrap; gap: 4px; }
 .week-tag {

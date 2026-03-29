@@ -39,18 +39,20 @@
 
     <Transition name="chips-fade">
       <div v-if="labelSchedules.length" class="label-cluster">
-        <div
-          v-for="s in visibleSchedules" :key="s.id"
-          :id="'node-' + s.id"
-          class="schedule-label-chip"
-          :class="{ 'is-dimmed': dimmedNodeIds.has(s.id) }"
-          :style="{ color: trackColor(s.track), borderColor: trackColor(s.track) }"
-          @click.stop="onChipClick(s)"
-          @dblclick.stop="onChipDblClick(s)"
-          @mouseenter="onChipEnter(s, $event)"
-          @mousemove="onChipMove($event)"
-          @mouseleave="onChipLeave"
-        >{{ s.tooltip?.title || s.text }}</div>
+        <template v-for="s in visibleSchedules" :key="s.id">
+          <div v-if="s.isPlaceholder" class="schedule-label-placeholder">&nbsp;</div>
+          <div v-else
+            :id="'node-' + s.id"
+            class="schedule-label-chip"
+            :class="{ 'is-dimmed': dimmedNodeIds.has(s.id) }"
+            :style="{ color: trackColor(s.track), borderColor: trackColor(s.track) }"
+            @click.stop="onChipClick(s)"
+            @dblclick.stop="onChipDblClick(s)"
+            @mouseenter="onChipEnter(s, $event)"
+            @mousemove="onChipMove($event)"
+            @mouseleave="onChipLeave"
+          >{{ s.tooltip?.title || s.text }}</div>
+        </template>
         <div v-if="hiddenCount > 0" class="hidden-count" @click.stop="openHiddenPopover">
           +{{ hiddenCount }} more
         </div>
@@ -91,6 +93,7 @@ const props = defineProps({
   isSelected: Boolean,
   hiddenTracks: { type: Object, default: () => new Set() },
   dimmedNodeIds: { type: Object, default: () => new Set() },
+  trackOrder: { type: Array, default: () => [] },
 })
 
 const emit = defineEmits(['cell-click', 'add-schedule', 'toggle-tooltip', 'edit-schedule', 'delete-schedule', 'day-detail', 'hover-node', 'open-ai-modal'])
@@ -111,8 +114,30 @@ const filteredSchedules = computed(() =>
 )
 const labelSchedules = computed(() => filteredSchedules.value.filter(s => s.text || s.tooltip?.title))
 
+// trackOrder 기반 고정 슬롯 배치: 빈 슬롯은 placeholder로 채워 위치 고정
+const slottedSchedules = computed(() => {
+  if (!props.trackOrder.length) return labelSchedules.value.map(s => ({ ...s, isPlaceholder: false }))
+  const schedulesByTrack = {}
+  labelSchedules.value.forEach(s => {
+    if (!schedulesByTrack[s.track]) schedulesByTrack[s.track] = []
+    schedulesByTrack[s.track].push(s)
+  })
+  const result = []
+  props.trackOrder.forEach(trackId => {
+    if (schedulesByTrack[trackId]?.length) {
+      schedulesByTrack[trackId].forEach(s => result.push({ ...s, isPlaceholder: false }))
+      delete schedulesByTrack[trackId]
+    } else {
+      result.push({ id: `ph-${trackId}-${props.dateStr}`, track: trackId, isPlaceholder: true })
+    }
+  })
+  // trackOrder에 포함되지 않은 일정 (personal 등) 뒤에 추가
+  Object.values(schedulesByTrack).flat().forEach(s => result.push({ ...s, isPlaceholder: false }))
+  return result
+})
+
 const MAX_VISIBLE = 3
-const visibleSchedules  = computed(() => labelSchedules.value.slice(0, MAX_VISIBLE))
+const visibleSchedules  = computed(() => slottedSchedules.value.slice(0, MAX_VISIBLE))
 const hiddenCount       = computed(() => Math.max(0, labelSchedules.value.length - MAX_VISIBLE))
 const hiddenSchedules   = computed(() => labelSchedules.value.slice(MAX_VISIBLE))
 
@@ -260,6 +285,12 @@ onBeforeUnmount(() => {
   overflow: hidden; text-overflow: ellipsis; text-align: left;
   background: var(--bg-elevated); min-width: 0;
   transition: all 0.2s cubic-bezier(0.16,1,0.3,1);
+}
+.schedule-label-placeholder {
+  font-size: 10px; font-weight: 800; padding: 4px 6px; border-radius: 4px;
+  border: 1px solid transparent; white-space: nowrap;
+  font-family: 'Inter', sans-serif; width: 90%; max-width: 100%; box-sizing: border-box;
+  overflow: hidden; min-width: 0; visibility: hidden; pointer-events: none;
 }
 .schedule-label-chip:hover { border-color: var(--text-primary); background: var(--bg-hover); transform: translateY(-1px); }
 .schedule-label-chip.is-dimmed { opacity: 0.15 !important; border-color: var(--border) !important; color: var(--text-muted) !important; filter: grayscale(1); pointer-events: none; }

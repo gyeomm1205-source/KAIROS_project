@@ -370,9 +370,11 @@
           <!-- 옵션 A -->
           <div v-if="curriculumOptionA" class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-a">옵션 A</span>
+              <div class="option-badge-row">
+                <span class="option-badge badge-a">옵션 A</span>
+                <span class="option-badge badge-a-sub">{{ curriculumOptionASubtitle }}</span>
+              </div>
               <h4 class="option-title">{{ curriculumOptionATitle }}</h4>
-              <p class="option-subtitle">{{ curriculumOptionASubtitle }}</p>
               <span class="option-meta"><i class="fas fa-clock"/> {{ curriculumOptionAMeta }}</span>
             </div>
             <div class="curriculum-items">
@@ -396,9 +398,11 @@
 
           <div v-if="curriculumOptionB" class="curriculum-option">
             <div class="curriculum-option-header">
-              <span class="option-badge badge-b">옵션 B</span>
+              <div class="option-badge-row">
+                <span class="option-badge badge-b">옵션 B</span>
+                <span class="option-badge badge-b-sub">{{ curriculumOptionBSubtitle }}</span>
+              </div>
               <h4 class="option-title">{{ curriculumOptionBTitle }}</h4>
-              <p class="option-subtitle">{{ curriculumOptionBSubtitle }}</p>
               <span class="option-meta"><i class="fas fa-clock"/> {{ curriculumOptionBMeta }}</span>
             </div>
             <div class="curriculum-items">
@@ -1093,11 +1097,13 @@ button { font-family: 'Space Grotesk', 'Pretendard', sans-serif; cursor: pointer
 .curriculum-modal-state.error-state i { color: var(--clr-danger, #ff6b6b); }
 .curriculum-option { display: flex; flex-direction: column; padding: 4px; min-height: 0; }
 .curriculum-option-header { flex-shrink: 0; margin-bottom: 16px; }
-.option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 40px; letter-spacing: 0.12em; margin-bottom: 8px; background: transparent; color: var(--text-primary); border: 1px solid var(--border); }
-.badge-a {}
-.badge-b {}
+.option-badge-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.option-badge { display: inline-block; padding: 3px 10px; font-size: 10px; font-weight: 800; border-radius: 40px; letter-spacing: 0.12em; }
+.badge-a { background: var(--clr-primary); color: var(--bg-base); border: 1px solid var(--clr-primary); }
+.badge-a-sub { background: transparent; color: var(--clr-primary); border: 1px solid var(--clr-primary); }
+.badge-b { background: transparent; color: var(--clr-icon-ai); border: 1px solid var(--clr-icon-ai); }
+.badge-b-sub { background: var(--clr-icon-ai); color: var(--bg-base); border: 1px solid var(--clr-icon-ai); }
 .option-title { font-size: 16px; font-weight: 800; color: var(--text-primary); margin: 4px 0; letter-spacing: 0.05em; }
-.option-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 600; margin: 4px 0 8px; line-height: 1.5; }
 .option-meta { font-size: 12px; color: var(--text-muted); font-weight: 600; display: flex; align-items: center; gap: 6px; }
 .curriculum-items { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; min-height: 0; padding-right: 4px; -ms-overflow-style: none; scrollbar-width: none; }
 .curriculum-items::-webkit-scrollbar { display: none; }
