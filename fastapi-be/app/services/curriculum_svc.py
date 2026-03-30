@@ -1,0 +1,747 @@
+"""
+커리큘럼 생성 서비스 — POST /api/v1/ai/curriculum/generate
+
+실행 흐름 (3분기):
+    run_curriculum(request)
+        │
+        ├─ ONBOARDING: _build_onboarding_context()  ← analysisData + userTechStacks + 캘린더
+        ├─ AUTO:       _build_auto_context()         ← recentActivities + userTechStacks + 캘린더
+        └─ MANUAL:     _build_manual_context()       ← 사용자 직접 지정 + 캘린더
+        │
+        ├─ _generate_with_llm(ctx, curriculum_type)  ← gpt-4o structured output
+        └─ _assemble_response(output)                ← CurriculumResponse 조립
+
+소유 규칙:
+  - 이 서비스는 MySQL에 직접 쿼리하지 않는다.
+  - 모든 도메인 컨텍스트는 CurriculumRequest를 통해 전달된다(Spring Boot 조립).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import logging
+from datetime import date, timedelta
+from typing import Any
+
+from langchain_core.prompts import ChatPromptTemplate
+from pydantic import BaseModel, Field
+
+from app.core.model_router import TaskType, get_model, get_model_name
+from app.models.schemas import (
+    ActivityHistoryItem,
+    AnalysisData,
+    AlternativeCurriculumOption,
+    CurriculumNode,
+    CurriculumRecommendationReason,
+    CurriculumRequest,
+    CurriculumResponse,
+    CurriculumType,
+    GoogleCalendarEvent,
+    ManualGeneration,
+    SkillStat,
+)
+
+logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# LLM 구조화 출력 스키마
+# ---------------------------------------------------------------------------
+
+class _CurriculumNodeOutput(BaseModel):
+    title: str = Field(..., description="학습 주제 제목")
+    description: str | None = Field(None, description="title을 구체적으로 풀어쓴 설명. 무엇을 어떻게 학습하는지 1~2문장.")
+    scheduled_date: str = Field(..., description="학습 예정일 (YYYY-MM-DD)")
+    expected_minutes: int = Field(..., ge=30, le=240, description="예상 소요 시간(분)")
+
+
+class _CurriculumOutput(BaseModel):
+    """LLM 구조화 출력 스키마."""
+    summary_line: str = Field(
+        description="커리큘럼을 한 줄로 요약한 헤드라인. 예: '실무 도입을 앞둔 GraphQL 단기 마스터 과정'"
+    )
+    user_context: str = Field(
+        description="사용자의 현재 상황 요약. 기존 경험, 수준, 목표 포지션 등 1~2문장."
+    )
+    ai_interpretation: str = Field(
+        description="AI가 이해한 학습 방향. 어떤 내용을 왜 이 순서로 편성했는지 1~2문장."
+    )
+    curriculum_rationale: str = Field(
+        description="일정 배치 근거. 캘린더 이벤트 회피, 학습량 분산 등 1~2문장."
+    )
+    tech_stacks: list[str] = Field(
+        default_factory=list,
+        description="이 커리큘럼이 주로 다루는 핵심 기술 스택 또는 개념 키워드 1~5개. 예: Docker, Kubernetes, React, RAG"
+    )
+    nodes: list[_CurriculumNodeOutput] = Field(
+        description="날짜별 학습 노드 목록. 시작일부터 순서대로."
+    )
+
+
+# ---------------------------------------------------------------------------
+# 공통 원칙 프롬프트
+# ---------------------------------------------------------------------------
+
+_COMMON_RULES = """\
+[공통 원칙]
+1. 오늘 날짜({today})부터 시작해 노드를 배치하세요.
+2. 커리큘럼 기간은 아래 기준에 따라 결정하세요. 7일을 절대 초과하지 마세요.
+   - 단일 개념 학습 (Git 기초, 특정 라이브러리 입문 등): 2~3일
+   - 개념 이해 + 실습이 필요한 주제: 4~5일
+   - 여러 기술 통합 또는 심화가 필요한 주제: 6~7일
+3. 바쁜 날짜({busy_dates})는 건너뛰고 나머지 날에만 노드를 할당하세요.
+4. 하루 1개 노드 원칙: 같은 scheduled_date를 가진 노드는 없어야 합니다.
+5. 노드 순서는 개념 이해 → 실습 → 심화/복습 흐름으로 구성하세요.
+6. expected_minutes는 30~120분 범위에서 실제 학습량에 맞게 설정하세요.
+7. 노드 제목과 내용은 실제 학습 활동만 포함하세요. "Q&A 세션", "전문가 상담" 같이 혼자 할 수 없는 활동은 절대 포함하지 마세요.
+8. 반드시 한국어로 작성하세요.\
+"""
+
+# ── ONBOARDING 프롬프트 ──────────────────────────────────────────────────────
+_ONBOARDING_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토입니다.
+신규 가입자의 GitHub/Velog 활동 분석 결과와 기술 숙련도 데이터를 바탕으로,
+이 사람에게 지금 가장 필요한 학습 주제를 직접 결정하고 날짜가 지정된 커리큘럼을 설계합니다.
+
+[제외 기술 스택]
+{excluded_tech_stacks}
+
+[주제 선정 기준 — 반드시 아래 순서로 판단하세요]
+1. 사용 빈도 상위 기술 중 심화 학습 시 임팩트가 큰 것을 우선합니다.
+2. 추천 포지션(recommendedPositions)과 연관성이 높은 기술을 선호합니다.
+3. 단순 반복(알고리즘 풀이, README 수정 등)보다 실제 프로젝트 기술에 집중합니다.
+4. 주제는 하나의 구체적인 기술 또는 기술 조합으로 한정하세요.
+5. 제외된 기술 스택은 커리큘럼 주제로 선택하지 말고, 노드 제목/설명/요약에도 드러내지 마세요.
+
+""" + _COMMON_RULES
+
+_ALTERNATIVE_FOCUS_TEMPLATE = """\
+
+[추가 생성 지시]
+이번 생성은 "{focus_label}" 옵션입니다.
+- 생성 목표: {focus_description}
+- 가능하면 {focus_tech} 중심으로 커리큘럼 주제를 구체화하세요.
+- 두 옵션이 지나치게 비슷해지지 않도록 학습 의도와 노드 흐름을 분명히 구분하세요.
+"""
+
+_ONBOARDING_USER_TEMPLATE = """\
+[프로필 분석 결과]
+- 분석 요약: {summary}
+- 주요 기술 스택 (사용 빈도순):
+{tech_details}
+
+[기술 숙련도 통계 (DB 기반)]
+{tech_stats}
+
+[일정 정보]
+- 오늘: {today}
+- 바쁜 기간(건너뛸 날짜): {busy_dates}
+
+위 분석 결과를 바탕으로 이 사람에게 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+
+[노드 작성 기준]
+- title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
+- description: 위 분석 결과를 통해 파악된 사용자의 현재 수준에 딱 맞춰서, 이 학습 노드에서 수행해야 할 구체적인 실천 목표와 가이드를 2~3문장으로 제시하세요. 템플릿처럼 딱딱하게 쓰지 말고, 멘토가 조언하듯 자연스럽게 작성하세요.\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
+"""
+
+# ── AUTO 프롬프트 ────────────────────────────────────────────────────────────
+_AUTO_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토입니다.
+사용자의 최근 활동 이력과 기술 숙련도 통계를 바탕으로,
+지금 이 시점에 가장 적합한 학습 주제를 스스로 결정하고 날짜가 지정된 커리큘럼을 설계합니다.
+
+[주제 선정 기준]
+1. 최근 활동에서 자주 등장하는 기술 중 심화할 여지가 있는 것을 우선합니다.
+2. 자주 쓰지만 숙련도가 상대적으로 낮은 기술을 보완하는 방향을 우선합니다.
+3. 단순 반복 작업보다 새로운 개념 습득이나 실전 적용에 집중합니다.
+
+""" + _COMMON_RULES
+
+_AUTO_USER_TEMPLATE = """\
+[최근 활동 이력 (최신 순)]
+{recent_activities}
+
+[기술 숙련도 통계 (DB 기반, 활동 빈도 순)]
+{tech_stats}
+
+[제외 기술 스택]
+{excluded_tech_stacks}
+
+[일정 정보]
+- 오늘: {today}
+- 바쁜 기간(건너뛸 날짜): {busy_dates}
+
+위 활동 이력과 기술 통계를 바탕으로 이 사람에게 지금 가장 적합한 학습 주제를 직접 결정하고 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+제외된 기술 스택은 커리큘럼 주제 선정에서 완전히 배제하세요.
+
+[노드 작성 기준]
+- title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
+- description: 위 분석 결과를 통해 파악된 사용자의 현재 수준에 딱 맞춰서, 이 학습 노드에서 수행해야 할 구체적인 실천 목표와 가이드를 2~3문장으로 제시하세요. 템플릿처럼 딱딱하게 쓰지 말고, 멘토가 조언하듯 자연스럽게 작성하세요.\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
+"""
+
+# ── MANUAL 프롬프트 ──────────────────────────────────────────────────────────
+_MANUAL_SYSTEM_PROMPT = """\
+당신은 KAIROS의 AI 학습 멘토입니다.
+사용자가 직접 지정한 학습 주제와 목표를 바탕으로 날짜가 지정된 커리큘럼을 설계합니다.
+
+""" + _COMMON_RULES
+
+_MANUAL_USER_TEMPLATE = """\
+[사용자 정보]
+- 학습 주제: {topic}
+- 학습 목표 유형: {goal_type}
+- 구체적 목표: {specific_goal}
+- 기술 숙련도 통계 (참고용):
+{tech_stats}
+
+[제외 기술 스택]
+{excluded_tech_stacks}
+
+[설문 응답]
+{survey_text}
+
+[일정 정보]
+- 오늘: {today}
+- 바쁜 기간(건너뛸 날짜): {busy_dates}
+
+위 정보를 바탕으로 커리큘럼을 생성하세요. 기간은 주제 복잡도에 맞게 자유롭게 결정하세요 (최대 7일).
+제외된 기술 스택은 커리큘럼 주제로 선택하지 말고, 설명에도 반복해서 언급하지 마세요.
+
+[노드 작성 기준]
+- title: 무엇을 배우는지 명확히 드러나도록 구체적으로 작성하세요.
+- description: title을 보고 해당 내용의 학습을 위해 수행할 구체적인 행동을 3단계 레벨로 나누어 제시하세요.
+  완전히 처음 접하는 사람에게 추천할 학습: (구체적 행동)
+  가볍게 다루거나 공부해본 수준의 사람에게 추천할 학습: (구체적 행동)
+  실제로 해당 기술을 써서 프로젝트를 진행해본 경험이 있는 사람에게 추천할 실습: (구체적 행동)\
+
+[추가 출력 기준]
+- tech_stacks: 이 커리큘럼 전체를 대표하는 구체적인 기술/개념 키워드만 1~5개 추출하세요.
+- broad category(예: 프론트엔드, 백엔드) 대신 실제 기술명(예: React, Docker, Spring Boot)을 우선하세요.\
+"""
+
+
+# ---------------------------------------------------------------------------
+# 공개 엔트리 포인트
+# ---------------------------------------------------------------------------
+
+async def run_curriculum(request: CurriculumRequest) -> CurriculumResponse:
+    """POST /api/v1/ai/curriculum/generate 의 메인 엔트리 포인트."""
+    logger.info(
+        "[run_curriculum] user_id=%s type=%s",
+        request.user_id,
+        request.curriculum_type.value,
+    )
+    if request.curriculum_type == CurriculumType.auto:
+        option_a_output, option_b_output = await _generate_alternative_pair(request)
+        option_a = _assemble_alternative_option(option_a_output, "WEAKNESS", "약점 보완형")
+        option_b = _assemble_alternative_option(option_b_output, "STRENGTH", "강점 강화형")
+
+        response = CurriculumResponse(
+            recommendation_reason=option_a.recommendation_reason,
+            tech_stacks=option_a.tech_stacks,
+            nodes=option_a.nodes,
+            option_a=option_a,
+            option_b=option_b,
+        )
+        logger.info(
+            "[run_curriculum] 완료 — optionA=%d개, optionB=%d개 노드 생성 (type=%s)",
+            len(option_a.nodes),
+            len(option_b.nodes),
+            request.curriculum_type.value,
+        )
+        return response
+
+    try:
+        output = await _generate_with_llm(request)
+    except Exception as exc:
+        logger.warning("[run_curriculum] LLM 호출 실패 (%s) — 템플릿 폴백 사용", exc)
+        output = _generate_with_template(request)
+
+    response = _assemble_response(output)
+    logger.info(
+        "[run_curriculum] 완료 — %d개 노드 생성 (type=%s)",
+        len(response.nodes),
+        request.curriculum_type.value,
+    )
+    return response
+
+
+# ---------------------------------------------------------------------------
+# 내부 구현
+# ---------------------------------------------------------------------------
+
+async def _generate_with_llm(request: CurriculumRequest) -> _CurriculumOutput:
+    """3분기별 프롬프트로 gpt-4o structured output 커리큘럼 생성."""
+    llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.7)
+    structured_llm = llm.with_structured_output(_CurriculumOutput)
+
+    system_prompt, user_template, ctx = _resolve_curriculum_prompt(request)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human",  user_template),
+    ])
+    chain = prompt | structured_llm
+    result: _CurriculumOutput = await chain.ainvoke(ctx)
+
+    logger.debug(
+        "[_generate_with_llm] model=%s type=%s nodes=%d",
+        get_model_name(TaskType.RECOMMENDATION_REASON),
+        request.curriculum_type.value,
+        len(result.nodes),
+    )
+    return result
+
+
+async def _generate_alternative_pair(request: CurriculumRequest) -> tuple[_CurriculumOutput, _CurriculumOutput]:
+    weak_output, strong_output = await asyncio.gather(
+        _generate_alternative_option(request, "weakness"),
+        _generate_alternative_option(request, "strength"),
+    )
+    return weak_output, strong_output
+
+
+def _resolve_curriculum_prompt(request: CurriculumRequest) -> tuple[str, str, dict[str, Any]]:
+    match request.curriculum_type:
+        case CurriculumType.onboarding:
+            return _ONBOARDING_SYSTEM_PROMPT, _ONBOARDING_USER_TEMPLATE, _build_onboarding_context(request)
+        case CurriculumType.auto:
+            return _AUTO_SYSTEM_PROMPT, _AUTO_USER_TEMPLATE, _build_auto_context(request)
+        case CurriculumType.manual:
+            return _MANUAL_SYSTEM_PROMPT, _MANUAL_USER_TEMPLATE, _build_manual_context(request)
+        case _:
+            logger.warning("[_resolve_curriculum_prompt] 알 수 없는 curriculum_type=%s — ONBOARDING으로 폴백", request.curriculum_type)
+            return _ONBOARDING_SYSTEM_PROMPT, _ONBOARDING_USER_TEMPLATE, _build_onboarding_context(request)
+
+
+async def _generate_alternative_option(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    """A/B 전용 옵션 하나를 생성한다. 기존 단일 생성 로직과 분리 유지."""
+    try:
+        return await _generate_with_llm_for_focus(request, focus_mode)
+    except Exception as exc:
+        logger.warning(
+            "[_generate_alternative_option] LLM 호출 실패 (%s) — %s 템플릿 폴백",
+            exc,
+            focus_mode,
+        )
+        return _generate_with_template_for_focus(request, focus_mode)
+
+
+async def _generate_with_llm_for_focus(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    llm = get_model(TaskType.RECOMMENDATION_REASON, temperature=0.7)
+    structured_llm = llm.with_structured_output(_CurriculumOutput)
+
+    system_prompt, user_template, ctx = _resolve_curriculum_prompt(request)
+    focus_instruction = _build_focus_instruction(request, focus_mode)
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt),
+        ("human", user_template + _ALTERNATIVE_FOCUS_TEMPLATE),
+    ])
+    chain = prompt | structured_llm
+    result: _CurriculumOutput = await chain.ainvoke({
+        **ctx,
+        **focus_instruction,
+    })
+
+    logger.debug(
+        "[_generate_with_llm_for_focus] model=%s type=%s focus=%s nodes=%d",
+        get_model_name(TaskType.RECOMMENDATION_REASON),
+        request.curriculum_type.value,
+        focus_mode,
+        len(result.nodes),
+    )
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 분기별 context 빌더
+# ---------------------------------------------------------------------------
+
+def _build_onboarding_context(request: CurriculumRequest) -> dict[str, Any]:
+    """ONBOARDING: profile_analyzer 결과 + user_tech_stacks + 캘린더."""
+    today = date.today().isoformat()
+    busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
+    analysis = request.analysis_data
+    excluded = _excluded_set(request.excluded_tech_stacks)
+
+    # tech_details: 사용 빈도 내림차순 정렬, 상위 7개
+    tech_details_lines: list[str] = []
+    if analysis and analysis.tech_details:
+        sorted_tech = sorted(analysis.tech_details, key=lambda t: t.usage_count, reverse=True)
+        for t in sorted_tech[:7]:
+            if t.tech_name and t.tech_name.strip().lower() in excluded:
+                continue
+            tech_details_lines.append(
+                f"  - {t.tech_name}: 사용 {t.usage_count}회, 숙련도 {t.proficiency_percentage}%"
+            )
+    tech_details_str = "\n".join(tech_details_lines) if tech_details_lines else "  (정보 없음)"
+
+    # recommended_positions
+    positions_str = "없음"
+    if analysis and analysis.recommended_positions:
+        pos_parts = [f"{p.position_name}({p.fit_level})" for p in analysis.recommended_positions]
+        positions_str = ", ".join(pos_parts)
+
+    # user_tech_stacks (DB 집계)
+    tech_stats_str = _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded))
+
+    return {
+        "summary":               (analysis.summary if analysis else "정보 없음"),
+        "tech_details":          tech_details_str,
+        "recommended_positions": positions_str,
+        "tech_stats":            tech_stats_str,
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
+        "today":                 today,
+        "busy_dates":            busy_dates,
+    }
+
+
+def _build_auto_context(request: CurriculumRequest) -> dict[str, Any]:
+    """AUTO: recent_activities + user_tech_stacks + 캘린더."""
+    today = date.today().isoformat()
+    busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
+    excluded = _excluded_set(request.excluded_tech_stacks)
+
+    # recent_activities (최신 10개)
+    activities_lines: list[str] = []
+    for act in request.recent_activities[:10]:
+        stacks = ", ".join(_filter_stack_list(act.tech_stacks, excluded)) or "없음"
+        activities_lines.append(
+            f"  - [{act.activity_date[:10]}] [{act.activity_type}] {act.title} (기술: {stacks}, 분류: {act.category})"
+        )
+    activities_str = "\n".join(activities_lines) if activities_lines else "  (최근 활동 없음)"
+
+    return {
+        "recent_activities": activities_str,
+        "tech_stats":        _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded)),
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
+        "today":             today,
+        "busy_dates":        busy_dates,
+    }
+
+
+def _build_manual_context(request: CurriculumRequest) -> dict[str, Any]:
+    """MANUAL: 사용자 직접 지정 주제 + user_tech_stacks + 캘린더."""
+    today = date.today().isoformat()
+    busy_dates = _fmt_busy_dates(request.google_calendar_events, request.consider_personal_schedule)
+    manual = request.manual_generation
+    excluded = _excluded_set(request.excluded_tech_stacks)
+
+    return {
+        "topic":        (manual.topic or "개발 역량 강화") if manual else "개발 역량 강화",
+        "goal_type":    (manual.goal_type or "전반적 학습") if manual else "전반적 학습",
+        "specific_goal": (manual.specific_goal or "실무 수준 달성") if manual else "실무 수준 달성",
+        "tech_stats":   _fmt_skill_stats(_filter_skill_stats(request.user_tech_stacks, excluded)),
+        "excluded_tech_stacks":  ", ".join(request.excluded_tech_stacks) or "없음",
+        "survey_text":  _fmt_survey(manual) if manual else "없음",
+        "today":        today,
+        "busy_dates":   busy_dates,
+    }
+
+
+# ---------------------------------------------------------------------------
+# 폴백 — LLM 실패 시 규칙 기반 최소 커리큘럼
+# ---------------------------------------------------------------------------
+
+def _generate_with_template(request: CurriculumRequest) -> _CurriculumOutput:
+    """규칙 기반 폴백 — LLM 호출 없음."""
+    excluded = _excluded_set(request.excluded_tech_stacks)
+
+    # 주제 결정
+    match request.curriculum_type:
+        case CurriculumType.onboarding:
+            if request.analysis_data and request.analysis_data.tech_details:
+                allowed_details = [
+                    t for t in request.analysis_data.tech_details
+                    if t.tech_name and t.tech_name.strip().lower() not in excluded
+                ]
+                top = max(allowed_details or request.analysis_data.tech_details, key=lambda t: t.usage_count)
+                topic = f"{top.tech_name} 심화 학습"
+            elif request.user_tech_stacks:
+                allowed_stats = [
+                    stat for stat in request.user_tech_stacks
+                    if stat.skill and stat.skill.strip().lower() not in excluded
+                ]
+                topic = f"{(allowed_stats or request.user_tech_stacks)[0].skill} 심화 학습"
+            else:
+                topic = "개발 역량 강화"
+        case CurriculumType.auto:
+            allowed_stats = [
+                stat for stat in request.user_tech_stacks
+                if stat.skill and stat.skill.strip().lower() not in excluded
+            ]
+            if allowed_stats:
+                topic = f"{allowed_stats[0].skill} 심화 학습"
+            else:
+                topic = "개발 역량 강화"
+        case CurriculumType.manual:
+            manual = request.manual_generation
+            topic = (manual.topic or "학습 목표") if manual else "학습 목표"
+        case _:
+            topic = "개발 역량 강화"
+
+    today = date.today()
+    busy = _get_busy_date_set(request.google_calendar_events, request.consider_personal_schedule)
+
+    nodes: list[_CurriculumNodeOutput] = []
+    current = today
+    step_labels = ["개념 이해", "실습", "심화 및 복습"]
+    step_minutes = [60, 90, 60]
+
+    for _ in range(14):  # 최대 14일 탐색
+        if len(nodes) >= 5:
+            break
+        if current.isoformat() not in busy:
+            idx = len(nodes)
+            label = step_labels[idx % 3]
+            mins = step_minutes[idx % 3]
+            nodes.append(_CurriculumNodeOutput(
+                title=f"{topic} — {label}",
+                description=None,
+                scheduled_date=current.isoformat(),
+                expected_minutes=mins,
+            ))
+        current += timedelta(days=1)
+
+    return _CurriculumOutput(
+        summary_line=f"{topic} 단기 집중 과정",
+        user_context="프로필 기반으로 맞춤 커리큘럼을 구성했습니다.",
+        ai_interpretation=f"{topic} 학습을 개념 → 실습 → 심화 순서로 편성했습니다.",
+        curriculum_rationale="일정 제약을 반영해 학습 가능한 날짜에만 노드를 배치했습니다.",
+        tech_stacks=_derive_template_tech_stacks(request),
+        nodes=nodes,
+    )
+
+
+def _generate_with_template_for_focus(request: CurriculumRequest, focus_mode: str) -> _CurriculumOutput:
+    topic = _choose_focus_topic(request, focus_mode)
+    base_output = _generate_with_template(request)
+
+    focus_label = "약점 보완형" if focus_mode == "weakness" else "강점 강화형"
+    focus_reason = (
+        f"{topic}처럼 지금 보완이 필요한 영역을 우선 다루도록 구성했습니다."
+        if focus_mode == "weakness"
+        else f"{topic}처럼 이미 강점이 보이는 영역을 더 깊게 확장하도록 구성했습니다."
+    )
+
+    adjusted_nodes = []
+    for index, node in enumerate(base_output.nodes):
+        adjusted_nodes.append(_CurriculumNodeOutput(
+            title=f"{topic} — {['개념 이해', '실습', '심화 및 복습'][index % 3]}",
+            description=node.description,
+            scheduled_date=node.scheduled_date,
+            expected_minutes=node.expected_minutes,
+        ))
+
+    return _CurriculumOutput(
+        summary_line=f"{focus_label} {topic} 집중 과정",
+        user_context=base_output.user_context,
+        ai_interpretation=focus_reason,
+        curriculum_rationale=base_output.curriculum_rationale,
+        tech_stacks=_normalize_tech_stack_list([topic, *base_output.tech_stacks]),
+        nodes=adjusted_nodes,
+    )
+
+
+def _assemble_response(output: _CurriculumOutput) -> CurriculumResponse:
+    """LLM 출력을 CurriculumResponse로 조립한다."""
+    reason = CurriculumRecommendationReason(
+        summary_line=output.summary_line,
+        user_context=output.user_context,
+        ai_interpretation=output.ai_interpretation,
+        curriculum_rationale=output.curriculum_rationale,
+    )
+    nodes = [
+        CurriculumNode(
+            title=n.title,
+            description=n.description,
+            scheduled_date=n.scheduled_date,
+            expected_minutes=n.expected_minutes,
+        )
+        for n in output.nodes
+    ]
+    return CurriculumResponse(
+        recommendation_reason=reason,
+        tech_stacks=output.tech_stacks[:5],
+        nodes=nodes,
+    )
+
+
+def _assemble_alternative_option(
+    output: _CurriculumOutput,
+    option_type: str,
+    option_label: str,
+) -> AlternativeCurriculumOption:
+    base = _assemble_response(output)
+    return AlternativeCurriculumOption(
+        option_type=option_type,
+        option_label=option_label,
+        recommendation_reason=base.recommendation_reason,
+        tech_stacks=base.tech_stacks,
+        nodes=base.nodes,
+    )
+
+
+def _derive_template_tech_stacks(request: CurriculumRequest) -> list[str]:
+    tech_stacks: list[str] = []
+
+    if request.curriculum_type == CurriculumType.onboarding and request.analysis_data:
+        tech_stacks.extend(t.tech_name for t in request.analysis_data.tech_details[:5])
+    elif request.curriculum_type == CurriculumType.manual and request.manual_generation and request.manual_generation.topic:
+        tech_stacks.append(request.manual_generation.topic)
+
+    if not tech_stacks:
+        tech_stacks.extend(stat.skill for stat in request.user_tech_stacks[:5])
+
+    excluded = _excluded_set(request.excluded_tech_stacks)
+    normalized: list[str] = []
+    for tech in tech_stacks:
+        value = (tech or "").strip()
+        if value and value.lower() not in excluded and value not in normalized:
+            normalized.append(value)
+    return normalized[:5]
+
+
+def _build_focus_instruction(request: CurriculumRequest, focus_mode: str) -> dict[str, str]:
+    focus_tech = _choose_focus_topic(request, focus_mode)
+    if focus_mode == "weakness":
+        return {
+            "focus_label": "약점 보완형",
+            "focus_description": "현재 상대적으로 약하거나 덜 자신 있는 기술을 보완하는 방향",
+            "focus_tech": focus_tech,
+        }
+    return {
+        "focus_label": "강점 강화형",
+        "focus_description": "이미 강점이 보이는 기술을 더 깊게 확장하는 방향",
+        "focus_tech": focus_tech,
+    }
+
+
+def _choose_focus_topic(request: CurriculumRequest, focus_mode: str) -> str:
+    excluded = _excluded_set(request.excluded_tech_stacks)
+    if request.curriculum_type == CurriculumType.onboarding and request.analysis_data and request.analysis_data.tech_details:
+        techs = sorted(
+            request.analysis_data.tech_details,
+            key=lambda t: (t.proficiency_percentage, t.usage_count)
+        )
+        if focus_mode == "strength":
+            selected = max(
+                request.analysis_data.tech_details,
+                key=lambda t: (t.proficiency_percentage, t.usage_count)
+            )
+            if selected.tech_name and selected.tech_name.strip().lower() not in excluded:
+                return selected.tech_name
+        for item in techs:
+            if item.tech_name and item.tech_name.strip().lower() not in excluded:
+                return item.tech_name
+        return "개발 역량 강화"
+
+    if request.user_tech_stacks:
+        sorted_stats = sorted(request.user_tech_stacks, key=lambda s: s.count, reverse=True)
+        if focus_mode == "strength":
+            for stat in sorted_stats:
+                if stat.skill and stat.skill.strip().lower() not in excluded:
+                    return stat.skill
+        for stat in reversed(sorted_stats):
+            if stat.skill and stat.skill.strip().lower() not in excluded:
+                return stat.skill
+
+    if request.manual_generation and request.manual_generation.topic:
+        return request.manual_generation.topic
+
+    return "개발 역량 강화"
+
+
+def _normalize_tech_stack_list(values: list[str]) -> list[str]:
+    normalized: list[str] = []
+    for tech in values:
+        value = (tech or "").strip()
+        if value and value not in normalized:
+            normalized.append(value)
+    return normalized[:5]
+
+
+def _excluded_set(values: list[str] | None) -> set[str]:
+    return {
+        value.strip().lower()
+        for value in (values or [])
+        if value and value.strip()
+    }
+
+
+def _filter_stack_list(values: list[str] | None, excluded: set[str]) -> list[str]:
+    if not values:
+        return []
+    filtered: list[str] = []
+    for value in values:
+        normalized = (value or "").strip()
+        if normalized and normalized.lower() not in excluded and normalized not in filtered:
+            filtered.append(normalized)
+    return filtered
+
+
+def _filter_skill_stats(values: list[SkillStat], excluded: set[str]) -> list[SkillStat]:
+    if not values:
+        return []
+    return [
+        stat for stat in values
+        if stat.skill and stat.skill.strip().lower() not in excluded
+    ]
+
+
+# ---------------------------------------------------------------------------
+# 헬퍼
+# ---------------------------------------------------------------------------
+
+def _fmt_skill_stats(skill_stats: list[SkillStat], top_n: int = 8) -> str:
+    """SkillStat 목록을 프롬프트용 문자열로 변환 (빈도 내림차순)."""
+    if not skill_stats:
+        return "  (기술 통계 없음)"
+    sorted_stats = sorted(skill_stats, key=lambda s: s.count, reverse=True)
+    lines = [f"  - {s.skill}: {s.count}회" for s in sorted_stats[:top_n]]
+    return "\n".join(lines)
+
+
+def _fmt_survey(manual: ManualGeneration) -> str:
+    if not manual.survey_answers:
+        return "없음"
+    labels = {
+        "q1Concept":    "현재 이해 수준",
+        "q2Experience": "관련 경험",
+        "q3Reason":     "학습 이유",
+    }
+    lines = [f"- {labels.get(k, k)}: {v}" for k, v in manual.survey_answers.items()]
+    return "\n".join(lines) or "없음"
+
+
+def _fmt_busy_dates(events: list[GoogleCalendarEvent], consider: bool) -> str:
+    if not consider or not events:
+        return "없음"
+    return ", ".join(f"{e.title} ({e.start_date} ~ {e.end_date})" for e in events)
+
+
+def _get_busy_date_set(events: list[GoogleCalendarEvent], consider: bool) -> set[str]:
+    """바쁜 날짜를 YYYY-MM-DD 집합으로 반환한다."""
+    if not consider or not events:
+        return set()
+    busy: set[str] = set()
+    for e in events:
+        try:
+            start = date.fromisoformat(e.start_date)
+            end = date.fromisoformat(e.end_date)
+            cur = start
+            while cur <= end:
+                busy.add(cur.isoformat())
+                cur += timedelta(days=1)
+        except ValueError:
+            continue
+    return busy

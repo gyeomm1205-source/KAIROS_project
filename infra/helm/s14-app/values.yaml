@@ -1,4 +1,4 @@
-baseDomain: 127.0.0.1.nip.io
+baseDomain: 221.138.211.197.nip.io
 
 replicaCount:
   vueFe: 1
@@ -13,17 +13,21 @@ imagePullSecrets:
 images:
   vueFe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: vue-fe-b8109915
+    tag: vue-fe-07f71f42
     pullPolicy: IfNotPresent
   springbootBe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: springboot-be-b8109915
+    tag: springboot-be-07f71f42
     pullPolicy: IfNotPresent
   fastapiBe:
     repository: docker.io/gjaku1031/ken-ssafy
-    tag: fastapi-be-b8109915
+    tag: fastapi-be-07f71f42
     pullPolicy: IfNotPresent
 
 ingress:
   enabled: true
   className: traefik
+  tls:
+    enabled: true
+    clusterIssuer: letsencrypt-prod
+    secretName: ssafy-nipio-tls
