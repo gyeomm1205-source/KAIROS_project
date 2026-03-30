@@ -25,9 +25,11 @@ spec:
           ports:
             - name: http
               containerPort: 8080
-          envFrom:
-            - secretRef:
-                name: springboot-be-env
+          env:
+            - name: APP_FASTAPI_BASE_URL
+              value: "http://fastapi-be.{{ .Release.Namespace }}.svc.cluster.local:8000"
+            - name: APP_CORS_ALLOWED_ORIGIN_PATTERNS
+              value: "*"
           readinessProbe:
             httpGet:
               path: /actuator/health
