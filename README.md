@@ -9,7 +9,7 @@
 ![Qdrant](https://img.shields.io/badge/Qdrant-DC382D?style=for-the-badge&logo=qdrant&logoColor=white)
 ![Vue.js](https://img.shields.io/badge/Vue_3-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white)
 ![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
-![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=for-the-badge&logo=kubernetes&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 ---
 
@@ -57,8 +57,7 @@ KAIROS는 사용자의 **GitHub 커밋/PR**과 **Velog 블로그 글**을 자동
 | Main Backend | Spring Boot 4.0.2, Java 21, JPA, Spring Security | 도메인 로직, 인증, 데이터 영속성 담당 |
 | Database | MySQL, Redis | RDBMS + 캐싱 레이어 |
 | Frontend | Vue 3, Vite, Pinia, Three.js | 반응형 SPA + 랜딩 페이지 3D 효과 |
-| Infra | Docker, Kubernetes, Helm, ArgoCD, Traefik | GitOps 기반 자동 배포 파이프라인 |
-| CI/CD | GitLab CI | Docker 이미지 빌드 → Helm values 자동 업데이트 |
+| Infra | Docker | 컨테이너 기반 수동 배포 |
 
 ---
 
@@ -163,18 +162,3 @@ npm run dev
 - FastAPI Swagger: http://localhost:8000/docs
 - Vue Dev: http://localhost:5173/
 
-### Kubernetes GitOps (Helm)
-
-- Helm chart path: `infra/helm/s14-app`
-- ArgoCD application manifest: `infra/argocd/app-develop.yaml`
-- CI/CD pipeline: `.gitlab-ci.yml` (self-hosted runner: other-vm, develop branch trigger)
-- 배포 기준: Helm chart + ArgoCD (kustomize 미사용, `infra/k8s` 제거)
-- 배포 브랜치: `develop`
-- Spring Boot 이미지 빌드: Dockerfile 대신 `bootBuildImage` 사용 (CI에서 실행)
-- Docker Hub private 저장소 기준: `ssafy`의 `dockerhub-regcred` + values `imagePullSecrets` 설정 필수
-
-Quick check:
-
-```bash
-helm template s14-app infra/helm/s14-app --namespace ssafy | head -n 40
-```
