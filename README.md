@@ -16,7 +16,6 @@
 ## 목차
 
 - [프로젝트 소개](#프로젝트-소개)
-- [아키텍처](#아키텍처)
 - [기술 스택](#기술-스택)
 - [주요 기능](#주요-기능)
 - [프로젝트 정보](#프로젝트-정보)
@@ -47,84 +46,6 @@ KAIROS는 사용자의 **GitHub 커밋/PR**과 **Velog 블로그 글**을 자동
 
 ---
 
-## 아키텍처
-
-### 시스템 전체 구조
-
-```mermaid
-graph LR
-    subgraph Client
-        A["Vue 3 + Vite\nThree.js 3D 그래프"]
-    end
-
-    subgraph Ingress
-        T[Traefik + TLS]
-    end
-
-    subgraph Main Backend
-        B["Spring Boot 4.0\nJava 21 / JPA / Security"]
-        DB[(MySQL)]
-        R[(Redis)]
-    end
-
-    subgraph AI Service
-        F["FastAPI\nPython 3.12 / LangChain"]
-        Q[(Qdrant\nVector DB)]
-        O["OpenAI API\nGPT-4o"]
-    end
-
-    subgraph CI/CD
-        GL[GitLab CI] --> D[Docker Build]
-        D --> H[Helm Chart]
-        H --> AR[ArgoCD]
-        AR --> K[Kubernetes]
-    end
-
-    A -->|HTTPS| T
-    T --> B
-    T --> F
-    B <--> DB
-    B <--> R
-    B -->|S2S API| F
-    F <--> Q
-    F <-->|LLM 호출| O
-```
-
-### AI 서비스 내부 파이프라인
-
-```mermaid
-graph TD
-    subgraph "데이터 수집 & 임베딩"
-        G[GitHub API\n커밋/PR/레포] --> E[전처리 & 분류]
-        V[Velog GraphQL\n블로그 글] --> E
-        E --> EM["text-embedding-3-small\n벡터 임베딩"]
-        EM --> QD[(Qdrant\nreference_chunks)]
-    end
-
-    subgraph "학습 추천 (RAG)"
-        R1[사용자 프로필 분석] --> R2[Qdrant 유사도 검색]
-        R2 --> R3["GPT-4o\n추천 생성"]
-        R3 --> R4["Pydantic\n구조화 출력"]
-    end
-
-    subgraph "커리큘럼 생성"
-        C1["3가지 모드\n온보딩 / 자동 / 수동"] --> C2[Qdrant 컨텍스트 수집]
-        C2 --> C3["GPT-4o\n커리큘럼 생성"]
-        C3 --> C4["Google Calendar\n일정 연동"]
-    end
-
-    subgraph "퀴즈 생성"
-        Q1["Qdrant 청크 기반\n근거 수집"] --> Q2["GPT-4o\n퀴즈 + 루브릭 단일 호출"]
-        Q2 --> Q3["환각 방지\n청크 외 출제 차단"]
-    end
-
-    QD --> R1
-    QD --> C1
-    QD --> Q1
-```
-
----
-
 ## 기술 스택
 
 | 분류 | 기술 | 선택 이유 |
@@ -135,7 +56,7 @@ graph TD
 | Embedding | text-embedding-3-small | 비용 대비 성능이 우수하고, 1536차원으로 충분한 표현력 |
 | Main Backend | Spring Boot 4.0.2, Java 21, JPA, Spring Security | 도메인 로직, 인증, 데이터 영속성 담당 |
 | Database | MySQL, Redis | RDBMS + 캐싱 레이어 |
-| Frontend | Vue 3, Vite, Pinia, Three.js | 반응형 SPA + 3D 지식 그래프 시각화 |
+| Frontend | Vue 3, Vite, Pinia, Three.js | 반응형 SPA + 랜딩 페이지 3D 효과 |
 | Infra | Docker, Kubernetes, Helm, ArgoCD, Traefik | GitOps 기반 자동 배포 파이프라인 |
 | CI/CD | GitLab CI | Docker 이미지 빌드 → Helm values 자동 업데이트 |
 
@@ -190,14 +111,6 @@ graph TD
 - 기술 스택별 레이더 차트로 역량 시각화
 - 시간축 바 그래프로 학습 활동 추이 표시
 - 가입 시점 기준선 대비 성장도 측정
-
-</details>
-
-<details>
-<summary><b>6. 3D 지식 그래프</b></summary>
-
-- Three.js 기반 인터랙티브 3D 그래프
-- 커리큘럼 노드 간 관계를 시각적으로 탐색
 
 </details>
 
