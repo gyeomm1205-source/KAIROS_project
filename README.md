@@ -64,55 +64,35 @@ KAIROS는 사용자의 **GitHub 커밋/PR**과 **Velog 블로그 글**을 자동
 
 ## 주요 기능
 
-<details>
-<summary><b>1. GitHub/Velog 활동 분석</b></summary>
-
+### 1. GitHub/Velog 활동 분석
 - GitHub REST API로 레포, 커밋, PR 데이터 수집
 - Velog GraphQL API로 블로그 글 수집
 - GPT-4o-mini로 활동 분류 (기술 스택, 카테고리, 요약)
 - 최종 개발자 프로필 생성 (기술 역량, 추천 포지션)
 
-</details>
-
-<details>
-<summary><b>2. RAG 기반 학습 추천</b></summary>
-
+### 2. RAG 기반 학습 추천
 - 사용자 프로필에서 쿼리 텍스트 구성
 - Qdrant에서 유사 학습 자료 벡터 검색
 - GPT-4o가 검색 결과를 기반으로 개인화된 추천 이유, 현재 상태 진단, 다음 학습 경로 생성
 - 일일 배치 추천 + 온디맨드 추천 지원
 
-</details>
-
-<details>
-<summary><b>3. AI 커리큘럼 생성</b></summary>
-
+### 3. AI 커리큘럼 생성
 - **온보딩 모드**: 프로필 분석 기반 초기 커리큘럼
 - **자동 모드**: 최근 활동 기반, 약점 보완 / 강점 강화 두 가지 옵션 동시 생성
 - **수동 모드**: 사용자 지정 주제로 커리큘럼 생성
 - Google Calendar에서 기존 일정 조회 후, 비어있는 날짜에 학습 일정 배치 (2~7일)
 
-</details>
-
-<details>
-<summary><b>4. AI 퀴즈 생성 (환각 방지)</b></summary>
-
+### 4. AI 퀴즈 생성 (환각 방지)
 - Qdrant에서 학습 주제 관련 청크 검색
 - 검색된 청크만을 근거로 퀴즈 출제 (LLM이 자체 지식으로 문제를 만들지 못하도록 제약)
 - 객관식, 주관식, 코딩 문제 3가지 유형
 - 퀴즈와 채점 루브릭을 단일 LLM 호출로 동시 생성
 - 사용자 수준(JUNIOR/MID/SENIOR)에 따라 난이도/유형 비율 자동 조정
 
-</details>
-
-<details>
-<summary><b>5. 성장 추적</b></summary>
-
+### 5. 성장 추적
 - 기술 스택별 레이더 차트로 역량 시각화
 - 시간축 바 그래프로 학습 활동 추이 표시
 - 가입 시점 기준선 대비 성장도 측정
-
-</details>
 
 ---
 
