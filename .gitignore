@@ -18,3 +18,15 @@ springboot-be/build/
 # IDE
 .idea/
 .vscode/
+
+# Secrets & credentials
+*.pem
+*.env
+fastapi-be/.env
+springboot-be/src/main/resources/env.txt
+settings.local.json
+
+# Storage & data
+storage/
+fastapi-be/venv/
+.qdrant-initialized
